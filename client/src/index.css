@@ -1,0 +1,186 @@
+@font-face {
+  font-family: StoryScript;
+  src: url('./fonts/StoryScript-Regular.ttf');
+}
+
+:root {
+  font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
+  line-height: 1.5;
+  font-weight: 400;
+  color-scheme: light dark;
+  color: rgba(255, 255, 255, 0.87);
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Убираем центрирование для #root */
+#root {
+  display: block;
+  min-height: 100vh;
+}
+
+a {
+  font-weight: 500;
+  color: #646cff;
+  text-decoration: inherit;
+}
+a:hover {
+  color: #535bf2;
+}
+
+body {
+  margin: 0;
+  min-width: 320px;
+  min-height: 100vh;
+  background-image: url('/images/body.png');
+  background-color: #000000;
+  background-attachment: fixed;
+  background-size: cover;
+  background-repeat: no-repeat;
+  background-position: center;
+}
+
+h1 {
+  font-size: 3.2em;
+  line-height: 1.1;
+}
+
+button {
+  border-radius: 8px;
+  border: 1px solid transparent;
+  padding: 0.6em 1.2em;
+  font-size: 1em;
+  font-weight: 500;
+  font-family: inherit;
+  background-color: #1a1a1a;
+  cursor: pointer;
+  transition: border-color 0.25s;
+}
+button:hover {
+  border-color: #646cff;
+}
+button:focus,
+button:focus-visible {
+  outline: 4px auto -webkit-focus-ring-color;
+}
+
+@media (prefers-color-scheme: light) {
+  :root {
+    color: #213547;
+    background-color: #ffffff;
+  }
+  a:hover {
+    color: #747bff;
+  }
+  button {
+    background-color: #f9f9f9;
+  }
+}
+
+.message-list {
+  background-color: #161616 !important;
+}
+
+/* Стили для аудио плеера под стиль сайта */
+.custom-audio-player {
+  border-radius: 28px !important;
+  background: transparent !important;
+  outline: none !important;
+}
+
+/* Контейнер самого плеера */
+.custom-audio-player audio {
+  border-radius: 28px !important;
+}
+
+/* Стилизация для WebKit браузеров (Chrome, Edge, Safari) */
+.custom-audio-player::-webkit-media-controls-panel {
+  background: linear-gradient(135deg, #2a2a2a 0%, rgba(141, 134, 14, 0.95) 100%) !important;
+  border-radius: 28px !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3) !important;
+}
+
+/* Кнопка play/pause */
+.custom-audio-player::-webkit-media-controls-play-button {
+  background-color: #ffd966 !important;
+  border-radius: 50% !important;
+  transform: scale(1.1) !important;
+  transition: all 0.2s ease !important;
+  margin: 0 8px !important;
+}
+
+.custom-audio-player::-webkit-media-controls-play-button:hover {
+  background-color: #ffaa33 !important;
+  transform: scale(1.2) !important;
+}
+
+/* Текущее время и общая длительность */
+.custom-audio-player::-webkit-media-controls-current-time-display,
+.custom-audio-player::-webkit-media-controls-time-remaining-display {
+  color: #ffd966 !important;
+  font-weight: 500 !important;
+  text-shadow: 0 0 2px rgba(0, 0, 0, 0.5) !important;
+  font-size: 12px !important;
+}
+
+/* Полоса прогресса */
+.custom-audio-player::-webkit-media-controls-timeline {
+  border-radius: 10px !important;
+  height: 4px !important;
+  margin: 0 8px !important;
+}
+
+/* Стилизация трека прогресса (нужны дополнительные селекторы) */
+.custom-audio-player::-webkit-media-controls-timeline::-webkit-slider-thumb {
+  background-color: #ffd966 !important;
+  border-radius: 50% !important;
+  width: 12px !important;
+  height: 12px !important;
+  box-shadow: 0 0 6px rgba(255, 215, 0, 0.6) !important;
+}
+
+/* Кнопка громкости */
+.custom-audio-player::-webkit-media-controls-mute-button {
+  background-color: transparent !important;
+  color: #ffd966 !important;
+  transform: scale(0.9) !important;
+}
+
+.custom-audio-player::-webkit-media-controls-mute-button:hover {
+  transform: scale(1) !important;
+}
+
+/* Слайдер громкости */
+.custom-audio-player::-webkit-media-controls-volume-slider {
+  border-radius: 10px !important;
+  height: 4px !important;
+}
+
+/* Кнопка текущего временного трека (отключаем ненужные элементы) */
+.custom-audio-player::-internal-media-controls-download-button {
+  display: none !important;
+}
+
+/* Скрываем кнопку с тремя точками */
+.custom-audio-player::-webkit-media-controls-overflow-button {
+  display: none !important;
+}
+
+.custom-audio-player::cue {
+  color: #ffd966;
+}
+
+/* Полоса объема звука */
+.custom-audio-player::-webkit-media-controls-volume-slider::-webkit-slider-thumb {
+  background-color: #ffd966 !important;
+  border-radius: 50% !important;
+  width: 10px !important;
+  height: 10px !important;
+}
+
+/* Медиа-контролы в полноэкранном режиме */
+.custom-audio-player:fullscreen::-webkit-media-controls-panel {
+  background: linear-gradient(135deg, rgba(26, 26, 26, 0.95) 0%, rgba(20, 20, 20, 0.95) 100%) !important;
+}

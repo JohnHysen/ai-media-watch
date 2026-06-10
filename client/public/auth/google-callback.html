@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Google Callback</title>
+    <script>
+      function extractToken() {
+        const hash = window.location.hash.substring(1)
+        const params = new URLSearchParams(hash)
+        const token = params.get('id_token')
+
+        if (token && window.opener) {
+          window.opener.postMessage({ token }, window.location.origin)
+          window.close()
+        }
+      }
+
+      window.onload = extractToken
+    </script>
+  </head>
+  <body>
+    <p>Вход...</p>
+  </body>
+</html>
