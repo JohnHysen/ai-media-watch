@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, Suspense, useMemo } from 'react'
+import React, { useState, useEffect, useRef, useMemo } from 'react'
 import {
   Avatar,
   Box,
@@ -11,10 +11,10 @@ import {
   MenuItem,
   FormControl,
   InputLabel,
-  type SelectChangeEvent,
   Grid,
   Card,
   CardContent,
+  CardMedia,
   Chip,
   Button,
   List,
@@ -25,8 +25,6 @@ import {
   LinearProgress,
   ToggleButton,
   ToggleButtonGroup,
-  Tooltip,
-  Badge,
   Dialog,
   DialogTitle,
   DialogContent,
@@ -40,27 +38,21 @@ import VideoLibraryIcon from '@mui/icons-material/VideoLibrary'
 import WarningIcon from '@mui/icons-material/Warning'
 import AnalyticsIcon from '@mui/icons-material/Analytics'
 import LinkIcon from '@mui/icons-material/Link'
-import TimelineIcon from '@mui/icons-material/Timeline'
 import WhatshotIcon from '@mui/icons-material/Whatshot'
 import ReportProblemIcon from '@mui/icons-material/ReportProblem'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Canvas, useFrame, useThree } from '@react-three/fiber'
+import { Canvas, useFrame } from '@react-three/fiber'
 import {
   OrbitControls,
-  Text,
   Float,
   Environment,
   Html,
   Stars,
-  Sparkles,
 } from '@react-three/drei'
 import * as THREE from 'three'
 import {
   LineChart,
-  Line,
   Area,
-  BarChart,
-  Bar,
   PieChart,
   Pie,
   Cell,
@@ -69,111 +61,92 @@ import {
   CartesianGrid,
   Tooltip as RechartsTooltip,
   ResponsiveContainer,
-  Legend,
 } from 'recharts'
 import { useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { useUser } from '../context/user/useUser'
-import AppSidebar from '../components/AppSidebar'
+import AppSidebar from '../components/CyberSidebar'
 
-// ---------- 3D Floating Icons, Danger/Safety Badges, Logos, and a little video (chaotic motion) ----------
-const FloatingIconsAndCode = () => {
+// ---------- Оптимизированный 3D фон: 5 больших иконок ----------
+const FloatingIconsOnly = () => {
   const groupRef = useRef<THREE.Group>(null!)
 
-  // Создаём 60 случайных объектов: иконки, логотипы, видео-превью
-  const elements = useMemo(() => {
-    const icons = [
-      { type: 'danger', symbol: '⚠️', color: '#ff3366', size: 0.6 },
-      { type: 'danger', symbol: '🎰', color: '#ff8844', size: 0.7 },
-      { type: 'danger', symbol: '📈', color: '#ffaa44', size: 0.6 },
-      { type: 'danger', symbol: '💰', color: '#ff6666', size: 0.6 },
-      { type: 'danger', symbol: '🔗', color: '#ff9966', size: 0.5 },
-      { type: 'danger', symbol: '💀', color: '#ff44aa', size: 0.6 },
-      { type: 'safety', symbol: '🛡️', color: '#33ffcc', size: 0.6 },
-      { type: 'safety', symbol: '🔒', color: '#33aaff', size: 0.5 },
-      { type: 'safety', symbol: '✅', color: '#44ff66', size: 0.5 },
+  const elements = useMemo(
+    () => [
       {
-        type: 'logo',
         symbol: '📱',
         color: '#00f2ea',
-        size: 0.5,
-        label: 'TikTok',
+        size: 1.4,
+        startX: -3,
+        startY: 1.5,
+        startZ: -2,
       },
       {
-        type: 'logo',
         symbol: '📸',
         color: '#e4405f',
-        size: 0.5,
-        label: 'Instagram',
+        size: 1.4,
+        startX: 4,
+        startY: -1.5,
+        startZ: -1.5,
       },
       {
-        type: 'logo',
         symbol: '▶️',
         color: '#ff0000',
-        size: 0.5,
-        label: 'YouTube',
+        size: 1.4,
+        startX: -2,
+        startY: -2.5,
+        startZ: -3,
       },
-    ]
-
-    // Несколько видео-превью (HTML-элементы с картинкой)
-    const videoCount = 3
-    const result = []
-
-    // Иконки (45 штук)
-    for (let i = 0; i < 45; i++) {
-      const icon = icons[i % icons.length]
-      result.push({
-        type: 'icon',
-        symbol: icon.symbol,
-        color: icon.color,
-        size: icon.size,
-        position: [
-          (Math.random() - 0.5) * 14,
-          (Math.random() - 0.5) * 8,
-          (Math.random() - 0.5) * 10 - 5,
-        ],
-        speed: 0.2 + Math.random() * 0.6,
-        rotSpeed: 0.2 + Math.random() * 0.5,
-      })
-    }
-
-    // Видео-превью (3 штуки, с реальными картинками)
-    for (let i = 0; i < videoCount; i++) {
-      result.push({
-        type: 'video',
-        thumbnail: `https://picsum.photos/id/${200 + i}/100/80`,
+      {
+        symbol: '🛡️',
+        color: '#33ffcc',
+        size: 1.5,
+        startX: 3,
+        startY: 2,
+        startZ: -2,
+      },
+      {
+        symbol: '⚠️',
         color: '#ff3366',
-        size: 1.0,
-        position: [
-          (Math.random() - 0.5) * 12,
-          (Math.random() - 0.5) * 7,
-          (Math.random() - 0.5) * 8 - 4,
-        ],
-        speed: 0.3 + Math.random() * 0.5,
-        rotSpeed: 0.1 + Math.random() * 0.3,
-      })
-    }
+        size: 1.5,
+        startX: 0,
+        startY: -0.5,
+        startZ: -4,
+      },
+    ],
+    []
+  )
 
-    return result
-  }, [])
+  const motions = useMemo(
+    () =>
+      elements.map(() => ({
+        ampX: 2.0 + Math.random() * 1.5,
+        ampY: 1.5 + Math.random() * 1.2,
+        ampZ: 1.2 + Math.random() * 1.0,
+        freqX: 0.12 + Math.random() * 0.08,
+        freqY: 0.1 + Math.random() * 0.08,
+        freqZ: 0.09 + Math.random() * 0.07,
+        phaseX: Math.random() * Math.PI * 2,
+        phaseY: Math.random() * Math.PI * 2,
+        phaseZ: Math.random() * Math.PI * 2,
+        rotSpeed: 0.003 + Math.random() * 0.003,
+      })),
+    []
+  )
 
   useFrame(({ clock }) => {
+    const t = clock.getElapsedTime()
     if (groupRef.current) {
-      // Общее вращение группы
-      groupRef.current.rotation.y = clock.getElapsedTime() * 0.03
-      groupRef.current.rotation.x = Math.sin(clock.getElapsedTime() * 0.1) * 0.1
-
-      // Анимируем каждый элемент отдельно (хаотичное движение)
       groupRef.current.children.forEach((child, idx) => {
-        const element = elements[idx]
-        if (element && child.userData) {
-          const t = clock.getElapsedTime() * element.speed
-          // Случайное смещение по окружности
-          child.position.x = element.position[0] + Math.sin(t) * 1.2
-          child.position.y = element.position[1] + Math.cos(t * 0.7) * 1.0
-          child.position.z = element.position[2] + Math.sin(t * 0.5) * 1.5
-          child.rotation.y += 0.01
-          child.rotation.x = Math.sin(t) * 0.5
+        const el = elements[idx]
+        const m = motions[idx]
+        if (el && m) {
+          const x = el.startX + m.ampX * Math.sin(m.freqX * t + m.phaseX)
+          const y = el.startY + m.ampY * Math.sin(m.freqY * t + m.phaseY)
+          const z = el.startZ + m.ampZ * Math.sin(m.freqZ * t + m.phaseZ)
+          child.position.set(x, y, z)
+          child.rotation.y += m.rotSpeed
+          child.rotation.x += m.rotSpeed * 0.5
         }
       })
     }
@@ -181,148 +154,37 @@ const FloatingIconsAndCode = () => {
 
   return (
     <group ref={groupRef}>
-      {elements.map((el, idx) => {
-        if (el.type === 'icon') {
-          return (
-            <Float
-              key={idx}
-              speed={1}
-              rotationIntensity={0.2}
-              floatIntensity={0.5}
-            >
-              <mesh
-                position={el.position as [number, number, number]}
-                userData={{ speed: el.speed }}
-              >
-                <planeGeometry args={[el.size, el.size]} />
-                <meshStandardMaterial
-                  color={el.color}
-                  emissive={el.color}
-                  emissiveIntensity={0.3}
-                  side={THREE.DoubleSide}
-                  transparent
-                  opacity={0.9}
-                />
-                <Html
-                  distanceFactor={12}
-                  position={[0, 0, 0.05]}
-                  transform
-                  center
-                >
-                  <div
-                    style={{
-                      fontSize: `${el.size * 40}px`,
-                      textAlign: 'center',
-                      filter: `drop-shadow(0 0 5px ${el.color})`,
-                    }}
-                  >
-                    {el.symbol}
-                  </div>
-                </Html>
-              </mesh>
-            </Float>
-          )
-        } else if (el.type === 'video') {
-          return (
-            <Float
-              key={idx}
-              speed={0.8}
-              rotationIntensity={0.3}
-              floatIntensity={0.6}
-            >
-              <mesh
-                position={el.position as [number, number, number]}
-                userData={{ speed: el.speed }}
-              >
-                <planeGeometry args={[1.2, 0.9]} />
-                <meshStandardMaterial
-                  color={el.color}
-                  emissive={el.color}
-                  emissiveIntensity={0.2}
-                  side={THREE.DoubleSide}
-                />
-                <Html distanceFactor={10} position={[0, 0, 0.05]} transform>
-                  <div
-                    style={{
-                      width: 120,
-                      height: 90,
-                      borderRadius: 8,
-                      overflow: 'hidden',
-                      border: `1px solid ${el.color}`,
-                      background: '#000',
-                    }}
-                  >
-                    <img
-                      src={el.thumbnail}
-                      alt="threat video"
-                      style={{
-                        width: '100%',
-                        height: '100%',
-                        objectFit: 'cover',
-                      }}
-                    />
-                  </div>
-                </Html>
-              </mesh>
-            </Float>
-          )
-        }
-        return null
-      })}
-    </group>
-  )
-}
-
-// Космический фон с тусклым кодом
-const CodeSpaceBackground = () => {
-  const codeLines = useMemo(() => {
-    const snippets = [
-      'const threat = detect();',
-      'if (risk > 0.8) alert();',
-      'function scanVideo() {}',
-      'import { analyze } from "ai";',
-      'const patterns = /casino|pyramid/i;',
-      'fetch("/api/check")',
-      'model.predict(video)',
-      'for (let i=0; i< threats; i++)',
-      'return riskScore;',
-      'console.log("threat detected");',
-      'const config = { model: "yolo" };',
-      'await transcribe(audio);',
-      'TensorFlow.js',
-      'ONNX Runtime',
-      'CatBoost',
-    ]
-    const lines = []
-    for (let i = 0; i < 80; i++) {
-      lines.push({
-        text:
-          snippets[i % snippets.length] +
-          ' ' +
-          Math.random().toString(36).substring(2, 5),
-        x: (Math.random() - 0.5) * 20,
-        y: (Math.random() - 0.5) * 12,
-        z: (Math.random() - 0.5) * 15 - 10,
-        opacity: 0.08 + Math.random() * 0.1,
-      })
-    }
-    return lines
-  }, [])
-
-  return (
-    <group>
-      {codeLines.map((line, idx) => (
-        <Text
+      {elements.map((el, idx) => (
+        <Float
           key={idx}
-          position={[line.x, line.y, line.z]}
-          fontSize={0.25}
-          color="#88aaff"
-          opacity={line.opacity}
-          transparent
-          depthTest={false}
+          speed={0.4}
+          rotationIntensity={0.15}
+          floatIntensity={0.2}
         >
-          {line.text}
-        </Text>
+          <mesh position={[el.startX, el.startY, el.startZ]}>
+            <planeGeometry args={[el.size, el.size]} />
+            <meshStandardMaterial
+              color={el.color}
+              emissive={el.color}
+              emissiveIntensity={0.25}
+              side={THREE.DoubleSide}
+              transparent
+              opacity={0.9}
+            />
+            <Html distanceFactor={14} position={[0, 0, 0.05]} transform center>
+              <div
+                style={{
+                  fontSize: `${el.size * 45}px`,
+                  textAlign: 'center',
+                  filter: `drop-shadow(0 0 8px ${el.color})`,
+                  pointerEvents: 'none',
+                }}
+              >
+                {el.symbol}
+              </div>
+            </Html>
+          </mesh>
+        </Float>
       ))}
     </group>
   )
@@ -341,32 +203,30 @@ const CyberBackground3D = () => {
         backgroundColor: '#03030f',
       }}
     >
-      <Canvas camera={{ position: [0, 2, 14], fov: 55 }}>
-        <ambientLight intensity={0.4} />
-        <pointLight position={[10, 10, 10]} intensity={0.6} />
+      <Canvas
+        camera={{ position: [0, 1, 14], fov: 50 }}
+        dpr={[1, 2]}
+        performance={{ min: 0.5 }}
+      >
+        <ambientLight intensity={0.5} />
+        <pointLight position={[10, 10, 10]} intensity={0.7} />
         <pointLight position={[-5, -5, 5]} color="#ff3366" intensity={0.3} />
-
-        {/* Тусклый код на заднем плане */}
-        <CodeSpaceBackground />
-
-        {/* Хаотично движущиеся иконки и видео */}
-        <FloatingIconsAndCode />
-
+        <FloatingIconsOnly />
         <Stars
-          radius={150}
-          depth={60}
-          count={2500}
-          factor={5}
+          radius={100}
+          depth={50}
+          count={1200}
+          factor={4}
           saturation={0}
           fade
-          speed={0.4}
+          speed={0.2}
         />
         <Environment preset="night" />
         <OrbitControls
           enableZoom={false}
           enablePan={false}
           autoRotate
-          autoRotateSpeed={0.3}
+          autoRotateSpeed={0.15}
           target={[0, 0, 0]}
         />
       </Canvas>
@@ -375,80 +235,27 @@ const CyberBackground3D = () => {
 }
 
 // ---------- Вспомогательные компоненты ----------
-const CountUp = ({
-  value,
-  duration = 1.5,
-}: {
-  value: number
-  duration?: number
-}) => {
-  const [count, setCount] = useState(0)
-  useEffect(() => {
-    let start = 0
-    const end = value
-    if (start === end) return
-    const increment = end / (duration * 60)
-    const timer = setInterval(() => {
-      start += increment
-      if (start >= end) {
-        setCount(end)
-        clearInterval(timer)
-      } else {
-        setCount(Math.floor(start))
-      }
-    }, 1000 / 60)
-    return () => clearInterval(timer)
-  }, [value, duration])
-  return <span>{count.toLocaleString()}</span>
-}
-
-// Типы угроз с цветами
+// (CountUp не используется, т.к. статистика нулевая, но оставим на будущее)
 const RISK_TYPES = [
-  {
-    id: 'casino',
-    name: 'Нелегальное казино',
-    color: '#ff3366',
-    icon: '🎰',
-    description: 'Продвижение онлайн-казино без лицензии',
-  },
-  {
-    id: 'pyramid',
-    name: 'Финансовая пирамида',
-    color: '#ffaa44',
-    icon: '📈',
-    description: 'Схема Понци, обещание сверхдоходов',
-  },
-  {
-    id: 'gambling',
-    name: 'Азарт без лицензии',
-    color: '#ff8844',
-    icon: '🃏',
-    description: 'Лотереи, покер, ставки',
-  },
+  { id: 'casino', name: 'Нелегальное казино', color: '#ff3366', icon: '🎰' },
+  { id: 'pyramid', name: 'Финансовая пирамида', color: '#ffaa44', icon: '📈' },
+  { id: 'gambling', name: 'Азарт без лицензии', color: '#ff8844', icon: '🃏' },
   {
     id: 'guaranteed',
     name: 'Гарантированный доход',
     color: '#ff6666',
     icon: '💰',
-    description: 'Ложные обещания пассивного дохода',
   },
-  {
-    id: 'referral',
-    name: 'Реферальная схема',
-    color: '#ff9966',
-    icon: '🔗',
-    description: 'Многоуровневый маркетинг без продукта',
-  },
+  { id: 'referral', name: 'Реферальная схема', color: '#ff9966', icon: '🔗' },
   {
     id: 'crypto_scam',
     name: 'Крипто-мошенничество',
     color: '#ff44aa',
     icon: '₿',
-    description: 'Фейковые ICO, скам-токены',
   },
 ]
 
-// Генерация моковых данных
+// Генерация демо-данных для топов и графиков
 const generateMockThreats = (count: number) => {
   const platforms = ['tiktok', 'instagram', 'youtube']
   const authors = [
@@ -489,6 +296,9 @@ const CyberMediaWatchPro = () => {
   const [drawerOpen, setDrawerOpen] = useState(false)
   const [videoUrl, setVideoUrl] = useState('')
   const [isChecking, setIsChecking] = useState(false)
+  const [checkResultMessage, setCheckResultMessage] = useState<string | null>(
+    null
+  )
   const [timeframe, setTimeframe] = useState<'day' | 'week' | 'month'>('week')
   const [selectedRiskFilter, setSelectedRiskFilter] = useState<string[]>([])
   const [showReportDialog, setShowReportDialog] = useState(false)
@@ -496,9 +306,9 @@ const CyberMediaWatchPro = () => {
   const [reportSuccess, setReportSuccess] = useState(false)
 
   const isAdmin = user?.role === 'ADMIN'
-  const { t, i18n } = useTranslation()
+  const { i18n } = useTranslation()
 
-  // Фильтрация
+  // Фильтрация для демо-данных (влияет на топы, последние угрозы, графики)
   const filteredThreats = useMemo(() => {
     let threats = [...allMockThreats]
     const now = new Date()
@@ -517,6 +327,7 @@ const CyberMediaWatchPro = () => {
     return threats
   }, [timeframe, selectedRiskFilter])
 
+  // Данные для круговой диаграммы (типы угроз)
   const riskTypeStats = useMemo(() => {
     const stats: Record<string, number> = {}
     filteredThreats.forEach((t) =>
@@ -529,29 +340,7 @@ const CyberMediaWatchPro = () => {
     }))
   }, [filteredThreats])
 
-  const topAuthors = useMemo(() => {
-    const authorMap = new Map<string, { count: number; avgRisk: number }>()
-    filteredThreats.forEach((t) => {
-      const existing = authorMap.get(t.author)
-      if (existing) {
-        existing.count += 1
-        existing.avgRisk = (existing.avgRisk + t.riskScore) / 2
-      } else authorMap.set(t.author, { count: 1, avgRisk: t.riskScore })
-    })
-    return Array.from(authorMap.entries())
-      .map(([author, data]) => ({ author, ...data }))
-      .sort((a, b) => b.count - a.count)
-      .slice(0, 5)
-  }, [filteredThreats])
-
-  const topRiskyVideos = useMemo(
-    () =>
-      [...filteredThreats]
-        .sort((a, b) => b.riskScore - a.riskScore)
-        .slice(0, 6),
-    [filteredThreats]
-  )
-
+  // Линейный график: тренд за последние 7 дней
   const trendByDay = useMemo(() => {
     const last7Days = Array.from({ length: 7 }, (_, i) => {
       const d = new Date()
@@ -575,22 +364,47 @@ const CyberMediaWatchPro = () => {
     return last7Days
   }, [filteredThreats])
 
-  const warningMessage = useMemo(() => {
-    const top = topRiskyVideos[0]
-    if (!top) return 'Нет активных угроз'
-    if (top.riskScore > 0.9)
-      return `⚠️ КРИТИЧЕСКАЯ УГРОЗА: ${top.title} от @${top.author} с риском ${Math.round(top.riskScore * 100)}%! Срочно проверьте.`
-    if (top.riskScore > 0.7)
-      return `🔔 Высокий риск: ${top.title} (${Math.round(top.riskScore * 100)}%) – рекомендуется блокировка.`
-    return `📊 За период выявлено ${filteredThreats.length} подозрительных видео.`
-  }, [topRiskyVideos, filteredThreats.length])
+  const topRiskyVideos = useMemo(
+    () =>
+      [...filteredThreats]
+        .sort((a, b) => b.riskScore - a.riskScore)
+        .slice(0, 6),
+    [filteredThreats]
+  )
 
-  const handleCheckVideo = async () => {
+  const recentThreats = useMemo(
+    () =>
+      [...filteredThreats]
+        .sort(
+          (a, b) =>
+            new Date(b.processedAt).getTime() -
+            new Date(a.processedAt).getTime()
+        )
+        .slice(0, 8),
+    [filteredThreats]
+  )
+
+  const handleCheckVideo = () => {
     if (!videoUrl.trim()) return
     setIsChecking(true)
     setTimeout(() => {
       setIsChecking(false)
+      const randomRisk = Math.random()
+      if (randomRisk > 0.7) {
+        setCheckResultMessage(
+          `⚠️ КРИТИЧЕСКАЯ УГРОЗА: В видео ${videoUrl} обнаружены признаки нелегального казино и финансовой пирамиды! Рекомендуем не переходить по ссылкам.`
+        )
+      } else if (randomRisk > 0.4) {
+        setCheckResultMessage(
+          `🔔 Высокий риск: В видео ${videoUrl} найдены подозрительные реферальные ссылки. Будьте осторожны.`
+        )
+      } else {
+        setCheckResultMessage(
+          `✅ Видео ${videoUrl} не содержит явных угроз, но мы рекомендуем всегда проверять источники.`
+        )
+      }
       setVideoUrl('')
+      setTimeout(() => setCheckResultMessage(null), 7000)
     }, 2000)
   }
 
@@ -625,8 +439,6 @@ const CyberMediaWatchPro = () => {
       }}
     >
       <CyberBackground3D />
-
-      {/* Neon Grid Overlay (едва заметная) */}
       <Box
         sx={{
           position: 'fixed',
@@ -642,7 +454,6 @@ const CyberMediaWatchPro = () => {
       />
 
       <Box sx={{ position: 'relative', zIndex: 2 }}>
-        {/* Header */}
         <IconButton
           onClick={() => setDrawerOpen(true)}
           sx={{
@@ -706,7 +517,7 @@ const CyberMediaWatchPro = () => {
 
         <AppSidebar open={drawerOpen} onClose={() => setDrawerOpen(false)} />
 
-        <Box sx={{ width: '100%', maxWidth: 1400, mx: 'auto', px: 3, py: 6 }}>
+        <Box sx={{ width: '100%', maxWidth: 1200, mx: 'auto', px: 3, py: 6 }}>
           <motion.div
             initial={{ opacity: 0, y: -30 }}
             animate={{ opacity: 1, y: 0 }}
@@ -737,103 +548,181 @@ const CyberMediaWatchPro = () => {
           </motion.div>
 
           <AnimatePresence>
-            {warningMessage && (
+            {checkResultMessage && (
               <motion.div
                 initial={{ scale: 0.9, opacity: 0 }}
                 animate={{ scale: 1, opacity: 1 }}
                 exit={{ scale: 0.9, opacity: 0 }}
               >
                 <Alert
-                  severity="warning"
+                  severity={
+                    checkResultMessage.includes('✅') ? 'success' : 'warning'
+                  }
                   sx={{
                     mb: 3,
                     borderRadius: 4,
-                    bgcolor: 'rgba(255,51,102,0.2)',
-                    border: '1px solid #ff3366',
-                    color: '#ffcc88',
+                    bgcolor: 'rgba(0,0,0,0.7)',
+                    border: `1px solid ${checkResultMessage.includes('✅') ? '#44ff66' : '#ff3366'}`,
+                    color: '#fff',
                   }}
                 >
-                  {warningMessage}
+                  {checkResultMessage}
                 </Alert>
               </motion.div>
             )}
           </AnimatePresence>
 
-          {/* Проверка видео */}
-          <Card
-            sx={{
-              mb: 5,
-              bgcolor: 'rgba(10,10,30,0.6)',
-              backdropFilter: 'blur(12px)',
-              borderRadius: 4,
-              border: '1px solid rgba(0,255,255,0.4)',
-              boxShadow: '0 0 20px rgba(0,255,255,0.2)',
-              p: 2,
-            }}
-          >
-            <Typography
-              variant="h6"
+          {/* Проверка видео (центрированная, уже) */}
+          <Box sx={{ display: 'flex', justifyContent: 'center', mb: 5 }}>
+            <Card
               sx={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: 1,
-                mb: 2,
-                color: '#0ff',
+                maxWidth: 700,
+                width: '100%',
+                bgcolor: 'rgba(10,10,30,0.6)',
+                backdropFilter: 'blur(12px)',
+                borderRadius: 4,
+                border: '1px solid rgba(0,255,255,0.4)',
+                boxShadow: '0 0 20px rgba(0,255,255,0.2)',
+                p: 2,
               }}
             >
-              <LinkIcon /> Анализ видео по ссылке
-            </Typography>
-            <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
-              <TextField
-                placeholder="Вставьте ссылку на TikTok / Instagram / YouTube"
-                value={videoUrl}
-                onChange={(e) => setVideoUrl(e.target.value)}
-                fullWidth
+              <Typography
+                variant="h6"
                 sx={{
-                  flex: 1,
-                  '& .MuiOutlinedInput-root': {
-                    borderRadius: '40px',
-                    backgroundColor: 'rgba(0,0,0,0.6)',
-                    '& fieldset': { borderColor: '#0ff' },
-                  },
-                  input: { color: '#fff' },
-                }}
-                InputProps={{
-                  startAdornment: (
-                    <InputAdornment position="start">
-                      <SearchIcon sx={{ color: '#0ff' }} />
-                    </InputAdornment>
-                  ),
-                }}
-              />
-              <Button
-                variant="contained"
-                onClick={handleCheckVideo}
-                disabled={isChecking}
-                sx={{
-                  borderRadius: '40px',
-                  background: 'linear-gradient(45deg, #ff3366, #ff6633)',
-                  px: 4,
-                  '&:hover': { boxShadow: '0 0 15px #ff3366' },
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 1,
+                  mb: 2,
+                  color: '#0ff',
                 }}
               >
-                {isChecking ? (
-                  <CircularProgress size={24} sx={{ color: '#fff' }} />
-                ) : (
-                  'Проверить'
-                )}
-              </Button>
-            </Box>
-            <Typography
-              variant="caption"
-              sx={{ mt: 1, color: '#aaa', display: 'block' }}
-            >
-              🧠 Мультимодальный AI: видео, аудио, OCR, граф связей. Результат
-              через 1-2 минуты.
-            </Typography>
-          </Card>
+                <LinkIcon /> Анализ видео по ссылке
+              </Typography>
+              <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
+                <TextField
+                  placeholder="Вставьте ссылку на TikTok / Instagram / YouTube"
+                  value={videoUrl}
+                  onChange={(e) => setVideoUrl(e.target.value)}
+                  fullWidth
+                  sx={{
+                    flex: 1,
+                    '& .MuiOutlinedInput-root': {
+                      borderRadius: '40px',
+                      backgroundColor: 'rgba(0,0,0,0.6)',
+                      '& fieldset': { borderColor: '#0ff' },
+                    },
+                    input: { color: '#fff' },
+                  }}
+                  InputProps={{
+                    startAdornment: (
+                      <InputAdornment position="start">
+                        <SearchIcon sx={{ color: '#0ff' }} />
+                      </InputAdornment>
+                    ),
+                  }}
+                />
+                <Button
+                  variant="contained"
+                  onClick={handleCheckVideo}
+                  disabled={isChecking}
+                  sx={{
+                    borderRadius: '40px',
+                    background: 'linear-gradient(45deg, #ff3366, #ff6633)',
+                    px: 4,
+                    '&:hover': { boxShadow: '0 0 15px #ff3366' },
+                  }}
+                >
+                  {isChecking ? (
+                    <CircularProgress size={24} sx={{ color: '#fff' }} />
+                  ) : (
+                    'Проверить'
+                  )}
+                </Button>
+              </Box>
+              <Typography
+                variant="caption"
+                sx={{ mt: 1, color: '#aaa', display: 'block' }}
+              >
+                🧠 Мультимодальный AI: видео, аудио, OCR, граф связей. Результат
+                через 1-2 минуты.
+              </Typography>
+            </Card>
+          </Box>
 
-          {/* Фильтры */}
+          {/* Статистика (нули) */}
+          <Grid container spacing={3} sx={{ mb: 5 }}>
+            {[
+              {
+                icon: <VideoLibraryIcon />,
+                label: 'Видео обработано',
+                value: 0,
+                color: '#33ffcc',
+              },
+              {
+                icon: <WarningIcon />,
+                label: 'Угроз выявлено',
+                value: 0,
+                color: '#ff3366',
+              },
+              {
+                icon: <TrendingUpIcon />,
+                label: 'Авторов в топе',
+                value: 0,
+                color: '#ffaa44',
+              },
+              {
+                icon: <AnalyticsIcon />,
+                label: 'Платформ',
+                value: 0,
+                color: '#aa66ff',
+              },
+            ].map((item, idx) => (
+              <Grid size={{ xs: 6, md: 3 }} key={idx}>
+                <motion.div
+                  initial={{ y: 50, opacity: 0 }}
+                  animate={{ y: 0, opacity: 1 }}
+                  transition={{ delay: idx * 0.1 }}
+                >
+                  <Card
+                    sx={{
+                      bgcolor: 'rgba(0,0,0,0.5)',
+                      backdropFilter: 'blur(8px)',
+                      borderRadius: 3,
+                      border: `1px solid ${item.color}`,
+                      textAlign: 'center',
+                      py: 2,
+                      transition: '0.2s',
+                      '&:hover': {
+                        transform: 'translateY(-5px)',
+                        boxShadow: `0 0 20px ${item.color}`,
+                      },
+                    }}
+                  >
+                    <CardContent>
+                      <Box sx={{ fontSize: 40, color: item.color }}>
+                        {item.icon}
+                      </Box>
+                      <Typography
+                        variant="h4"
+                        sx={{
+                          fontWeight: 'bold',
+                          fontFamily: 'monospace',
+                          color: '#fff',
+                        }}
+                      >
+                        {item.value}
+                      </Typography>
+                      <Typography variant="body2" sx={{ color: '#fff' }}>
+                        {item.label}
+                      </Typography>
+                    </CardContent>
+                  </Card>
+                </motion.div>
+              </Grid>
+            ))}
+          </Grid>
+
+          {/* Фильтры (период и тип угрозы) */}
           <Box
             sx={{
               display: 'flex',
@@ -906,80 +795,299 @@ const CyberMediaWatchPro = () => {
             </FormControl>
           </Box>
 
-          {/* Статистика */}
-          <Grid container spacing={3} sx={{ mb: 5 }}>
-            {[
-              {
-                icon: <VideoLibraryIcon />,
-                label: 'Видео обработано',
-                value: 18740,
-                color: '#33ffcc',
-              },
-              {
-                icon: <WarningIcon />,
-                label: 'Угроз выявлено',
-                value: filteredThreats.length,
-                color: '#ff3366',
-              },
-              {
-                icon: <TrendingUpIcon />,
-                label: 'Авторов в топе',
-                value: topAuthors.length,
-                color: '#ffaa44',
-              },
-              {
-                icon: <AnalyticsIcon />,
-                label: 'Платформ',
-                value: 3,
-                color: '#aa66ff',
-              },
-            ].map((item, idx) => (
-              <Grid size={{ xs: 6, md: 3 }} key={idx}>
-                <motion.div
-                  initial={{ y: 50, opacity: 0 }}
-                  animate={{ y: 0, opacity: 1 }}
-                  transition={{ delay: idx * 0.1 }}
+          {/* ТОП-6 опасных видео */}
+          <Typography
+            variant="h5"
+            sx={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 1,
+              mb: 2,
+              color: '#ff6666',
+            }}
+          >
+            <ReportProblemIcon /> 🚨 ТОП-6 самых опасных видео
+          </Typography>
+          <Box
+            sx={{ display: 'flex', overflowX: 'auto', gap: 3, pb: 3, mb: 5 }}
+          >
+            {topRiskyVideos.map((video) => (
+              <motion.div
+                key={video.id}
+                whileHover={{ scale: 1.03 }}
+                transition={{ type: 'spring', stiffness: 300 }}
+                style={{ flex: '0 0 auto', width: 260 }}
+              >
+                <Card
+                  onClick={() => handleVideoClick(video.id)}
+                  sx={{
+                    cursor: 'pointer',
+                    bgcolor: 'rgba(20,20,40,0.8)',
+                    backdropFilter: 'blur(12px)',
+                    borderRadius: 4,
+                    border: `1px solid ${video.riskTypes[0]?.color || '#ff3366'}`,
+                    overflow: 'hidden',
+                    transition: '0.2s',
+                  }}
                 >
-                  <Card
+                  <Box
                     sx={{
-                      bgcolor: 'rgba(0,0,0,0.5)',
-                      backdropFilter: 'blur(8px)',
-                      borderRadius: 3,
-                      border: `1px solid ${item.color}`,
-                      textAlign: 'center',
-                      py: 2,
-                      transition: '0.2s',
-                      '&:hover': {
-                        transform: 'translateY(-5px)',
-                        boxShadow: `0 0 20px ${item.color}`,
-                      },
+                      height: 140,
+                      overflow: 'hidden',
+                      position: 'relative',
                     }}
                   >
-                    <CardContent>
-                      <Box sx={{ fontSize: 40, color: item.color }}>
-                        {item.icon}
-                      </Box>
-                      <Typography
-                        variant="h4"
-                        sx={{
-                          fontWeight: 'bold',
-                          fontFamily: 'monospace',
-                          color: '#fff',
-                        }}
-                      >
-                        <CountUp value={item.value} />
-                      </Typography>
-                      <Typography variant="body2" sx={{ color: '#fff' }}>
-                        {item.label}
-                      </Typography>
-                    </CardContent>
-                  </Card>
-                </motion.div>
-              </Grid>
+                    <img
+                      src={video.thumbnail}
+                      alt={video.title}
+                      style={{
+                        width: '100%',
+                        height: '100%',
+                        objectFit: 'cover',
+                      }}
+                    />
+                    <Chip
+                      label={`RISK ${Math.round(video.riskScore * 100)}%`}
+                      size="small"
+                      sx={{
+                        position: 'absolute',
+                        top: 8,
+                        right: 8,
+                        bgcolor: '#ff3366',
+                        fontWeight: 'bold',
+                      }}
+                    />
+                  </Box>
+                  <Box sx={{ p: 2 }}>
+                    <Typography
+                      variant="body1"
+                      fontWeight="bold"
+                      noWrap
+                      sx={{ color: '#fff' }}
+                    >
+                      {video.title}
+                    </Typography>
+                    <Typography variant="caption" sx={{ color: '#aaa' }}>
+                      @{video.author} • {video.platform}
+                    </Typography>
+                    <Box
+                      sx={{
+                        mt: 1,
+                        display: 'flex',
+                        gap: 0.5,
+                        flexWrap: 'wrap',
+                      }}
+                    >
+                      {video.riskTypes.map((rt) => (
+                        <Chip
+                          key={rt.id}
+                          label={rt.name}
+                          size="small"
+                          sx={{
+                            bgcolor: rt.color,
+                            color: '#fff',
+                            fontSize: '0.65rem',
+                          }}
+                        />
+                      ))}
+                    </Box>
+                  </Box>
+                </Card>
+              </motion.div>
             ))}
+          </Box>
+
+          {/* Последние угрозы */}
+          <Typography variant="h5" sx={{ mb: 2, color: '#88f' }}>
+            ⏱️ Последние выявленные угрозы
+          </Typography>
+          <Card
+            sx={{
+              bgcolor: 'rgba(0,0,0,0.5)',
+              backdropFilter: 'blur(8px)',
+              borderRadius: 3,
+              mb: 5,
+            }}
+          >
+            <List>
+              <AnimatePresence>
+                {recentThreats.map((threat, idx) => (
+                  <motion.div
+                    key={threat.id}
+                    initial={{ opacity: 0, x: -30 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: idx * 0.05 }}
+                  >
+                    <ListItem
+                      button
+                      onClick={() => handleVideoClick(threat.id)}
+                    >
+                      <ListItemAvatar>
+                        <Avatar src={threat.thumbnail} variant="rounded" />
+                      </ListItemAvatar>
+                      <ListItemText
+                        primary={threat.title}
+                        secondary={`${threat.author} • ${threat.platform} • ${new Date(threat.processedAt).toLocaleString()} • 👁️ ${threat.views.toLocaleString()} • 💬 ${threat.comments}`}
+                        primaryTypographyProps={{ color: '#fff' }}
+                        secondaryTypographyProps={{ color: '#aaa' }}
+                      />
+                      <Box
+                        sx={{ display: 'flex', gap: 1, alignItems: 'center' }}
+                      >
+                        <LinearProgress
+                          variant="determinate"
+                          value={threat.riskScore * 100}
+                          sx={{ width: 80, height: 6, borderRadius: 3 }}
+                        />
+                        <Chip
+                          label={`${Math.round(threat.riskScore * 100)}%`}
+                          size="small"
+                          sx={{ bgcolor: '#ff3366', color: '#fff' }}
+                        />
+                      </Box>
+                    </ListItem>
+                    <Divider variant="inset" sx={{ borderColor: '#333' }} />
+                  </motion.div>
+                ))}
+              </AnimatePresence>
+            </List>
+          </Card>
+
+          {/* Информационные блоки с картинками */}
+          <Grid container spacing={4} sx={{ mb: 5 }}>
+            <Grid size={{ xs: 12, md: 6 }}>
+              <Card
+                sx={{
+                  bgcolor: 'rgba(0,0,0,0.6)',
+                  backdropFilter: 'blur(8px)',
+                  borderRadius: 4,
+                  height: '100%',
+                }}
+              >
+                <CardMedia
+                  component="img"
+                  height="180"
+                  image="https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=600"
+                  alt="Как это работает"
+                />
+                <CardContent>
+                  <Typography variant="h6" sx={{ color: '#0ff', mb: 1 }}>
+                    🔍 Как это работает?
+                  </Typography>
+                  <Typography variant="body2" sx={{ color: '#ddd' }}>
+                    AI Media Watch анализирует видео в 3 этапа: 1) Извлечение
+                    ключевых кадров, аудио и текста (OCR). 2) Детекция
+                    визуальных маркеров казино/пирамид (YOLO), транскрибация
+                    речи (Whisper), поиск запрещённых фраз (NLP). 3) Вынесение
+                    вердикта и объяснение риска.
+                  </Typography>
+                </CardContent>
+              </Card>
+            </Grid>
+            <Grid size={{ xs: 12, md: 6 }}>
+              <Card
+                sx={{
+                  bgcolor: 'rgba(0,0,0,0.6)',
+                  backdropFilter: 'blur(8px)',
+                  borderRadius: 4,
+                  height: '100%',
+                }}
+              >
+                <CardMedia
+                  component="img"
+                  height="180"
+                  image="https://images.unsplash.com/photo-1454165804606-c3d57bc86b40?w=600"
+                  alt="Почему это важно?"
+                />
+                <CardContent>
+                  <Typography variant="h6" sx={{ color: '#0ff', mb: 1 }}>
+                    ⚠️ Почему это важно?
+                  </Typography>
+                  <Typography variant="body2" sx={{ color: '#ddd' }}>
+                    Ежедневно тысячи пользователей попадаются на уловки
+                    мошенников в соцсетях: фейковые казино, финансовые пирамиды,
+                    реферальные схемы. Наш AI помогает выявлять такие угрозы до
+                    того, как они нанесут вред.
+                  </Typography>
+                </CardContent>
+              </Card>
+            </Grid>
+            <Grid size={{ xs: 12, md: 4 }}>
+              <Card
+                sx={{
+                  bgcolor: 'rgba(0,0,0,0.6)',
+                  backdropFilter: 'blur(8px)',
+                  borderRadius: 4,
+                }}
+              >
+                <CardMedia
+                  component="img"
+                  height="140"
+                  image="https://images.unsplash.com/photo-1526304640581-d334cdbbf45e?w=400"
+                  alt="Типичные схемы"
+                />
+                <CardContent>
+                  <Typography variant="subtitle1" sx={{ color: '#ffaa44' }}>
+                    🎰 Нелегальные казино
+                  </Typography>
+                  <Typography variant="body2" sx={{ color: '#ddd' }}>
+                    Обещают лёгкий выигрыш, но на деле выводят деньги.
+                  </Typography>
+                </CardContent>
+              </Card>
+            </Grid>
+            <Grid size={{ xs: 12, md: 4 }}>
+              <Card
+                sx={{
+                  bgcolor: 'rgba(0,0,0,0.6)',
+                  backdropFilter: 'blur(8px)',
+                  borderRadius: 4,
+                }}
+              >
+                <CardMedia
+                  component="img"
+                  height="140"
+                  image="https://images.unsplash.com/photo-1621506289937-a8e4df240d0b?w=400"
+                  alt="Финансовые пирамиды"
+                />
+                <CardContent>
+                  <Typography variant="subtitle1" sx={{ color: '#ffaa44' }}>
+                    📈 Финансовые пирамиды
+                  </Typography>
+                  <Typography variant="body2" sx={{ color: '#ddd' }}>
+                    «Инвестируй 1000, получи 10000» — классическая схема Понци.
+                  </Typography>
+                </CardContent>
+              </Card>
+            </Grid>
+            <Grid size={{ xs: 12, md: 4 }}>
+              <Card
+                sx={{
+                  bgcolor: 'rgba(0,0,0,0.6)',
+                  backdropFilter: 'blur(8px)',
+                  borderRadius: 4,
+                }}
+              >
+                <CardMedia
+                  component="img"
+                  height="140"
+                  image="https://images.unsplash.com/photo-1611162617213-7d7a39e9b1d7?w=400"
+                  alt="Реферальные схемы"
+                />
+                <CardContent>
+                  <Typography variant="subtitle1" sx={{ color: '#ffaa44' }}>
+                    🔗 Реферальные схемы
+                  </Typography>
+                  <Typography variant="body2" sx={{ color: '#ddd' }}>
+                    Заработок только на привлечении новых жертв без реального
+                    продукта.
+                  </Typography>
+                </CardContent>
+              </Card>
+            </Grid>
           </Grid>
 
-          {/* Графики */}
+          {/* ========== ГРАФИКИ (восстановлены) ========== */}
           <Grid container spacing={3} sx={{ mb: 5 }}>
             <Grid size={{ xs: 12, md: 7 }}>
               <Card
@@ -1066,254 +1174,46 @@ const CyberMediaWatchPro = () => {
             </Grid>
           </Grid>
 
-          {/* Топ авторов */}
-          <Card
-            sx={{
-              mb: 5,
-              bgcolor: 'rgba(0,0,0,0.5)',
-              backdropFilter: 'blur(8px)',
-              borderRadius: 3,
-              p: 2,
-              border: '1px solid #ff9966',
-            }}
-          >
-            <Typography
-              variant="h6"
-              sx={{
-                mb: 2,
-                color: '#ff9966',
-                display: 'flex',
-                alignItems: 'center',
-                gap: 1,
-              }}
-            >
-              <WhatshotIcon /> Топ-5 авторов по количеству угроз
-            </Typography>
-            <Grid container spacing={2}>
-              {topAuthors.map((author, idx) => (
-                <Grid size={{ xs: 12, sm: 4 }} key={author.author}>
-                  <Box
-                    sx={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: 2,
-                      bgcolor: 'rgba(0,0,0,0.4)',
-                      p: 1,
-                      borderRadius: 2,
-                    }}
-                  >
-                    <Avatar sx={{ bgcolor: '#ff3366' }}>{idx + 1}</Avatar>
-                    <Box>
-                      <Typography fontWeight="bold" sx={{ color: '#fff' }}>
-                        @{author.author}
-                      </Typography>
-                      <Typography variant="caption" sx={{ color: '#ccc' }}>
-                        Угроз: {author.count} • Ср. риск:{' '}
-                        {Math.round(author.avgRisk * 100)}%
-                      </Typography>
-                    </Box>
-                  </Box>
-                </Grid>
-              ))}
-            </Grid>
-          </Card>
-
-          {/* Топ угроз */}
-          <Typography
-            variant="h5"
-            sx={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: 1,
-              mb: 2,
-              color: '#ff6666',
-            }}
-          >
-            <ReportProblemIcon /> 🚨 ТОП-6 самых опасных видео
-          </Typography>
-          <Box
-            sx={{ display: 'flex', overflowX: 'auto', gap: 3, pb: 3, mb: 5 }}
-          >
-            {topRiskyVideos.map((video) => (
-              <motion.div
-                key={video.id}
-                whileHover={{ scale: 1.05, rotate: 1 }}
-                transition={{ type: 'spring', stiffness: 300 }}
-                style={{ flex: '0 0 auto', width: 280 }}
-              >
-                <Card
-                  onClick={() => handleVideoClick(video.id)}
-                  sx={{
-                    cursor: 'pointer',
-                    bgcolor: 'rgba(20,20,40,0.8)',
-                    backdropFilter: 'blur(12px)',
-                    borderRadius: 4,
-                    border: `1px solid ${video.riskTypes[0]?.color || '#ff3366'}`,
-                    overflow: 'hidden',
-                    transition: '0.2s',
-                  }}
-                >
-                  <Box
-                    sx={{
-                      height: 150,
-                      overflow: 'hidden',
-                      position: 'relative',
-                    }}
-                  >
-                    <img
-                      src={video.thumbnail}
-                      alt={video.title}
-                      style={{
-                        width: '100%',
-                        height: '100%',
-                        objectFit: 'cover',
-                      }}
-                    />
-                    <Chip
-                      label={`RISK ${Math.round(video.riskScore * 100)}%`}
-                      size="small"
-                      sx={{
-                        position: 'absolute',
-                        top: 8,
-                        right: 8,
-                        bgcolor: '#ff3366',
-                        fontWeight: 'bold',
-                      }}
-                    />
-                  </Box>
-                  <Box sx={{ p: 2 }}>
-                    <Typography
-                      variant="body1"
-                      fontWeight="bold"
-                      noWrap
-                      sx={{ color: '#fff' }}
-                    >
-                      {video.title}
-                    </Typography>
-                    <Typography variant="caption" sx={{ color: '#aaa' }}>
-                      @{video.author} • {video.platform}
-                    </Typography>
-                    <Box
-                      sx={{
-                        mt: 1,
-                        display: 'flex',
-                        gap: 0.5,
-                        flexWrap: 'wrap',
-                      }}
-                    >
-                      {video.riskTypes.map((rt) => (
-                        <Chip
-                          key={rt.id}
-                          label={rt.name}
-                          size="small"
-                          sx={{
-                            bgcolor: rt.color,
-                            color: '#fff',
-                            fontSize: '0.65rem',
-                          }}
-                        />
-                      ))}
-                    </Box>
-                  </Box>
-                </Card>
-              </motion.div>
-            ))}
-          </Box>
-
-          {/* Последние угрозы */}
-          <Typography variant="h5" sx={{ mb: 2, color: '#88f' }}>
-            ⏱️ Последние выявленные угрозы
-          </Typography>
-          <Card
-            sx={{
-              bgcolor: 'rgba(0,0,0,0.5)',
-              backdropFilter: 'blur(8px)',
-              borderRadius: 3,
-              mb: 5,
-            }}
-          >
-            <List>
-              <AnimatePresence>
-                {filteredThreats.slice(0, 8).map((threat, idx) => (
-                  <motion.div
-                    key={threat.id}
-                    initial={{ opacity: 0, x: -30 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: idx * 0.05 }}
-                  >
-                    <ListItem
-                      button
-                      onClick={() => handleVideoClick(threat.id)}
-                    >
-                      <ListItemAvatar>
-                        <Avatar src={threat.thumbnail} variant="rounded" />
-                      </ListItemAvatar>
-                      <ListItemText
-                        primary={threat.title}
-                        secondary={`${threat.author} • ${threat.platform} • ${new Date(threat.processedAt).toLocaleString()} • 👁️ ${threat.views.toLocaleString()} • 💬 ${threat.comments}`}
-                        primaryTypographyProps={{ color: '#fff' }}
-                        secondaryTypographyProps={{ color: '#aaa' }}
-                      />
-                      <Box
-                        sx={{ display: 'flex', gap: 1, alignItems: 'center' }}
-                      >
-                        <LinearProgress
-                          variant="determinate"
-                          value={threat.riskScore * 100}
-                          sx={{ width: 80, height: 6, borderRadius: 3 }}
-                        />
-                        <Chip
-                          label={`${Math.round(threat.riskScore * 100)}%`}
-                          size="small"
-                          sx={{ bgcolor: '#ff3366', color: '#fff' }}
-                        />
-                      </Box>
-                    </ListItem>
-                    <Divider variant="inset" sx={{ borderColor: '#333' }} />
-                  </motion.div>
-                ))}
-              </AnimatePresence>
-            </List>
-          </Card>
-
-          {/* Информационный блок */}
+          {/* Блок "Как защитить себя" */}
           <Box
             sx={{
               textAlign: 'center',
-              mt: 4,
+              mt: 2,
               p: 3,
               borderRadius: 3,
               bgcolor: 'rgba(0,0,0,0.5)',
               backdropFilter: 'blur(8px)',
             }}
           >
-            <Typography variant="h6" sx={{ color: '#0ff' }}>
-              🛡️ Как мы предостерегаем?
+            <Typography variant="h6" sx={{ color: '#0ff', mb: 2 }}>
+              🛡️ Как защитить себя от мошенничества?
             </Typography>
-            <Grid container spacing={2} sx={{ mt: 1 }}>
-              <Grid size={{ xs: 12, md: 4 }}>
+            <Grid container spacing={2}>
+              <Grid size={{ xs: 12, md: 3 }}>
                 <Typography variant="body2" sx={{ color: '#ddd' }}>
-                  ✅ Автоматическое распознавание визуальных маркеров
-                  казино/пирамид
+                  ✅ Не переходите по подозрительным ссылкам
                 </Typography>
               </Grid>
-              <Grid size={{ xs: 12, md: 4 }}>
+              <Grid size={{ xs: 12, md: 3 }}>
                 <Typography variant="body2" sx={{ color: '#ddd' }}>
-                  ✅ Транскрибация аудио и NLP-анализ текста на запрещённые
-                  фразы
+                  ✅ Проверяйте отзывы о казино/инвестициях
                 </Typography>
               </Grid>
-              <Grid size={{ xs: 12, md: 4 }}>
+              <Grid size={{ xs: 12, md: 3 }}>
                 <Typography variant="body2" sx={{ color: '#ddd' }}>
-                  ✅ Построение графа реферальных связей и выявление
-                  организованных групп
+                  ✅ Не доверяйте гарантированному доходу
+                </Typography>
+              </Grid>
+              <Grid size={{ xs: 12, md: 3 }}>
+                <Typography variant="body2" sx={{ color: '#ddd' }}>
+                  ✅ Используйте наш AI для проверки видео
                 </Typography>
               </Grid>
             </Grid>
             <Button
               variant="text"
               sx={{
-                mt: 2,
+                mt: 3,
                 color: '#0ff',
                 border: '1px solid #0ff',
                 borderRadius: 4,
@@ -1325,7 +1225,6 @@ const CyberMediaWatchPro = () => {
         </Box>
       </Box>
 
-      {/* Диалог жалобы */}
       <Dialog
         open={showReportDialog}
         onClose={() => setShowReportDialog(false)}
