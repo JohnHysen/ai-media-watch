@@ -16,5 +16,7 @@ def download_video(analyze_id: str, url: str):
 
 
 def remove_video(analyze_id: str):
-    path = path = Path("temp") / analyze_id
-    shutil.rmtree(path)
+    path = Path("temp") / analyze_id
+
+    if path.exists():
+        shutil.rmtree(path)
