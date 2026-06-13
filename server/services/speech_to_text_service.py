@@ -1,6 +1,6 @@
 # services/speech_to_text_service.py
 from pathlib import Path
-from services.model_loader import get_whisper_model
+from .model_loader import get_whisper_model
 
 def transcribe_audio(analyze_id: str) -> str:
     

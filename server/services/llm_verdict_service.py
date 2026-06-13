@@ -2,7 +2,7 @@
 import json
 import re
 from pathlib import Path
-from services.model_loader import get_llm_model
+from .model_loader import get_llm_model
 
 
 def get_llm_verdict(analyze_id: str, metadata: dict, transcript: str, frame_analysis: dict) -> dict:

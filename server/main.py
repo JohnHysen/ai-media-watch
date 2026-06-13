@@ -6,14 +6,27 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
-from services.file_lifecycle_service import download_video, remove_video
-from services.video_processing_service import video_processing
-from services.metadata_service import get_video_metadata
-from services.speech_to_text_service import transcribe_audio
-from services.frame_analysis_service import analyze_frames
-from services.llm_verdict_service import get_llm_verdict
+from .services.file_lifecycle_service import download_video, remove_video
+from .services.video_processing_service import video_processing
+from .services.metadata_service import get_video_metadata
+from .services.speech_to_text_service import transcribe_audio
+from .services.frame_analysis_service import analyze_frames
+from .services.llm_verdict_service import get_llm_verdict
+from contextlib import asynccontextmanager
+from .db.init_db import init_db
+from .models_db import AnalyticsResult
+from datetime import datetime
+from .db.session import SessionLocal
 
-app = FastAPI()
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    init_db()
+
+    yield
+
+
+app = FastAPI(lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,
@@ -31,7 +44,7 @@ async def analyze(request: AnalyzeRequest):
     url = request.url
     start_time = time.time()
     analyze_id = str(uuid.uuid4())
-    
+
     try:
         print(f"🔍 Анализ видео: {url}")
         print(f"📁 ID: {analyze_id}")
@@ -53,14 +66,16 @@ async def analyze(request: AnalyzeRequest):
 
         verdict = get_llm_verdict(analyze_id, metadata, transcript, frame_analysis)
         
+
+        # # 7. Удаляем файлы
         print("🧹 Очистка...")
         remove_video(analyze_id)
-        
+
         duration = round(time.time() - start_time, 2)
 
         result = {
             "url": url,
-            "video_title": metadata.get('title', ''),
+            "video_title": metadata.get("title", ""),
             "verdict": verdict.get("verdict", "неизвестно"),
             "is_dangerous": verdict.get("is_dangerous", False),
             "confidence": verdict.get("confidence", 0.0),
@@ -69,7 +84,25 @@ async def analyze(request: AnalyzeRequest):
             "transcript_length": len(transcript),
             "time_seconds": duration,
         }
-        print(f"\n✨ РЕЗУЛЬТАТ: {result['verdict'].upper()} ({result['confidence']:.0%})")
+
+        analytics_result = AnalyticsResult(
+            name = result.get("video_title"),
+            url = result.get("url"),
+            verdict = result.get("verdict"),
+            is_dangerous = result.get("is_dangerous", False),
+            confidence = result.get("confidence", 0.0),
+            reason = result.get("reason", ""),
+            time_seconds = result.get("time_seconds", 0.0),
+            created_at = datetime.now(),
+        )
+        
+        db = SessionLocal()
+        db.add(analytics_result)
+        db.commit()
+
+        print(
+            f"\n✨ РЕЗУЛЬТАТ: {result['verdict'].upper()} ({result['confidence']:.0%})"
+        )
         return result
 
     except Exception as e:
