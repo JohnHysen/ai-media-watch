@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useMemo } from 'react'
+import React, { useState, useRef, useMemo } from 'react'
 import {
   Avatar,
   Box,
@@ -38,7 +38,6 @@ import VideoLibraryIcon from '@mui/icons-material/VideoLibrary'
 import WarningIcon from '@mui/icons-material/Warning'
 import AnalyticsIcon from '@mui/icons-material/Analytics'
 import LinkIcon from '@mui/icons-material/Link'
-import WhatshotIcon from '@mui/icons-material/Whatshot'
 import ReportProblemIcon from '@mui/icons-material/ReportProblem'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Canvas, useFrame } from '@react-three/fiber'
@@ -377,11 +376,9 @@ const CyberMediaWatchPro = () => {
     if (!videoUrl.trim()) return
     setIsChecking(true)
     try {
-      const response = await fetch('http://localhost:8000/analyze', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ url: videoUrl }),
-      })
+      const response = await fetch(
+        'http://localhost:8000/analyze?url=' + encodeURIComponent(videoUrl)
+      )
       if (!response.ok) {
         const errorText = await response.text()
         throw new Error(errorText || 'Ошибка сервера')

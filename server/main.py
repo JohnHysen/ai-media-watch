@@ -36,12 +36,9 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-class AnalyzeRequest(BaseModel):
-    url: str
 
-@app.post("/analyze")
-async def analyze(request: AnalyzeRequest):
-    url = request.url
+@app.get("/analyze")
+async def analyze(url: str):
     start_time = time.time()
     analyze_id = str(uuid.uuid4())
 
@@ -65,7 +62,6 @@ async def analyze(request: AnalyzeRequest):
         print(f"   ✅ Кадров проанализировано: {frame_analysis.get('total_frames', 0)}")
 
         verdict = get_llm_verdict(analyze_id, metadata, transcript, frame_analysis)
-        
 
         # # 7. Удаляем файлы
         print("🧹 Очистка...")
@@ -86,16 +82,16 @@ async def analyze(request: AnalyzeRequest):
         }
 
         analytics_result = AnalyticsResult(
-            name = result.get("video_title"),
-            url = result.get("url"),
-            verdict = result.get("verdict"),
-            is_dangerous = result.get("is_dangerous", False),
-            confidence = result.get("confidence", 0.0),
-            reason = result.get("reason", ""),
-            time_seconds = result.get("time_seconds", 0.0),
-            created_at = datetime.now(),
+            name=result.get("video_title"),
+            url=result.get("url"),
+            verdict=result.get("verdict"),
+            is_dangerous=result.get("is_dangerous", False),
+            confidence=result.get("confidence", 0.0),
+            reason=result.get("reason", ""),
+            time_seconds=result.get("time_seconds", 0.0),
+            created_at=datetime.now(),
         )
-        
+
         db = SessionLocal()
         db.add(analytics_result)
         db.commit()
@@ -112,9 +108,11 @@ async def analyze(request: AnalyzeRequest):
             pass
         raise e
 
+
 @app.get("/")
 def read_root():
     return {"Hello": "World"}
+
 
 @app.get("/items/{item_id}")
 def read_item(item_id: int, q: str | None = None):
