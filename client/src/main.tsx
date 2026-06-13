@@ -18,7 +18,6 @@ import './index.css'
 import './i18n'
 import WithAuth from './components/WithAuth.tsx'
 import Email from './pages/Email.tsx'
-import Charts from './pages/Charts.tsx'
 import Profile from './pages/Profile.tsx'
 import History from './pages/History'
 import Analytics from './pages/Analytics'
@@ -79,10 +78,6 @@ const router = createBrowserRouter([
       {
         path: '/8-qr',
         element: <WithAuth c={<QR />} roles={['USER', 'ADMIN']} />,
-      },
-      {
-        path: '/9-charts',
-        element: <WithAuth c={<Charts />} roles={['ADMIN']} />,
       },
       {
         path: '/profile',

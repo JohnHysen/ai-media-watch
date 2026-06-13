@@ -24,6 +24,7 @@ import {
   Tabs,
   InputAdornment,
   IconButton as MuiIconButton,
+  CircularProgress,
 } from '@mui/material'
 import CloseIcon from '@mui/icons-material/Close'
 import DashboardIcon from '@mui/icons-material/Dashboard'
@@ -38,6 +39,7 @@ import VisibilityOff from '@mui/icons-material/VisibilityOff'
 import { useNavigate } from 'react-router-dom'
 import { useUser } from '../context/user/useUser'
 import { useTranslation } from 'react-i18next'
+import { signIn, signUp } from '../http/API'
 
 interface Props {
   open: boolean
@@ -61,20 +63,17 @@ export default function CyberSidebar({ open, onClose }: Props) {
   const [showLoginPassword, setShowLoginPassword] = useState(false)
 
   // Поля регистрации
-  const [regName, setRegName] = useState('')
+  const [regFirstName, setRegFirstName] = useState('')
+  const [regLastName, setRegLastName] = useState('')
   const [regEmail, setRegEmail] = useState('')
   const [regPassword, setRegPassword] = useState('')
   const [regConfirmPassword, setRegConfirmPassword] = useState('')
   const [showRegPassword, setShowRegPassword] = useState(false)
   const [showRegConfirmPassword, setShowRegConfirmPassword] = useState(false)
 
-  // Проверка на бота (простая капча)
-  const [botCheckAnswer, setBotCheckAnswer] = useState('')
-  const botQuestion = '2 + 2 = ?'
-  const botCorrectAnswer = '4'
-
-  // Сообщения об ошибках
+  // Состояние загрузки и ошибок
   const [authError, setAuthError] = useState('')
+  const [loading, setLoading] = useState(false)
 
   const handleNavigation = (path: string) => {
     navigate(path)
@@ -87,42 +86,37 @@ export default function CyberSidebar({ open, onClose }: Props) {
     navigate('/')
   }
 
-  // Обработчик входа
-  const handleLogin = () => {
+  // Реальный вход через API
+  const handleLogin = async () => {
     setAuthError('')
     if (!loginEmail.trim() || !loginPassword.trim()) {
       setAuthError('Заполните все поля')
       return
     }
-    // Проверка бота
-    if (botCheckAnswer !== botCorrectAnswer) {
-      setAuthError('Неверный ответ на проверочный вопрос')
-      return
+    setLoading(true)
+    try {
+      const res = await signIn(loginEmail, loginPassword)
+      if (res && res.token) {
+        login(res.user, res.token)
+        setAuthDialogOpen(false)
+        setLoginEmail('')
+        setLoginPassword('')
+      } else {
+        setAuthError('Ошибка входа: сервер не вернул данные')
+      }
+    } catch (err: any) {
+      setAuthError(err?.response?.data?.message || 'Ошибка входа')
+    } finally {
+      setLoading(false)
     }
-    // Имитация API-вызова (замени на реальный запрос)
-    // В реальном проекте: await signIn(loginEmail, loginPassword)
-    const fakeUser = {
-      id: '1',
-      first_name: loginEmail.split('@')[0],
-      last_name: '',
-      email: loginEmail,
-      role: 'USER',
-      photoURL: null,
-    }
-    const fakeToken = 'fake-jwt-token'
-    login(fakeUser, fakeToken)
-    setAuthDialogOpen(false)
-    // Сброс полей
-    setLoginEmail('')
-    setLoginPassword('')
-    setBotCheckAnswer('')
   }
 
-  // Обработчик регистрации
-  const handleRegister = () => {
+  // Реальная регистрация через API
+  const handleRegister = async () => {
     setAuthError('')
     if (
-      !regName.trim() ||
+      !regFirstName.trim() ||
+      !regLastName.trim() ||
       !regEmail.trim() ||
       !regPassword.trim() ||
       !regConfirmPassword.trim()
@@ -138,44 +132,40 @@ export default function CyberSidebar({ open, onClose }: Props) {
       setAuthError('Пароль должен быть не менее 6 символов')
       return
     }
-    if (botCheckAnswer !== botCorrectAnswer) {
-      setAuthError('Неверный ответ на проверочный вопрос')
-      return
+    setLoading(true)
+    try {
+      const res = await signUp(regFirstName, regLastName, regEmail, regPassword)
+      if (res && res.token) {
+        login(res.user, res.token)
+        setAuthDialogOpen(false)
+        setRegFirstName('')
+        setRegLastName('')
+        setRegEmail('')
+        setRegPassword('')
+        setRegConfirmPassword('')
+      } else {
+        setAuthError('Ошибка регистрации: сервер не вернул данные')
+      }
+    } catch (err: any) {
+      setAuthError(err?.response?.data?.message || 'Ошибка регистрации')
+    } finally {
+      setLoading(false)
     }
-    // Имитация регистрации
-    const fakeUser = {
-      id: '1',
-      first_name: regName,
-      last_name: '',
-      email: regEmail,
-      role: 'USER',
-      photoURL: null,
-    }
-    const fakeToken = 'fake-jwt-token'
-    login(fakeUser, fakeToken)
-    setAuthDialogOpen(false)
-    // Сброс полей
-    setRegName('')
-    setRegEmail('')
-    setRegPassword('')
-    setRegConfirmPassword('')
-    setBotCheckAnswer('')
   }
 
-  // Очистка ошибки при смене вкладки
   const handleAuthTabChange = (_: React.SyntheticEvent, newValue: number) => {
     setAuthTab(newValue)
     setAuthError('')
-    setBotCheckAnswer('')
   }
 
-  // Новые пункты меню
   const menuItems = [
     { text: 'Главная', icon: <DashboardIcon />, path: '/' },
     { text: 'Профиль', icon: <PersonIcon />, path: '/profile' },
     { text: 'История проверок', icon: <HistoryIcon />, path: '/history' },
     { text: 'Аналитика угроз', icon: <AnalyticsIcon />, path: '/analytics' },
   ]
+
+  const isAuthenticated = !!user?.role
 
   return (
     <>
@@ -243,7 +233,7 @@ export default function CyberSidebar({ open, onClose }: Props) {
           </Box>
 
           {/* Профиль пользователя (если авторизован) */}
-          {user ? (
+          {isAuthenticated ? (
             <Box
               sx={{
                 p: 2,
@@ -355,7 +345,7 @@ export default function CyberSidebar({ open, onClose }: Props) {
           <Divider sx={{ borderColor: 'rgba(0,255,255,0.2)' }} />
 
           {/* Кнопка выхода */}
-          {user && (
+          {isAuthenticated && (
             <Box sx={{ p: 2 }}>
               <Button
                 fullWidth
@@ -437,7 +427,7 @@ export default function CyberSidebar({ open, onClose }: Props) {
           {authTab === 0 && (
             <Stack spacing={2}>
               <TextField
-                label="Email или логин"
+                label="Email"
                 fullWidth
                 value={loginEmail}
                 onChange={(e) => setLoginEmail(e.target.value)}
@@ -483,8 +473,21 @@ export default function CyberSidebar({ open, onClose }: Props) {
               <TextField
                 label="Имя"
                 fullWidth
-                value={regName}
-                onChange={(e) => setRegName(e.target.value)}
+                value={regFirstName}
+                onChange={(e) => setRegFirstName(e.target.value)}
+                sx={{ input: { color: '#fff' }, label: { color: '#aaa' } }}
+                InputProps={{
+                  sx: {
+                    '& fieldset': { borderColor: '#555' },
+                    '&:hover fieldset': { borderColor: '#0ff' },
+                  },
+                }}
+              />
+              <TextField
+                label="Фамилия"
+                fullWidth
+                value={regLastName}
+                onChange={(e) => setRegLastName(e.target.value)}
                 sx={{ input: { color: '#fff' }, label: { color: '#aaa' } }}
                 InputProps={{
                   sx: {
@@ -565,27 +568,6 @@ export default function CyberSidebar({ open, onClose }: Props) {
               />
             </Stack>
           )}
-
-          {/* Проверка на бота (общая для входа и регистрации) */}
-          <Box sx={{ mt: 2 }}>
-            <Typography variant="body2" sx={{ mb: 1, color: '#0ff' }}>
-              Проверка: {botQuestion}
-            </Typography>
-            <TextField
-              placeholder="Введите ответ цифрой"
-              fullWidth
-              size="small"
-              value={botCheckAnswer}
-              onChange={(e) => setBotCheckAnswer(e.target.value)}
-              sx={{
-                input: { color: '#fff' },
-                '& .MuiOutlinedInput-root': {
-                  '& fieldset': { borderColor: '#555' },
-                  '&:hover fieldset': { borderColor: '#0ff' },
-                },
-              }}
-            />
-          </Box>
         </DialogContent>
         <DialogActions sx={{ p: 2, pt: 0 }}>
           <Button
@@ -597,13 +579,20 @@ export default function CyberSidebar({ open, onClose }: Props) {
           <Button
             onClick={authTab === 0 ? handleLogin : handleRegister}
             variant="contained"
+            disabled={loading}
             sx={{
               bgcolor: '#0ff',
               color: '#000',
               '&:hover': { bgcolor: '#33ffcc' },
             }}
           >
-            {authTab === 0 ? 'Войти' : 'Зарегистрироваться'}
+            {loading ? (
+              <CircularProgress size={24} sx={{ color: '#000' }} />
+            ) : authTab === 0 ? (
+              'Войти'
+            ) : (
+              'Зарегистрироваться'
+            )}
           </Button>
         </DialogActions>
       </Dialog>

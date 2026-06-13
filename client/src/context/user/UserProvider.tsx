@@ -7,7 +7,6 @@ import {
 } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { io, type Socket } from 'socket.io-client'
-import { verify } from '../../http/API'
 import { baseWSURL } from '../../config'
 import { UserContext } from './UserContext'
 import { toast } from 'react-toastify'

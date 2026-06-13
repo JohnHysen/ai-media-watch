@@ -65,12 +65,11 @@ import {
 import { useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { useUser } from '../context/user/useUser'
-import AppSidebar from '../components/CyberSidebar'
+import CyberSidebar from '../components/CyberSidebar'
 
-// ---------- Оптимизированный 3D фон: 5 больших иконок ----------
+// ---------- 3D фон (без изменений) ----------
 const FloatingIconsOnly = () => {
   const groupRef = useRef<THREE.Group>(null!)
-
   const elements = useMemo(
     () => [
       {
@@ -116,7 +115,6 @@ const FloatingIconsOnly = () => {
     ],
     []
   )
-
   const motions = useMemo(
     () =>
       elements.map(() => ({
@@ -133,7 +131,6 @@ const FloatingIconsOnly = () => {
       })),
     []
   )
-
   useFrame(({ clock }) => {
     const t = clock.getElapsedTime()
     if (groupRef.current) {
@@ -151,7 +148,6 @@ const FloatingIconsOnly = () => {
       })
     }
   })
-
   return (
     <group ref={groupRef}>
       {elements.map((el, idx) => (
@@ -234,8 +230,6 @@ const CyberBackground3D = () => {
   )
 }
 
-// ---------- Вспомогательные компоненты ----------
-// (CountUp не используется, т.к. статистика нулевая, но оставим на будущее)
 const RISK_TYPES = [
   { id: 'casino', name: 'Нелегальное казино', color: '#ff3366', icon: '🎰' },
   { id: 'pyramid', name: 'Финансовая пирамида', color: '#ffaa44', icon: '📈' },
@@ -255,7 +249,6 @@ const RISK_TYPES = [
   },
 ]
 
-// Генерация демо-данных для топов и графиков
 const generateMockThreats = (count: number) => {
   const platforms = ['tiktok', 'instagram', 'youtube']
   const authors = [
@@ -289,7 +282,6 @@ const generateMockThreats = (count: number) => {
 
 const allMockThreats = generateMockThreats(48)
 
-// ---------- Главный компонент ----------
 const CyberMediaWatchPro = () => {
   const { user } = useUser()
   const navigate = useNavigate()
@@ -308,7 +300,6 @@ const CyberMediaWatchPro = () => {
   const isAdmin = user?.role === 'ADMIN'
   const { i18n } = useTranslation()
 
-  // Фильтрация для демо-данных (влияет на топы, последние угрозы, графики)
   const filteredThreats = useMemo(() => {
     let threats = [...allMockThreats]
     const now = new Date()
@@ -327,7 +318,6 @@ const CyberMediaWatchPro = () => {
     return threats
   }, [timeframe, selectedRiskFilter])
 
-  // Данные для круговой диаграммы (типы угроз)
   const riskTypeStats = useMemo(() => {
     const stats: Record<string, number> = {}
     filteredThreats.forEach((t) =>
@@ -340,7 +330,6 @@ const CyberMediaWatchPro = () => {
     }))
   }, [filteredThreats])
 
-  // Линейный график: тренд за последние 7 дней
   const trendByDay = useMemo(() => {
     const last7Days = Array.from({ length: 7 }, (_, i) => {
       const d = new Date()
@@ -371,7 +360,6 @@ const CyberMediaWatchPro = () => {
         .slice(0, 6),
     [filteredThreats]
   )
-
   const recentThreats = useMemo(
     () =>
       [...filteredThreats]
@@ -384,28 +372,39 @@ const CyberMediaWatchPro = () => {
     [filteredThreats]
   )
 
-  const handleCheckVideo = () => {
+  // ==================== ИСПРАВЛЕННАЯ ФУНКЦИЯ ====================
+  const handleCheckVideo = async () => {
     if (!videoUrl.trim()) return
     setIsChecking(true)
-    setTimeout(() => {
-      setIsChecking(false)
-      const randomRisk = Math.random()
-      if (randomRisk > 0.7) {
-        setCheckResultMessage(
-          `⚠️ КРИТИЧЕСКАЯ УГРОЗА: В видео ${videoUrl} обнаружены признаки нелегального казино и финансовой пирамиды! Рекомендуем не переходить по ссылкам.`
-        )
-      } else if (randomRisk > 0.4) {
-        setCheckResultMessage(
-          `🔔 Высокий риск: В видео ${videoUrl} найдены подозрительные реферальные ссылки. Будьте осторожны.`
-        )
-      } else {
-        setCheckResultMessage(
-          `✅ Видео ${videoUrl} не содержит явных угроз, но мы рекомендуем всегда проверять источники.`
-        )
+    try {
+      const response = await fetch('http://localhost:8000/analyze', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url: videoUrl }),
+      })
+      if (!response.ok) {
+        const errorText = await response.text()
+        throw new Error(errorText || 'Ошибка сервера')
       }
+      const data = await response.json()
+      const riskPercent = data.confidence * 100
+      let message = ''
+      if (riskPercent > 70) {
+        message = `⚠️ КРИТИЧЕСКАЯ УГРОЗА: риск ${riskPercent.toFixed(1)}%! ${data.verdict}`
+      } else if (riskPercent > 40) {
+        message = `🔔 Высокий риск: ${riskPercent.toFixed(1)}%! ${data.verdict}`
+      } else {
+        message = `✅ Видео проверено. Риск ${riskPercent.toFixed(1)}%. ${data.verdict}`
+      }
+      setCheckResultMessage(message)
+    } catch (error: any) {
+      console.error('Ошибка при проверке видео:', error)
+      setCheckResultMessage(`❌ Ошибка: ${error.message}`)
+    } finally {
+      setIsChecking(false)
       setVideoUrl('')
       setTimeout(() => setCheckResultMessage(null), 7000)
-    }, 2000)
+    }
   }
 
   const handleReportSubmit = () => {
@@ -452,7 +451,6 @@ const CyberMediaWatchPro = () => {
           zIndex: 0,
         }}
       />
-
       <Box sx={{ position: 'relative', zIndex: 2 }}>
         <IconButton
           onClick={() => setDrawerOpen(true)}
@@ -514,9 +512,7 @@ const CyberMediaWatchPro = () => {
             </Select>
           </FormControl>
         </Box>
-
-        <AppSidebar open={drawerOpen} onClose={() => setDrawerOpen(false)} />
-
+        <CyberSidebar open={drawerOpen} onClose={() => setDrawerOpen(false)} />
         <Box sx={{ width: '100%', maxWidth: 1200, mx: 'auto', px: 3, py: 6 }}>
           <motion.div
             initial={{ opacity: 0, y: -30 }}
@@ -546,7 +542,6 @@ const CyberMediaWatchPro = () => {
               Превентивные предупреждения
             </Typography>
           </motion.div>
-
           <AnimatePresence>
             {checkResultMessage && (
               <motion.div
@@ -571,8 +566,6 @@ const CyberMediaWatchPro = () => {
               </motion.div>
             )}
           </AnimatePresence>
-
-          {/* Проверка видео (центрированная, уже) */}
           <Box sx={{ display: 'flex', justifyContent: 'center', mb: 5 }}>
             <Card
               sx={{
@@ -648,8 +641,6 @@ const CyberMediaWatchPro = () => {
               </Typography>
             </Card>
           </Box>
-
-          {/* Статистика (нули) */}
           <Grid container spacing={3} sx={{ mb: 5 }}>
             {[
               {
@@ -721,8 +712,6 @@ const CyberMediaWatchPro = () => {
               </Grid>
             ))}
           </Grid>
-
-          {/* Фильтры (период и тип угрозы) */}
           <Box
             sx={{
               display: 'flex',
@@ -794,8 +783,6 @@ const CyberMediaWatchPro = () => {
               </Select>
             </FormControl>
           </Box>
-
-          {/* ТОП-6 опасных видео */}
           <Typography
             variant="h5"
             sx={{
@@ -896,8 +883,6 @@ const CyberMediaWatchPro = () => {
               </motion.div>
             ))}
           </Box>
-
-          {/* Последние угрозы */}
           <Typography variant="h5" sx={{ mb: 2, color: '#88f' }}>
             ⏱️ Последние выявленные угрозы
           </Typography>
@@ -952,8 +937,6 @@ const CyberMediaWatchPro = () => {
               </AnimatePresence>
             </List>
           </Card>
-
-          {/* Информационные блоки с картинками */}
           <Grid container spacing={4} sx={{ mb: 5 }}>
             <Grid size={{ xs: 12, md: 6 }}>
               <Card
@@ -1086,8 +1069,6 @@ const CyberMediaWatchPro = () => {
               </Card>
             </Grid>
           </Grid>
-
-          {/* ========== ГРАФИКИ (восстановлены) ========== */}
           <Grid container spacing={3} sx={{ mb: 5 }}>
             <Grid size={{ xs: 12, md: 7 }}>
               <Card
@@ -1173,8 +1154,6 @@ const CyberMediaWatchPro = () => {
               </Card>
             </Grid>
           </Grid>
-
-          {/* Блок "Как защитить себя" */}
           <Box
             sx={{
               textAlign: 'center',
@@ -1224,7 +1203,6 @@ const CyberMediaWatchPro = () => {
           </Box>
         </Box>
       </Box>
-
       <Dialog
         open={showReportDialog}
         onClose={() => setShowReportDialog(false)}
