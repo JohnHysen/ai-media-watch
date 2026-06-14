@@ -1,6 +1,7 @@
 import sequelize from './db'
 import { User } from './models/user'
+import { VideoAnalysis } from './models/VideoAnalysis' // добавили
 
-sequelize.addModels([User])
+sequelize.addModels([User, VideoAnalysis]) // добавили VideoAnalysis
 
-export { User }
+export { User, VideoAnalysis } // экспортируем обе модели

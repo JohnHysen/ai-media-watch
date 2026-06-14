@@ -10,6 +10,7 @@ import {
   Default,
   HasMany,
 } from 'sequelize-typescript'
+import { VideoAnalysis } from './VideoAnalysis'
 
 @Table({ timestamps: true })
 export class User extends Model {
@@ -54,4 +55,7 @@ export class User extends Model {
 
   @Column(DataType.DATE)
   declare last_seen: Date
+
+  @HasMany(() => VideoAnalysis, { foreignKey: 'userId' }) // ← добавили foreignKey
+  declare video_analyses: VideoAnalysis[]
 }

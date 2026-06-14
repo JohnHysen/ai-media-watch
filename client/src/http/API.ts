@@ -124,3 +124,86 @@ export const getUsers = async (id?: string) => {
     console.log(e)
   }
 }
+
+// ========== Video Analysis API ==========
+
+export interface VideoAnalysis {
+  id: number
+  video_url: string
+  title: string | null
+  tags: string | null
+  safety_percent: number
+  verdict_text: 'safe' | 'dangerous' | 'uncertain'
+  is_dangerous: boolean
+  duration_seconds: number
+  preview_image_url: string | null
+  checked_at: string
+  userId: number | null
+  createdAt: string
+  updatedAt: string
+  initiator?: {
+    id: number
+    email: string
+    first_name: string
+    last_name: string
+  }
+}
+
+// Получить все видео-анализы (с фильтрацией и пагинацией)
+export const getVideoAnalyses = async (params?: {
+  is_dangerous?: boolean
+  userId?: number
+  limit?: number
+  offset?: number
+}) => {
+  try {
+    const res = await $host.get<{ total: number; data: VideoAnalysis[] }>(
+      'video-analysis',
+      { params }
+    )
+    return res.data
+  } catch (e: any) {
+    if (e.response?.data?.error) toast.error(e.response.data.error)
+    console.log(e)
+    throw e
+  }
+}
+
+// Получить один видео-анализ по ID
+export const getVideoAnalysisById = async (id: number) => {
+  try {
+    const res = await $host.get<VideoAnalysis>(`video-analysis/${id}`)
+    return res.data
+  } catch (e: any) {
+    if (e.response?.data?.error) toast.error(e.response.data.error)
+    console.log(e)
+    throw e
+  }
+}
+
+// Получить анализы конкретного пользователя
+export const getVideoAnalysesByUser = async (userId: number) => {
+  try {
+    const res = await $host.get<VideoAnalysis[]>(
+      `video-analysis/user/${userId}`
+    )
+    return res.data
+  } catch (e: any) {
+    if (e.response?.data?.error) toast.error(e.response.data.error)
+    console.log(e)
+    throw e
+  }
+}
+
+// Удалить анализ (только для админа или владельца)
+export const deleteVideoAnalysis = async (id: number) => {
+  try {
+    const res = await $host.delete(`video-analysis/${id}`)
+    toast.success('Анализ удалён')
+    return res.data
+  } catch (e: any) {
+    if (e.response?.data?.error) toast.error(e.response.data.error)
+    console.log(e)
+    throw e
+  }
+}

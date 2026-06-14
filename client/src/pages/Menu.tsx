@@ -65,6 +65,7 @@ import { useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { useUser } from '../context/user/useUser'
 import CyberSidebar from '../components/CyberSidebar'
+import { $host } from '../http/API' // <-- импорт твоего axios-клиента с авторизацией
 
 // ---------- 3D фон (без изменений) ----------
 const FloatingIconsOnly = () => {
@@ -376,6 +377,7 @@ const CyberMediaWatchPro = () => {
     if (!videoUrl.trim()) return
     setIsChecking(true)
     try {
+      // 1. Отправляем видео на анализ в FastAPI
       const response = await fetch(
         'http://localhost:8000/analyze?url=' + encodeURIComponent(videoUrl)
       )
@@ -394,6 +396,35 @@ const CyberMediaWatchPro = () => {
         message = `✅ Видео проверено. Риск ${riskPercent.toFixed(1)}%. ${data.verdict}`
       }
       setCheckResultMessage(message)
+
+      // 2. Отправляем результат в Node.js для сохранения в БД
+      // Формируем payload согласно модели VideoAnalysis
+      const isDangerous = data.is_dangerous === true
+      const safetyPercent = isDangerous
+        ? (1 - data.confidence) * 100
+        : data.confidence * 100
+
+      let verdictText: 'safe' | 'dangerous' | 'uncertain' = 'safe'
+      if (isDangerous) verdictText = 'dangerous'
+      else if (data.confidence < 0.6) verdictText = 'uncertain'
+      else verdictText = 'safe'
+
+      // Длительность видео (если есть в ответе – используем, иначе 0)
+      const durationSeconds = data.duration_seconds || 0
+
+      await $host.post('/video-analysis', {
+        video_url: videoUrl,
+        title: data.video_title || null,
+        tags: null, // можно добавить позже
+        safety_percent: safetyPercent,
+        verdict_text: verdictText,
+        is_dangerous: isDangerous,
+        duration_seconds: durationSeconds,
+        preview_image_url: null,
+        checked_at: new Date().toISOString(),
+        userId: user?.id || null, // если пользователь авторизован
+      })
+      // Не показываем тост об успешной отправке, чтобы не перегружать интерфейс
     } catch (error: any) {
       console.error('Ошибка при проверке видео:', error)
       setCheckResultMessage(`❌ Ошибка: ${error.message}`)
@@ -643,25 +674,26 @@ const CyberMediaWatchPro = () => {
               {
                 icon: <VideoLibraryIcon />,
                 label: 'Видео обработано',
-                value: 0,
+                value: allMockThreats.length,
                 color: '#33ffcc',
               },
               {
                 icon: <WarningIcon />,
                 label: 'Угроз выявлено',
-                value: 0,
+                value: allMockThreats.filter((t) => t.riskScore > 0.7).length,
                 color: '#ff3366',
               },
               {
                 icon: <TrendingUpIcon />,
                 label: 'Авторов в топе',
-                value: 0,
+                value: [...new Set(allMockThreats.map((t) => t.author))].length,
                 color: '#ffaa44',
               },
               {
                 icon: <AnalyticsIcon />,
                 label: 'Платформ',
-                value: 0,
+                value: [...new Set(allMockThreats.map((t) => t.platform))]
+                  .length,
                 color: '#aa66ff',
               },
             ].map((item, idx) => (

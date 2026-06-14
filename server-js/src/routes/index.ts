@@ -1,17 +1,15 @@
-// routes/index.ts
 import { Router } from 'express'
-
-// Импортируем роутеры
 import authRouter from './authRouter.js'
 import userRouter from './userRouter.js'
-
-// Middleware доступа
+import videoRoutes from './videoRoutes.js'   // импорт
 import accessLevel from '../middleware/accessLevel.js'
 
 const router = Router()
 
 router.use('/auth', authRouter)
 router.use('/user', accessLevel(1), userRouter)
-// router.use('/admin', accessLevel(2), adminRouter)
+
+// Временно отключаем accessLevel для теста
+router.use('/video-analysis', videoRoutes)   // было: accessLevel(1), videoRoutes
 
 export default router

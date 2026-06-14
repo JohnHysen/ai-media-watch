@@ -2,7 +2,7 @@ import { ExtendedError, Socket } from 'socket.io'
 import jwt, { JwtPayload } from 'jsonwebtoken'
 import cfg from '../../config'
 import { User } from '../../db/index.js'
-import path from 'node:path'
+// import path from 'node:path'
 
 // Хранилище активных сокетов пользователей (userId -> socket)
 const userSockets = new Map<number, Socket>()
@@ -46,7 +46,7 @@ export const sio_chat = (socket: SocketU) => {
   // Обработка LLM-сообщений (существующий код, можно оставить как есть)
   socket.on('llmmessage', async (data) => {
     console.log('🔥 llmmessage data:', JSON.stringify(data, null, 2))
-    const { characterId, message, responseMode = 'text' } = data
+    const { characterId, message = 'text' } = data
     if (!characterId || !message) {
       socket.emit('llmmessage', 'Ошибка: не указан персонаж или сообщение')
       return

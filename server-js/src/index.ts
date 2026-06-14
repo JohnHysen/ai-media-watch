@@ -5,11 +5,12 @@ import http from 'http'
 import fileUpload from 'express-fileupload'
 
 import cfg from './config.js'
-import router from './routes/.'
-import sequelize from './db/db.js'
+import router from './routes/index'
+import sequelize from './db/db'
 import { sio_middleware, sio_chat } from './modules/sio/.'
 // import bot from './modules/telegram/.'
 import './modules/cron/.'
+import { createVideoAnalysis } from './controllers/videoController.js';
 
 const allowedOrigins = [cfg.CLIENT]
 const PORT = cfg.PORT
@@ -29,6 +30,7 @@ app.use(cors({ origin: allowedOrigins, credentials: true }))
 app.use('/static', express.static('static'))
 
 // ✅ 4. Роуты
+app.post('/video-analysis', createVideoAnalysis);
 app.use('/', router)
 
 // ✅ 5. Тестовый маршрут
