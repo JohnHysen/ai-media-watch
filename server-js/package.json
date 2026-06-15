@@ -15,6 +15,7 @@
   "keywords": [],
   "license": "MIT",
   "dependencies": {
+    "apify-client": "^2.23.4",
     "bcryptjs": "^3.0.2",
     "blob": "^0.1.0",
     "cors": "^2.8.5",

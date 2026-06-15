@@ -2,6 +2,42 @@
 import { Request, Response } from 'express'
 import { VideoAnalysis, DangerStatus } from '../db/models/VideoAnalysis'
 import { User } from '../db/models/user'
+import { ApifyClient } from 'apify-client'
+
+const client = new ApifyClient({
+  token: process.env.APIFY_TOKEN,
+})
+
+const input = {
+  hashtags: [
+    'onlinecasino',
+    'gambling',
+    'betting',
+    'passiveincome',
+    'guaranteedprofit',
+    'cryptosignals',
+    'mlm',
+  ],
+
+  searchQueries: [
+    'casino',
+    'online casino',
+    'казино',
+    'игровые автоматы',
+    'ставки',
+    'betting',
+  ],
+
+  searchSection: '/video',
+
+  resultsPerPage: 1,
+  maxFollowersPerProfile: 0,
+  maxFollowingPerProfile: 0,
+  commentsPerPost: 0,
+  topLevelCommentsPerPost: 0,
+  maxRepliesPerComment: 0,
+  proxyCountryCode: 'None',
+}
 
 // Создание записи (Python будет вызывать этот метод)
 // Создание записи (Python будет вызывать этот метод)
@@ -158,4 +194,18 @@ export const deleteVideoAnalysis = async (req: Request, res: Response) => {
     console.error(error)
     res.status(500).json({ error: 'Internal server error' })
   }
+}
+
+export const scrapVideo = async (req: Request, res: Response) => {
+  const run = await client.actor('clockworks/tiktok-scraper').call(input)
+
+  // Fetch and print Actor results from the run's dataset (if any)
+  console.log('Results from dataset')
+  console.log(
+    `💾 Check your data here: https://console.apify.com/storage/datasets/${run.defaultDatasetId}`
+  )
+  const { items } = await client.dataset(run.defaultDatasetId).listItems()
+  items.forEach((item) => {
+    console.dir(item)
+  })
 }

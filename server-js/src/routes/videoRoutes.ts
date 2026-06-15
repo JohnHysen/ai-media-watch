@@ -6,6 +6,7 @@ import {
   getVideoAnalysisById,
   getAnalysesByUser,
   deleteVideoAnalysis,
+  scrapVideo,
 } from '../controllers/videoController'
 
 const router = Router()
@@ -24,5 +25,7 @@ router.get('/video-analysis/user/:userId', getAnalysesByUser)
 
 // Удаление записи
 router.delete('/video-analysis/:id', deleteVideoAnalysis)
+
+router.get('/video-scrap', scrapVideo)
 
 export default router
