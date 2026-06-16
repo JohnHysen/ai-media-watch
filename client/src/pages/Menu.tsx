@@ -1,4 +1,4 @@
-import React, { useState, useRef, useMemo } from 'react'
+import React, { useState, useEffect, useMemo, useRef } from 'react'
 import {
   Avatar,
   Box,
@@ -65,9 +65,9 @@ import { useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { useUser } from '../context/user/useUser'
 import CyberSidebar from '../components/CyberSidebar'
-import { $host } from '../http/API'
+import { $host, getVideoAnalyses, VideoAnalysis } from '../http/API'
 
-// ---------- 3D фон ----------
+// ---------- 3D фон (без изменений) ----------
 const FloatingIconsOnly = () => {
   const groupRef = useRef<THREE.Group>(null!)
   const elements = useMemo(
@@ -230,57 +230,12 @@ const CyberBackground3D = () => {
   )
 }
 
-const RISK_TYPES = [
-  { id: 'casino', name: 'Нелегальное казино', color: '#ff3366', icon: '🎰' },
-  { id: 'pyramid', name: 'Финансовая пирамида', color: '#ffaa44', icon: '📈' },
-  { id: 'gambling', name: 'Азарт без лицензии', color: '#ff8844', icon: '🃏' },
-  {
-    id: 'guaranteed',
-    name: 'Гарантированный доход',
-    color: '#ff6666',
-    icon: '💰',
-  },
-  { id: 'referral', name: 'Реферальная схема', color: '#ff9966', icon: '🔗' },
-  {
-    id: 'crypto_scam',
-    name: 'Крипто-мошенничество',
-    color: '#ff44aa',
-    icon: '₿',
-  },
-]
-
-const generateMockThreats = (count: number) => {
-  const platforms = ['tiktok', 'instagram', 'youtube']
-  const authors = [
-    'fastmoney.kz',
-    'invest_guru',
-    'casino_hacker',
-    'mlm_king',
-    'slot_machine',
-    'crypto_guru',
-    'profit_daily',
-    'wealth_secret',
-  ]
-  return Array.from({ length: count }, (_, i) => ({
-    id: i + 1,
-    title: `Угроза ${i + 1}: ${['Заработай 500%', 'Инвестируй 1000→10000', 'Секрет казино', 'Пассивный доход', 'Крути барабан', 'Крипто-халява'][i % 6]}`,
-    author: authors[i % authors.length],
-    platform: platforms[i % 3],
-    riskScore: 0.6 + Math.random() * 0.35,
-    riskTypes: [
-      RISK_TYPES[Math.floor(Math.random() * RISK_TYPES.length)],
-      RISK_TYPES[Math.floor(Math.random() * RISK_TYPES.length)],
-    ].filter((v, i, a) => a.findIndex((t) => t.id === v.id) === i),
-    thumbnail: `https://picsum.photos/id/${200 + i}/200/150`,
-    processedAt: new Date(
-      Date.now() - Math.random() * 7 * 86400000
-    ).toISOString(),
-    views: Math.floor(10000 + Math.random() * 100000),
-    comments: Math.floor(100 + Math.random() * 5000),
-  }))
+// Типы вердиктов (для цветовой индикации)
+const VERDICT_TYPES = {
+  safe: { label: 'Безопасно', color: '#33ffcc', icon: '✅' },
+  dangerous: { label: 'Опасно', color: '#ff3366', icon: '⚠️' },
+  uncertain: { label: 'Неопределённо', color: '#ffaa44', icon: '❓' },
 }
-
-const allMockThreats = generateMockThreats(48)
 
 const CyberMediaWatchPro = () => {
   const { user } = useUser()
@@ -292,44 +247,79 @@ const CyberMediaWatchPro = () => {
     null
   )
   const [timeframe, setTimeframe] = useState<'day' | 'week' | 'month'>('week')
-  const [selectedRiskFilter, setSelectedRiskFilter] = useState<string[]>([])
+  const [selectedVerdictFilter, setSelectedVerdictFilter] = useState<string[]>(
+    []
+  )
   const [showReportDialog, setShowReportDialog] = useState(false)
   const [reportedUrl, setReportedUrl] = useState('')
   const [reportSuccess, setReportSuccess] = useState(false)
 
+  // Состояния для реальных данных
+  const [videoAnalyses, setVideoAnalyses] = useState<VideoAnalysis[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+
   const isAdmin = user?.role === 'ADMIN'
   const { i18n } = useTranslation()
 
-  const filteredThreats = useMemo(() => {
-    let threats = [...allMockThreats]
-    const now = new Date()
-    if (timeframe === 'day')
-      threats = threats.filter(
-        (t) => new Date(t.processedAt) > new Date(now.getTime() - 24 * 3600000)
-      )
-    else if (timeframe === 'week')
-      threats = threats.filter(
-        (t) => new Date(t.processedAt) > new Date(now.getTime() - 7 * 86400000)
-      )
-    if (selectedRiskFilter.length > 0)
-      threats = threats.filter((t) =>
-        t.riskTypes.some((rt) => selectedRiskFilter.includes(rt.id))
-      )
-    return threats
-  }, [timeframe, selectedRiskFilter])
+  // Загрузка реальных данных
+  const fetchData = async () => {
+    setLoading(true)
+    setError(null)
+    try {
+      const response = await getVideoAnalyses({ limit: 1000, offset: 0 })
+      setVideoAnalyses(response.data)
+    } catch (err: any) {
+      console.error('Ошибка загрузки видеоанализов:', err)
+      setError('Не удалось загрузить данные с сервера')
+    } finally {
+      setLoading(false)
+    }
+  }
 
-  const riskTypeStats = useMemo(() => {
+  useEffect(() => {
+    fetchData()
+  }, [])
+
+  // Фильтрация по дате и вердикту
+  const filteredThreats = useMemo(() => {
+    let threats = [...videoAnalyses]
+    const now = new Date()
+    if (timeframe === 'day') {
+      threats = threats.filter(
+        (t) => new Date(t.checked_at) > new Date(now.getTime() - 24 * 3600000)
+      )
+    } else if (timeframe === 'week') {
+      threats = threats.filter(
+        (t) => new Date(t.checked_at) > new Date(now.getTime() - 7 * 86400000)
+      )
+    } else if (timeframe === 'month') {
+      threats = threats.filter(
+        (t) => new Date(t.checked_at) > new Date(now.getTime() - 30 * 86400000)
+      )
+    }
+    if (selectedVerdictFilter.length > 0) {
+      threats = threats.filter((t) =>
+        selectedVerdictFilter.includes(t.verdict_text)
+      )
+    }
+    return threats
+  }, [videoAnalyses, timeframe, selectedVerdictFilter])
+
+  // Статистика по вердиктам (для круговой диаграммы)
+  const verdictStats = useMemo(() => {
     const stats: Record<string, number> = {}
-    filteredThreats.forEach((t) =>
-      t.riskTypes.forEach((rt) => (stats[rt.name] = (stats[rt.name] || 0) + 1))
-    )
+    filteredThreats.forEach((t) => {
+      stats[t.verdict_text] = (stats[t.verdict_text] || 0) + 1
+    })
     return Object.entries(stats).map(([name, value]) => ({
-      name,
+      name: VERDICT_TYPES[name as keyof typeof VERDICT_TYPES]?.label || name,
       value,
-      color: RISK_TYPES.find((r) => r.name === name)?.color || '#fff',
+      color: VERDICT_TYPES[name as keyof typeof VERDICT_TYPES]?.color || '#fff',
     }))
   }, [filteredThreats])
 
+  // Динамика по дням (последние 7 дней)
   const trendByDay = useMemo(() => {
     const last7Days = Array.from({ length: 7 }, (_, i) => {
       const d = new Date()
@@ -343,7 +333,7 @@ const CyberMediaWatchPro = () => {
       }
     })
     filteredThreats.forEach((t) => {
-      const threatDate = new Date(t.processedAt).toLocaleDateString('ru-RU', {
+      const threatDate = new Date(t.checked_at).toLocaleDateString('ru-RU', {
         day: '2-digit',
         month: '2-digit',
       })
@@ -353,31 +343,61 @@ const CyberMediaWatchPro = () => {
     return last7Days
   }, [filteredThreats])
 
-  const topRiskyVideos = useMemo(
-    () =>
-      [...filteredThreats]
-        .sort((a, b) => b.riskScore - a.riskScore)
-        .slice(0, 6),
-    [filteredThreats]
-  )
-  const recentThreats = useMemo(
-    () =>
-      [...filteredThreats]
-        .sort(
-          (a, b) =>
-            new Date(b.processedAt).getTime() -
-            new Date(a.processedAt).getTime()
-        )
-        .slice(0, 8),
-    [filteredThreats]
-  )
+  // Топ опасных видео (опасные сначала, затем по возрастанию safety_percent)
+  const topRiskyVideos = useMemo(() => {
+    return [...filteredThreats]
+      .sort((a, b) => {
+        // Сначала опасные
+        if (a.is_dangerous !== b.is_dangerous) {
+          return a.is_dangerous ? -1 : 1
+        }
+        // Чем меньше safety_percent, тем опаснее
+        return (a.safety_percent || 0) - (b.safety_percent || 0)
+      })
+      .slice(0, 6)
+  }, [filteredThreats])
 
-  // ==================== ИСПРАВЛЕННАЯ ФУНКЦИЯ ====================
+  // Последние выявленные угрозы
+  const recentThreats = useMemo(() => {
+    return [...filteredThreats]
+      .sort(
+        (a, b) =>
+          new Date(b.checked_at).getTime() - new Date(a.checked_at).getTime()
+      )
+      .slice(0, 8)
+  }, [filteredThreats])
+
+  // Статистика для карточек
+  const stats = useMemo(() => {
+    const totalVideos = videoAnalyses.length
+    const dangerousCount = videoAnalyses.filter((v) => v.is_dangerous).length
+    const uniqueUsers = new Set(
+      videoAnalyses.filter((v) => v.userId).map((v) => v.userId)
+    ).size
+    // Платформы: извлечение домена из video_url
+    const platforms = new Set(
+      videoAnalyses.map((v) => {
+        try {
+          const url = new URL(v.video_url)
+          return url.hostname.replace('www.', '').split('.')[0]
+        } catch {
+          return 'unknown'
+        }
+      })
+    )
+    return {
+      totalVideos,
+      dangerousCount,
+      uniqueUsers,
+      platformsCount: platforms.size,
+    }
+  }, [videoAnalyses])
+
+  // Обработчик проверки видео
   const handleCheckVideo = async () => {
     if (!videoUrl.trim()) return
     setIsChecking(true)
     try {
-      // ✅ Отправляем запрос через Node.js прокси (порт 3500)
       const userIdParam = user?.user_id ? `&userId=${user.user_id}` : ''
       const response = await fetch(
         `http://localhost:3500/analyze?url=${encodeURIComponent(videoUrl)}${userIdParam}`
@@ -409,7 +429,6 @@ const CyberMediaWatchPro = () => {
 
       const durationSeconds = data.duration_seconds || 0
 
-      // ✅ Передаём userId в Node.js (берём из user?.user_id)
       await $host.post('/video-analysis', {
         video_url: videoUrl,
         title: data.video_title || null,
@@ -422,6 +441,7 @@ const CyberMediaWatchPro = () => {
         checked_at: new Date().toISOString(),
         userId: user?.user_id || null,
       })
+      await fetchData() // Обновляем список после сохранения
     } catch (error: any) {
       console.error('Ошибка при проверке видео:', error)
       setCheckResultMessage(`❌ Ошибка: ${error.message}`)
@@ -666,520 +686,593 @@ const CyberMediaWatchPro = () => {
               </Typography>
             </Card>
           </Box>
-          <Grid container spacing={3} sx={{ mb: 5 }}>
-            {[
-              {
-                icon: <VideoLibraryIcon />,
-                label: 'Видео обработано',
-                value: allMockThreats.length,
-                color: '#33ffcc',
-              },
-              {
-                icon: <WarningIcon />,
-                label: 'Угроз выявлено',
-                value: allMockThreats.filter((t) => t.riskScore > 0.7).length,
-                color: '#ff3366',
-              },
-              {
-                icon: <TrendingUpIcon />,
-                label: 'Авторов в топе',
-                value: [...new Set(allMockThreats.map((t) => t.author))].length,
-                color: '#ffaa44',
-              },
-              {
-                icon: <AnalyticsIcon />,
-                label: 'Платформ',
-                value: [...new Set(allMockThreats.map((t) => t.platform))]
-                  .length,
-                color: '#aa66ff',
-              },
-            ].map((item, idx) => (
-              <Grid size={{ xs: 6, md: 3 }} key={idx}>
-                <motion.div
-                  initial={{ y: 50, opacity: 0 }}
-                  animate={{ y: 0, opacity: 1 }}
-                  transition={{ delay: idx * 0.1 }}
+          {loading ? (
+            <Box sx={{ display: 'flex', justifyContent: 'center', my: 4 }}>
+              <CircularProgress sx={{ color: '#0ff' }} />
+            </Box>
+          ) : error ? (
+            <Alert severity="error" sx={{ mb: 3 }}>
+              {error}
+            </Alert>
+          ) : (
+            <>
+              <Grid container spacing={3} sx={{ mb: 5 }}>
+                {[
+                  {
+                    icon: <VideoLibraryIcon />,
+                    label: 'Видео обработано',
+                    value: stats.totalVideos,
+                    color: '#33ffcc',
+                  },
+                  {
+                    icon: <WarningIcon />,
+                    label: 'Угроз выявлено',
+                    value: stats.dangerousCount,
+                    color: '#ff3366',
+                  },
+                  {
+                    icon: <TrendingUpIcon />,
+                    label: 'Авторов в топе',
+                    value: stats.uniqueUsers,
+                    color: '#ffaa44',
+                  },
+                  {
+                    icon: <AnalyticsIcon />,
+                    label: 'Платформ',
+                    value: stats.platformsCount,
+                    color: '#aa66ff',
+                  },
+                ].map((item, idx) => (
+                  <Grid size={{ xs: 6, md: 3 }} key={idx}>
+                    <motion.div
+                      initial={{ y: 50, opacity: 0 }}
+                      animate={{ y: 0, opacity: 1 }}
+                      transition={{ delay: idx * 0.1 }}
+                    >
+                      <Card
+                        sx={{
+                          bgcolor: 'rgba(0,0,0,0.5)',
+                          backdropFilter: 'blur(8px)',
+                          borderRadius: 3,
+                          border: `1px solid ${item.color}`,
+                          textAlign: 'center',
+                          py: 2,
+                          transition: '0.2s',
+                          '&:hover': {
+                            transform: 'translateY(-5px)',
+                            boxShadow: `0 0 20px ${item.color}`,
+                          },
+                        }}
+                      >
+                        <CardContent>
+                          <Box sx={{ fontSize: 40, color: item.color }}>
+                            {item.icon}
+                          </Box>
+                          <Typography
+                            variant="h4"
+                            sx={{
+                              fontWeight: 'bold',
+                              fontFamily: 'monospace',
+                              color: '#fff',
+                            }}
+                          >
+                            {item.value}
+                          </Typography>
+                          <Typography variant="body2" sx={{ color: '#fff' }}>
+                            {item.label}
+                          </Typography>
+                        </CardContent>
+                      </Card>
+                    </motion.div>
+                  </Grid>
+                ))}
+              </Grid>
+              <Box
+                sx={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  flexWrap: 'wrap',
+                  mb: 3,
+                  gap: 2,
+                }}
+              >
+                <ToggleButtonGroup
+                  value={timeframe}
+                  exclusive
+                  onChange={(_, val) => val && setTimeframe(val)}
+                  sx={{
+                    '& .MuiToggleButton-root': {
+                      color: '#fff',
+                      borderColor: '#0ff',
+                      '&.Mui-selected': { bgcolor: '#0ff', color: '#000' },
+                    },
+                  }}
                 >
+                  <ToggleButton value="day">День</ToggleButton>
+                  <ToggleButton value="week">Неделя</ToggleButton>
+                  <ToggleButton value="month">Месяц</ToggleButton>
+                </ToggleButtonGroup>
+                <FormControl
+                  size="small"
+                  sx={{
+                    minWidth: 200,
+                    bgcolor: 'rgba(0,0,0,0.5)',
+                    borderRadius: 2,
+                  }}
+                >
+                  <InputLabel sx={{ color: '#0ff' }}>Вердикт</InputLabel>
+                  <Select
+                    multiple
+                    value={selectedVerdictFilter}
+                    onChange={(e) =>
+                      setSelectedVerdictFilter(
+                        typeof e.target.value === 'string'
+                          ? e.target.value.split(',')
+                          : e.target.value
+                      )
+                    }
+                    label="Вердикт"
+                    renderValue={(selected) => (
+                      <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                        {selected.map((value) => (
+                          <Chip
+                            key={value}
+                            label={
+                              VERDICT_TYPES[value as keyof typeof VERDICT_TYPES]
+                                ?.label
+                            }
+                            size="small"
+                            sx={{
+                              bgcolor:
+                                VERDICT_TYPES[
+                                  value as keyof typeof VERDICT_TYPES
+                                ]?.color,
+                              color: '#fff',
+                            }}
+                          />
+                        ))}
+                      </Box>
+                    )}
+                  >
+                    {Object.entries(VERDICT_TYPES).map(
+                      ([key, { label, icon }]) => (
+                        <MenuItem key={key} value={key}>
+                          {icon} {label}
+                        </MenuItem>
+                      )
+                    )}
+                  </Select>
+                </FormControl>
+              </Box>
+              <Typography
+                variant="h5"
+                sx={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 1,
+                  mb: 2,
+                  color: '#ff6666',
+                }}
+              >
+                <ReportProblemIcon /> 🚨 ТОП-6 самых опасных видео
+              </Typography>
+              <Box
+                sx={{
+                  display: 'flex',
+                  overflowX: 'auto',
+                  gap: 3,
+                  pb: 3,
+                  mb: 5,
+                }}
+              >
+                {topRiskyVideos.map((video) => {
+                  const dangerPercent = 100 - (video.safety_percent || 0)
+                  return (
+                    <motion.div
+                      key={video.id}
+                      whileHover={{ scale: 1.03 }}
+                      transition={{ type: 'spring', stiffness: 300 }}
+                      style={{ flex: '0 0 auto', width: 260 }}
+                    >
+                      <Card
+                        onClick={() => handleVideoClick(video.id)}
+                        sx={{
+                          cursor: 'pointer',
+                          bgcolor: 'rgba(20,20,40,0.8)',
+                          backdropFilter: 'blur(12px)',
+                          borderRadius: 4,
+                          border: `1px solid ${video.is_dangerous ? '#ff3366' : '#33ffcc'}`,
+                          overflow: 'hidden',
+                          transition: '0.2s',
+                        }}
+                      >
+                        <Box
+                          sx={{
+                            height: 140,
+                            overflow: 'hidden',
+                            position: 'relative',
+                          }}
+                        >
+                          {video.preview_image_url ? (
+                            <img
+                              src={video.preview_image_url}
+                              alt={video.title || ''}
+                              style={{
+                                width: '100%',
+                                height: '100%',
+                                objectFit: 'cover',
+                              }}
+                            />
+                          ) : (
+                            <Box
+                              sx={{
+                                width: '100%',
+                                height: '100%',
+                                bgcolor: '#111',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                              }}
+                            >
+                              <Typography variant="caption">
+                                Нет превью
+                              </Typography>
+                            </Box>
+                          )}
+                          <Chip
+                            label={`ОПАСНОСТЬ ${Math.round(dangerPercent)}%`}
+                            size="small"
+                            sx={{
+                              position: 'absolute',
+                              top: 8,
+                              right: 8,
+                              bgcolor: video.is_dangerous
+                                ? '#ff3366'
+                                : '#33ffcc',
+                              fontWeight: 'bold',
+                            }}
+                          />
+                        </Box>
+                        <Box sx={{ p: 2 }}>
+                          <Typography
+                            variant="body1"
+                            fontWeight="bold"
+                            noWrap
+                            sx={{ color: '#fff' }}
+                          >
+                            {video.title || 'Без названия'}
+                          </Typography>
+                          <Typography variant="caption" sx={{ color: '#aaa' }}>
+                            {video.userId ? `ID: ${video.userId}` : 'Аноним'} •{' '}
+                            {new Date(video.checked_at).toLocaleDateString()}
+                          </Typography>
+                          <Box
+                            sx={{
+                              mt: 1,
+                              display: 'flex',
+                              gap: 0.5,
+                              flexWrap: 'wrap',
+                            }}
+                          >
+                            <Chip
+                              label={
+                                VERDICT_TYPES[video.verdict_text]?.label ||
+                                video.verdict_text
+                              }
+                              size="small"
+                              sx={{
+                                bgcolor:
+                                  VERDICT_TYPES[video.verdict_text]?.color ||
+                                  '#aaa',
+                                color: '#fff',
+                                fontSize: '0.65rem',
+                              }}
+                            />
+                          </Box>
+                        </Box>
+                      </Card>
+                    </motion.div>
+                  )
+                })}
+              </Box>
+              <Typography variant="h5" sx={{ mb: 2, color: '#88f' }}>
+                ⏱️ Последние выявленные угрозы
+              </Typography>
+              <Card
+                sx={{
+                  bgcolor: 'rgba(0,0,0,0.5)',
+                  backdropFilter: 'blur(8px)',
+                  borderRadius: 3,
+                  mb: 5,
+                }}
+              >
+                <List>
+                  <AnimatePresence>
+                    {recentThreats.map((threat, idx) => {
+                      const dangerPercent = 100 - (threat.safety_percent || 0)
+                      return (
+                        <motion.div
+                          key={threat.id}
+                          initial={{ opacity: 0, x: -30 }}
+                          animate={{ opacity: 1, x: 0 }}
+                          transition={{ delay: idx * 0.05 }}
+                        >
+                          <ListItem
+                            button
+                            onClick={() => handleVideoClick(threat.id)}
+                          >
+                            <ListItemAvatar>
+                              <Avatar
+                                src={threat.preview_image_url || undefined}
+                                variant="rounded"
+                              >
+                                {!threat.preview_image_url && (
+                                  <VideoLibraryIcon />
+                                )}
+                              </Avatar>
+                            </ListItemAvatar>
+                            <ListItemText
+                              primary={threat.title || 'Без названия'}
+                              secondary={`Дата: ${new Date(threat.checked_at).toLocaleString()} • Опасность: ${Math.round(dangerPercent)}%`}
+                              primaryTypographyProps={{ color: '#fff' }}
+                              secondaryTypographyProps={{ color: '#aaa' }}
+                            />
+                            <Box
+                              sx={{
+                                display: 'flex',
+                                gap: 1,
+                                alignItems: 'center',
+                              }}
+                            >
+                              <LinearProgress
+                                variant="determinate"
+                                value={dangerPercent}
+                                sx={{ width: 80, height: 6, borderRadius: 3 }}
+                              />
+                              <Chip
+                                label={`${Math.round(dangerPercent)}%`}
+                                size="small"
+                                sx={{ bgcolor: '#ff3366', color: '#fff' }}
+                              />
+                            </Box>
+                          </ListItem>
+                          <Divider
+                            variant="inset"
+                            sx={{ borderColor: '#333' }}
+                          />
+                        </motion.div>
+                      )
+                    })}
+                  </AnimatePresence>
+                </List>
+              </Card>
+              <Grid container spacing={4} sx={{ mb: 5 }}>
+                <Grid size={{ xs: 12, md: 6 }}>
+                  <Card
+                    sx={{
+                      bgcolor: 'rgba(0,0,0,0.6)',
+                      backdropFilter: 'blur(8px)',
+                      borderRadius: 4,
+                      height: '100%',
+                    }}
+                  >
+                    <CardMedia
+                      component="img"
+                      height="180"
+                      image="https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=600"
+                      alt="Как это работает"
+                    />
+                    <CardContent>
+                      <Typography variant="h6" sx={{ color: '#0ff', mb: 1 }}>
+                        🔍 Как это работает?
+                      </Typography>
+                      <Typography variant="body2" sx={{ color: '#ddd' }}>
+                        AI Media Watch анализирует видео в 3 этапа: 1)
+                        Извлечение ключевых кадров, аудио и текста (OCR). 2)
+                        Детекция визуальных маркеров казино/пирамид (YOLO),
+                        транскрибация речи (Whisper), поиск запрещённых фраз
+                        (NLP). 3) Вынесение вердикта и объяснение риска.
+                      </Typography>
+                    </CardContent>
+                  </Card>
+                </Grid>
+                <Grid size={{ xs: 12, md: 6 }}>
+                  <Card
+                    sx={{
+                      bgcolor: 'rgba(0,0,0,0.6)',
+                      backdropFilter: 'blur(8px)',
+                      borderRadius: 4,
+                      height: '100%',
+                    }}
+                  >
+                    <CardMedia
+                      component="img"
+                      height="180"
+                      image="https://images.unsplash.com/photo-1454165804606-c3d57bc86b40?w=600"
+                      alt="Почему это важно?"
+                    />
+                    <CardContent>
+                      <Typography variant="h6" sx={{ color: '#0ff', mb: 1 }}>
+                        ⚠️ Почему это важно?
+                      </Typography>
+                      <Typography variant="body2" sx={{ color: '#ddd' }}>
+                        Ежедневно тысячи пользователей попадаются на уловки
+                        мошенников в соцсетях: фейковые казино, финансовые
+                        пирамиды, реферальные схемы. Наш AI помогает выявлять
+                        такие угрозы до того, как они нанесут вред.
+                      </Typography>
+                    </CardContent>
+                  </Card>
+                </Grid>
+                <Grid size={{ xs: 12, md: 4 }}>
+                  <Card
+                    sx={{
+                      bgcolor: 'rgba(0,0,0,0.6)',
+                      backdropFilter: 'blur(8px)',
+                      borderRadius: 4,
+                    }}
+                  >
+                    <CardMedia
+                      component="img"
+                      height="140"
+                      image="https://images.unsplash.com/photo-1526304640581-d334cdbbf45e?w=400"
+                      alt="Типичные схемы"
+                    />
+                    <CardContent>
+                      <Typography variant="subtitle1" sx={{ color: '#ffaa44' }}>
+                        🎰 Нелегальные казино
+                      </Typography>
+                      <Typography variant="body2" sx={{ color: '#ddd' }}>
+                        Обещают лёгкий выигрыш, но на деле выводят деньги.
+                      </Typography>
+                    </CardContent>
+                  </Card>
+                </Grid>
+                <Grid size={{ xs: 12, md: 4 }}>
+                  <Card
+                    sx={{
+                      bgcolor: 'rgba(0,0,0,0.6)',
+                      backdropFilter: 'blur(8px)',
+                      borderRadius: 4,
+                    }}
+                  >
+                    <CardMedia
+                      component="img"
+                      height="140"
+                      image="https://images.unsplash.com/photo-1621506289937-a8e4df240d0b?w=400"
+                      alt="Финансовые пирамиды"
+                    />
+                    <CardContent>
+                      <Typography variant="subtitle1" sx={{ color: '#ffaa44' }}>
+                        📈 Финансовые пирамиды
+                      </Typography>
+                      <Typography variant="body2" sx={{ color: '#ddd' }}>
+                        «Инвестируй 1000, получи 10000» — классическая схема
+                        Понци.
+                      </Typography>
+                    </CardContent>
+                  </Card>
+                </Grid>
+                <Grid size={{ xs: 12, md: 4 }}>
+                  <Card
+                    sx={{
+                      bgcolor: 'rgba(0,0,0,0.6)',
+                      backdropFilter: 'blur(8px)',
+                      borderRadius: 4,
+                    }}
+                  >
+                    <CardMedia
+                      component="img"
+                      height="140"
+                      image="https://images.unsplash.com/photo-1611162617213-7d7a39e9b1d7?w=400"
+                      alt="Реферальные схемы"
+                    />
+                    <CardContent>
+                      <Typography variant="subtitle1" sx={{ color: '#ffaa44' }}>
+                        🔗 Реферальные схемы
+                      </Typography>
+                      <Typography variant="body2" sx={{ color: '#ddd' }}>
+                        Заработок только на привлечении новых жертв без
+                        реального продукта.
+                      </Typography>
+                    </CardContent>
+                  </Card>
+                </Grid>
+              </Grid>
+              <Grid container spacing={3} sx={{ mb: 5 }}>
+                <Grid size={{ xs: 12, md: 7 }}>
                   <Card
                     sx={{
                       bgcolor: 'rgba(0,0,0,0.5)',
                       backdropFilter: 'blur(8px)',
                       borderRadius: 3,
-                      border: `1px solid ${item.color}`,
-                      textAlign: 'center',
-                      py: 2,
-                      transition: '0.2s',
-                      '&:hover': {
-                        transform: 'translateY(-5px)',
-                        boxShadow: `0 0 20px ${item.color}`,
-                      },
+                      p: 2,
+                      border: '1px solid #33ffcc',
                     }}
                   >
-                    <CardContent>
-                      <Box sx={{ fontSize: 40, color: item.color }}>
-                        {item.icon}
-                      </Box>
-                      <Typography
-                        variant="h4"
-                        sx={{
-                          fontWeight: 'bold',
-                          fontFamily: 'monospace',
-                          color: '#fff',
-                        }}
-                      >
-                        {item.value}
-                      </Typography>
-                      <Typography variant="body2" sx={{ color: '#fff' }}>
-                        {item.label}
-                      </Typography>
-                    </CardContent>
-                  </Card>
-                </motion.div>
-              </Grid>
-            ))}
-          </Grid>
-          <Box
-            sx={{
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center',
-              flexWrap: 'wrap',
-              mb: 3,
-              gap: 2,
-            }}
-          >
-            <ToggleButtonGroup
-              value={timeframe}
-              exclusive
-              onChange={(_, val) => val && setTimeframe(val)}
-              sx={{
-                '& .MuiToggleButton-root': {
-                  color: '#fff',
-                  borderColor: '#0ff',
-                  '&.Mui-selected': { bgcolor: '#0ff', color: '#000' },
-                },
-              }}
-            >
-              <ToggleButton value="day">День</ToggleButton>
-              <ToggleButton value="week">Неделя</ToggleButton>
-              <ToggleButton value="month">Месяц</ToggleButton>
-            </ToggleButtonGroup>
-            <FormControl
-              size="small"
-              sx={{
-                minWidth: 200,
-                bgcolor: 'rgba(0,0,0,0.5)',
-                borderRadius: 2,
-              }}
-            >
-              <InputLabel sx={{ color: '#0ff' }}>Тип угрозы</InputLabel>
-              <Select
-                multiple
-                value={selectedRiskFilter}
-                onChange={(e) =>
-                  setSelectedRiskFilter(
-                    typeof e.target.value === 'string'
-                      ? e.target.value.split(',')
-                      : e.target.value
-                  )
-                }
-                label="Тип угрозы"
-                renderValue={(selected) => (
-                  <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
-                    {selected.map((value) => (
-                      <Chip
-                        key={value}
-                        label={RISK_TYPES.find((r) => r.id === value)?.name}
-                        size="small"
-                        sx={{
-                          bgcolor: RISK_TYPES.find((r) => r.id === value)
-                            ?.color,
-                          color: '#fff',
-                        }}
-                      />
-                    ))}
-                  </Box>
-                )}
-              >
-                {RISK_TYPES.map((rt) => (
-                  <MenuItem key={rt.id} value={rt.id}>
-                    {rt.icon} {rt.name}
-                  </MenuItem>
-                ))}
-              </Select>
-            </FormControl>
-          </Box>
-          <Typography
-            variant="h5"
-            sx={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: 1,
-              mb: 2,
-              color: '#ff6666',
-            }}
-          >
-            <ReportProblemIcon /> 🚨 ТОП-6 самых опасных видео
-          </Typography>
-          <Box
-            sx={{ display: 'flex', overflowX: 'auto', gap: 3, pb: 3, mb: 5 }}
-          >
-            {topRiskyVideos.map((video) => (
-              <motion.div
-                key={video.id}
-                whileHover={{ scale: 1.03 }}
-                transition={{ type: 'spring', stiffness: 300 }}
-                style={{ flex: '0 0 auto', width: 260 }}
-              >
-                <Card
-                  onClick={() => handleVideoClick(video.id)}
-                  sx={{
-                    cursor: 'pointer',
-                    bgcolor: 'rgba(20,20,40,0.8)',
-                    backdropFilter: 'blur(12px)',
-                    borderRadius: 4,
-                    border: `1px solid ${video.riskTypes[0]?.color || '#ff3366'}`,
-                    overflow: 'hidden',
-                    transition: '0.2s',
-                  }}
-                >
-                  <Box
-                    sx={{
-                      height: 140,
-                      overflow: 'hidden',
-                      position: 'relative',
-                    }}
-                  >
-                    <img
-                      src={video.thumbnail}
-                      alt={video.title}
-                      style={{
-                        width: '100%',
-                        height: '100%',
-                        objectFit: 'cover',
-                      }}
-                    />
-                    <Chip
-                      label={`RISK ${Math.round(video.riskScore * 100)}%`}
-                      size="small"
-                      sx={{
-                        position: 'absolute',
-                        top: 8,
-                        right: 8,
-                        bgcolor: '#ff3366',
-                        fontWeight: 'bold',
-                      }}
-                    />
-                  </Box>
-                  <Box sx={{ p: 2 }}>
-                    <Typography
-                      variant="body1"
-                      fontWeight="bold"
-                      noWrap
-                      sx={{ color: '#fff' }}
-                    >
-                      {video.title}
+                    <Typography variant="h6" sx={{ mb: 2, color: '#0ff' }}>
+                      📈 Динамика угроз (последние 7 дней)
                     </Typography>
-                    <Typography variant="caption" sx={{ color: '#aaa' }}>
-                      @{video.author} • {video.platform}
-                    </Typography>
-                    <Box
-                      sx={{
-                        mt: 1,
-                        display: 'flex',
-                        gap: 0.5,
-                        flexWrap: 'wrap',
-                      }}
-                    >
-                      {video.riskTypes.map((rt) => (
-                        <Chip
-                          key={rt.id}
-                          label={rt.name}
-                          size="small"
-                          sx={{
-                            bgcolor: rt.color,
-                            color: '#fff',
-                            fontSize: '0.65rem',
+                    <ResponsiveContainer width="100%" height={260}>
+                      <LineChart data={trendByDay}>
+                        <CartesianGrid strokeDasharray="3 3" stroke="#333" />
+                        <XAxis dataKey="date" stroke="#ccc" />
+                        <YAxis stroke="#ccc" />
+                        <RechartsTooltip
+                          contentStyle={{
+                            backgroundColor: '#111',
+                            borderColor: '#0ff',
                           }}
                         />
-                      ))}
-                    </Box>
-                  </Box>
-                </Card>
-              </motion.div>
-            ))}
-          </Box>
-          <Typography variant="h5" sx={{ mb: 2, color: '#88f' }}>
-            ⏱️ Последние выявленные угрозы
-          </Typography>
-          <Card
-            sx={{
-              bgcolor: 'rgba(0,0,0,0.5)',
-              backdropFilter: 'blur(8px)',
-              borderRadius: 3,
-              mb: 5,
-            }}
-          >
-            <List>
-              <AnimatePresence>
-                {recentThreats.map((threat, idx) => (
-                  <motion.div
-                    key={threat.id}
-                    initial={{ opacity: 0, x: -30 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: idx * 0.05 }}
+                        <Area
+                          type="monotone"
+                          dataKey="count"
+                          stroke="#ff3366"
+                          fill="url(#gradient)"
+                        />
+                        <defs>
+                          <linearGradient
+                            id="gradient"
+                            x1="0"
+                            y1="0"
+                            x2="0"
+                            y2="1"
+                          >
+                            <stop
+                              offset="0%"
+                              stopColor="#ff3366"
+                              stopOpacity={0.6}
+                            />
+                            <stop
+                              offset="100%"
+                              stopColor="#ff3366"
+                              stopOpacity={0}
+                            />
+                          </linearGradient>
+                        </defs>
+                      </LineChart>
+                    </ResponsiveContainer>
+                  </Card>
+                </Grid>
+                <Grid size={{ xs: 12, md: 5 }}>
+                  <Card
+                    sx={{
+                      bgcolor: 'rgba(0,0,0,0.5)',
+                      backdropFilter: 'blur(8px)',
+                      borderRadius: 3,
+                      p: 2,
+                      border: '1px solid #ffaa44',
+                    }}
                   >
-                    <ListItem
-                      button
-                      onClick={() => handleVideoClick(threat.id)}
-                    >
-                      <ListItemAvatar>
-                        <Avatar src={threat.thumbnail} variant="rounded" />
-                      </ListItemAvatar>
-                      <ListItemText
-                        primary={threat.title}
-                        secondary={`${threat.author} • ${threat.platform} • ${new Date(threat.processedAt).toLocaleString()} • 👁️ ${threat.views.toLocaleString()} • 💬 ${threat.comments}`}
-                        primaryTypographyProps={{ color: '#fff' }}
-                        secondaryTypographyProps={{ color: '#aaa' }}
-                      />
-                      <Box
-                        sx={{ display: 'flex', gap: 1, alignItems: 'center' }}
-                      >
-                        <LinearProgress
-                          variant="determinate"
-                          value={threat.riskScore * 100}
-                          sx={{ width: 80, height: 6, borderRadius: 3 }}
-                        />
-                        <Chip
-                          label={`${Math.round(threat.riskScore * 100)}%`}
-                          size="small"
-                          sx={{ bgcolor: '#ff3366', color: '#fff' }}
-                        />
-                      </Box>
-                    </ListItem>
-                    <Divider variant="inset" sx={{ borderColor: '#333' }} />
-                  </motion.div>
-                ))}
-              </AnimatePresence>
-            </List>
-          </Card>
-          <Grid container spacing={4} sx={{ mb: 5 }}>
-            <Grid size={{ xs: 12, md: 6 }}>
-              <Card
-                sx={{
-                  bgcolor: 'rgba(0,0,0,0.6)',
-                  backdropFilter: 'blur(8px)',
-                  borderRadius: 4,
-                  height: '100%',
-                }}
-              >
-                <CardMedia
-                  component="img"
-                  height="180"
-                  image="https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=600"
-                  alt="Как это работает"
-                />
-                <CardContent>
-                  <Typography variant="h6" sx={{ color: '#0ff', mb: 1 }}>
-                    🔍 Как это работает?
-                  </Typography>
-                  <Typography variant="body2" sx={{ color: '#ddd' }}>
-                    AI Media Watch анализирует видео в 3 этапа: 1) Извлечение
-                    ключевых кадров, аудио и текста (OCR). 2) Детекция
-                    визуальных маркеров казино/пирамид (YOLO), транскрибация
-                    речи (Whisper), поиск запрещённых фраз (NLP). 3) Вынесение
-                    вердикта и объяснение риска.
-                  </Typography>
-                </CardContent>
-              </Card>
-            </Grid>
-            <Grid size={{ xs: 12, md: 6 }}>
-              <Card
-                sx={{
-                  bgcolor: 'rgba(0,0,0,0.6)',
-                  backdropFilter: 'blur(8px)',
-                  borderRadius: 4,
-                  height: '100%',
-                }}
-              >
-                <CardMedia
-                  component="img"
-                  height="180"
-                  image="https://images.unsplash.com/photo-1454165804606-c3d57bc86b40?w=600"
-                  alt="Почему это важно?"
-                />
-                <CardContent>
-                  <Typography variant="h6" sx={{ color: '#0ff', mb: 1 }}>
-                    ⚠️ Почему это важно?
-                  </Typography>
-                  <Typography variant="body2" sx={{ color: '#ddd' }}>
-                    Ежедневно тысячи пользователей попадаются на уловки
-                    мошенников в соцсетях: фейковые казино, финансовые пирамиды,
-                    реферальные схемы. Наш AI помогает выявлять такие угрозы до
-                    того, как они нанесут вред.
-                  </Typography>
-                </CardContent>
-              </Card>
-            </Grid>
-            <Grid size={{ xs: 12, md: 4 }}>
-              <Card
-                sx={{
-                  bgcolor: 'rgba(0,0,0,0.6)',
-                  backdropFilter: 'blur(8px)',
-                  borderRadius: 4,
-                }}
-              >
-                <CardMedia
-                  component="img"
-                  height="140"
-                  image="https://images.unsplash.com/photo-1526304640581-d334cdbbf45e?w=400"
-                  alt="Типичные схемы"
-                />
-                <CardContent>
-                  <Typography variant="subtitle1" sx={{ color: '#ffaa44' }}>
-                    🎰 Нелегальные казино
-                  </Typography>
-                  <Typography variant="body2" sx={{ color: '#ddd' }}>
-                    Обещают лёгкий выигрыш, но на деле выводят деньги.
-                  </Typography>
-                </CardContent>
-              </Card>
-            </Grid>
-            <Grid size={{ xs: 12, md: 4 }}>
-              <Card
-                sx={{
-                  bgcolor: 'rgba(0,0,0,0.6)',
-                  backdropFilter: 'blur(8px)',
-                  borderRadius: 4,
-                }}
-              >
-                <CardMedia
-                  component="img"
-                  height="140"
-                  image="https://images.unsplash.com/photo-1621506289937-a8e4df240d0b?w=400"
-                  alt="Финансовые пирамиды"
-                />
-                <CardContent>
-                  <Typography variant="subtitle1" sx={{ color: '#ffaa44' }}>
-                    📈 Финансовые пирамиды
-                  </Typography>
-                  <Typography variant="body2" sx={{ color: '#ddd' }}>
-                    «Инвестируй 1000, получи 10000» — классическая схема Понци.
-                  </Typography>
-                </CardContent>
-              </Card>
-            </Grid>
-            <Grid size={{ xs: 12, md: 4 }}>
-              <Card
-                sx={{
-                  bgcolor: 'rgba(0,0,0,0.6)',
-                  backdropFilter: 'blur(8px)',
-                  borderRadius: 4,
-                }}
-              >
-                <CardMedia
-                  component="img"
-                  height="140"
-                  image="https://images.unsplash.com/photo-1611162617213-7d7a39e9b1d7?w=400"
-                  alt="Реферальные схемы"
-                />
-                <CardContent>
-                  <Typography variant="subtitle1" sx={{ color: '#ffaa44' }}>
-                    🔗 Реферальные схемы
-                  </Typography>
-                  <Typography variant="body2" sx={{ color: '#ddd' }}>
-                    Заработок только на привлечении новых жертв без реального
-                    продукта.
-                  </Typography>
-                </CardContent>
-              </Card>
-            </Grid>
-          </Grid>
-          <Grid container spacing={3} sx={{ mb: 5 }}>
-            <Grid size={{ xs: 12, md: 7 }}>
-              <Card
-                sx={{
-                  bgcolor: 'rgba(0,0,0,0.5)',
-                  backdropFilter: 'blur(8px)',
-                  borderRadius: 3,
-                  p: 2,
-                  border: '1px solid #33ffcc',
-                }}
-              >
-                <Typography variant="h6" sx={{ mb: 2, color: '#0ff' }}>
-                  📈 Динамика угроз (последние 7 дней)
-                </Typography>
-                <ResponsiveContainer width="100%" height={260}>
-                  <LineChart data={trendByDay}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#333" />
-                    <XAxis dataKey="date" stroke="#ccc" />
-                    <YAxis stroke="#ccc" />
-                    <RechartsTooltip
-                      contentStyle={{
-                        backgroundColor: '#111',
-                        borderColor: '#0ff',
-                      }}
-                    />
-                    <Area
-                      type="monotone"
-                      dataKey="count"
-                      stroke="#ff3366"
-                      fill="url(#gradient)"
-                    />
-                    <defs>
-                      <linearGradient id="gradient" x1="0" y1="0" x2="0" y2="1">
-                        <stop
-                          offset="0%"
-                          stopColor="#ff3366"
-                          stopOpacity={0.6}
-                        />
-                        <stop
-                          offset="100%"
-                          stopColor="#ff3366"
-                          stopOpacity={0}
-                        />
-                      </linearGradient>
-                    </defs>
-                  </LineChart>
-                </ResponsiveContainer>
-              </Card>
-            </Grid>
-            <Grid size={{ xs: 12, md: 5 }}>
-              <Card
-                sx={{
-                  bgcolor: 'rgba(0,0,0,0.5)',
-                  backdropFilter: 'blur(8px)',
-                  borderRadius: 3,
-                  p: 2,
-                  border: '1px solid #ffaa44',
-                }}
-              >
-                <Typography variant="h6" sx={{ mb: 2, color: '#ffaa44' }}>
-                  🥧 Типы угроз
-                </Typography>
-                <ResponsiveContainer width="100%" height={260}>
-                  <PieChart>
-                    <Pie
-                      data={riskTypeStats}
-                      dataKey="value"
-                      nameKey="name"
-                      cx="50%"
-                      cy="50%"
-                      outerRadius={80}
-                      label={({ name, percent }) =>
-                        `${name}: ${(percent * 100).toFixed(0)}%`
-                      }
-                    >
-                      {riskTypeStats.map((entry, idx) => (
-                        <Cell key={idx} fill={entry.color} />
-                      ))}
-                    </Pie>
-                    <RechartsTooltip />
-                  </PieChart>
-                </ResponsiveContainer>
-              </Card>
-            </Grid>
-          </Grid>
+                    <Typography variant="h6" sx={{ mb: 2, color: '#ffaa44' }}>
+                      🥧 Распределение вердиктов
+                    </Typography>
+                    <ResponsiveContainer width="100%" height={260}>
+                      <PieChart>
+                        <Pie
+                          data={verdictStats}
+                          dataKey="value"
+                          nameKey="name"
+                          cx="50%"
+                          cy="50%"
+                          outerRadius={80}
+                          label={({ name, percent }) =>
+                            `${name}: ${(percent * 100).toFixed(0)}%`
+                          }
+                        >
+                          {verdictStats.map((entry, idx) => (
+                            <Cell key={idx} fill={entry.color} />
+                          ))}
+                        </Pie>
+                        <RechartsTooltip />
+                      </PieChart>
+                    </ResponsiveContainer>
+                  </Card>
+                </Grid>
+              </Grid>
+            </>
+          )}
           <Box
             sx={{
               textAlign: 'center',

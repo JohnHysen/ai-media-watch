@@ -13,6 +13,7 @@ import {
   createVideoAnalysis,
   getAllVideoAnalyses,
 } from './controllers/videoController.js'
+import { getAnalysesByUser } from './controllers/videoController.js'
 
 const allowedOrigins = [cfg.CLIENT]
 const PORT = cfg.PORT
@@ -25,8 +26,10 @@ app.use(cors({ origin: allowedOrigins, credentials: true }))
 app.use('/static', express.static('static'))
 
 // ✅ Все роуты идут через router (включая прокси)
+
 app.post('/video-analysis', createVideoAnalysis)
 app.get('/video-analysis', getAllVideoAnalyses)
+app.get('/video-analysis/user/:userId', getAnalysesByUser)
 app.use('/', router) // здесь теперь и прокси, и auth, и user
 
 app.get('/', (req, res) => {

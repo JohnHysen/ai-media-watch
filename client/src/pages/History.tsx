@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useMemo } from 'react'
 import {
   Box,
   Container,
@@ -21,20 +21,29 @@ import {
   Grid,
   Button,
   ButtonGroup,
+  Alert,
+  Link,
 } from '@mui/material'
 import MenuIcon from '@mui/icons-material/Menu'
 import SearchIcon from '@mui/icons-material/Search'
 import HistoryIcon from '@mui/icons-material/History'
 import TrendingDownIcon from '@mui/icons-material/TrendingDown'
 import TrendingUpIcon from '@mui/icons-material/TrendingUp'
+import PersonIcon from '@mui/icons-material/Person'
+import PeopleIcon from '@mui/icons-material/People'
 import { useUser } from '../context/user/useUser'
 import { motion } from 'framer-motion'
 import { Canvas, useFrame } from '@react-three/fiber'
 import { OrbitControls, Environment, Stars } from '@react-three/drei'
 import * as THREE from 'three'
 import CyberSidebar from '../components/CyberSidebar'
+import {
+  getVideoAnalyses,
+  getVideoAnalysesByUser,
+  VideoAnalysis,
+} from '../http/API'
 
-// ---------- Компонент вращающегося куба ----------
+// ---------- Фон с вращающимися кубами ----------
 const FloatingCube = ({ position, color, size, speed }) => {
   const meshRef = React.useRef<THREE.Mesh>(null)
   useFrame(({ clock }) => {
@@ -58,7 +67,6 @@ const FloatingCube = ({ position, color, size, speed }) => {
   )
 }
 
-// ---------- Космический фон с кубами ----------
 const CubeSpaceBackground = () => {
   const cubes = [
     { color: '#ff3366', size: 0.8, position: [-4, 1, -6], speed: 0.3 },
@@ -111,106 +119,97 @@ const CubeSpaceBackground = () => {
   )
 }
 
-// Типы угроз для цветовой индикации
-const threatTypes = {
-  casino: { label: 'Нелегальное казино', color: '#ff3366' },
-  pyramid: { label: 'Финансовая пирамида', color: '#ffaa44' },
-  gambling: { label: 'Азарт без лицензии', color: '#ff8844' },
-  guaranteed: { label: 'Гарантированный доход', color: '#ff6666' },
-  referral: { label: 'Реферальная схема', color: '#ff9966' },
-  crypto_scam: { label: 'Крипто-мошенничество', color: '#ff44aa' },
+// Маппинг вердиктов для цветовой индикации
+const VERDICT_MAP = {
+  safe: { label: 'Безопасно', color: '#44ff66' },
+  dangerous: { label: 'Опасно', color: '#ff3366' },
+  uncertain: { label: 'Неопределённо', color: '#ffaa44' },
 }
 
-// Генерация тестовых данных (заглушка)
-const generateMockHistory = () => {
-  const platforms = ['tiktok', 'instagram', 'youtube']
-  const titles = [
-    'Заработай 500% за день!',
-    'Инвестируй 1000→10000',
-    'Секретная стратегия казино',
-    'Пассивный доход 50% в месяц',
-    'Крути барабан и выигрывай iPhone',
-    'Крипто-халява с гарантией',
-    'Бинарные опционы прибыль 90%',
-    'Удвой депозит за час',
-  ]
-  const threats = [
-    'casino',
-    'pyramid',
-    'gambling',
-    'guaranteed',
-    'referral',
-    'crypto_scam',
-  ]
-  const history = []
-  const now = new Date()
-  for (let i = 0; i < 24; i++) {
-    const date = new Date(now.getTime() - i * 86400000) // последние 24 дня
-    history.push({
-      id: i + 1,
-      title: titles[i % titles.length] + ` (${i + 1})`,
-      url: `https://${platforms[i % 3]}.com/video/${i + 1}`,
-      risk: 50 + Math.floor(Math.random() * 50),
-      threatType: threats[i % threats.length],
-      checkedAt: date.toISOString(),
-    })
-  }
-  return history
-}
-
-// ---------- Главный компонент History ----------
+// ---------- Главный компонент ----------
 const History = () => {
   const { user } = useUser()
   const [drawerOpen, setDrawerOpen] = useState(false)
-  const [history, setHistory] = useState([])
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
   const [searchTerm, setSearchTerm] = useState('')
   const [page, setPage] = useState(0)
   const [rowsPerPage, setRowsPerPage] = useState(10)
+  const [sortOrder, setSortOrder] = useState<'newest' | 'oldest'>('newest')
+  const [mode, setMode] = useState<'my' | 'all'>('my')
+  const [videoAnalyses, setVideoAnalyses] = useState<VideoAnalysis[]>([])
   const [totalCount, setTotalCount] = useState(0)
-  const [sortOrder, setSortOrder] = useState('newest') // 'newest' или 'oldest'
 
-  // Загрузка данных (пока заглушка, потом заменить на API)
-  useEffect(() => {
-    if (!user) return
-    setLoading(true)
-    // TODO: заменить на реальный API-вызов
-    // const response = await fetch(`/api/user/history?page=${page}&limit=${rowsPerPage}&search=${searchTerm}&sort=${sortOrder}`)
-    // const data = await response.json()
-    // setHistory(data.items)
-    // setTotalCount(data.total)
-    setTimeout(() => {
-      let mock = generateMockHistory()
-      // Фильтрация по поиску
-      if (searchTerm) {
-        mock = mock.filter(
-          (item) =>
-            item.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            item.url.toLowerCase().includes(searchTerm.toLowerCase())
-        )
-      }
-      // Сортировка
-      mock.sort((a, b) => {
-        const dateA = new Date(a.checkedAt)
-        const dateB = new Date(b.checkedAt)
-        return sortOrder === 'newest' ? dateB - dateA : dateA - dateB
-      })
-      setTotalCount(mock.length)
-      // Пагинация
-      const paginated = mock.slice(
-        page * rowsPerPage,
-        page * rowsPerPage + rowsPerPage
-      )
-      setHistory(paginated)
+  const isAdmin = user?.role === 'ADMIN'
+  const isAuthenticated = user && user.user_id !== -1 && user.role !== null
+
+  // Логи для отладки
+  console.log('👤 user в History:', user)
+  console.log('📌 user.user_id:', user?.user_id)
+  console.log('🔐 isAdmin:', isAdmin)
+
+  const fetchData = async () => {
+    if (!isAuthenticated) {
       setLoading(false)
-    }, 500)
-  }, [user, page, rowsPerPage, searchTerm, sortOrder])
+      return
+    }
+    setLoading(true)
+    setError(null)
+    try {
+      let data: VideoAnalysis[] = []
+      if (mode === 'my') {
+        const userId = user.user_id ?? user.id
+        console.log(`🔍 Загрузка проверок для пользователя ${userId}`)
+        data = await getVideoAnalysesByUser(userId)
+        console.log(`📊 Получено ${data.length} записей`)
+      } else if (mode === 'all') {
+        console.log('🌐 Загрузка всех проверок')
+        const response = await getVideoAnalyses({ limit: 1000, offset: 0 })
+        data = response.data
+        console.log(`📊 Получено ${data.length} записей`)
+      }
+      setVideoAnalyses(data)
+      setTotalCount(data.length)
+    } catch (err: any) {
+      console.error('❌ Ошибка загрузки истории:', err)
+      setError('Не удалось загрузить данные: ' + (err.message || ''))
+    } finally {
+      setLoading(false)
+    }
+  }
 
-  const handleChangePage = (event, newPage) => {
+  useEffect(() => {
+    fetchData()
+  }, [user, mode])
+
+  const filteredAndPaginated = useMemo(() => {
+    let filtered = [...videoAnalyses]
+    if (searchTerm) {
+      const term = searchTerm.toLowerCase()
+      filtered = filtered.filter(
+        (item) =>
+          (item.title && item.title.toLowerCase().includes(term)) ||
+          item.video_url.toLowerCase().includes(term)
+      )
+    }
+    filtered.sort((a, b) => {
+      const dateA = new Date(a.checked_at).getTime()
+      const dateB = new Date(b.checked_at).getTime()
+      return sortOrder === 'newest' ? dateB - dateA : dateA - dateB
+    })
+    setTotalCount(filtered.length)
+    const start = page * rowsPerPage
+    const end = start + rowsPerPage
+    return filtered.slice(start, end)
+  }, [videoAnalyses, searchTerm, sortOrder, page, rowsPerPage])
+
+  const handleChangePage = (_: unknown, newPage: number) => {
     setPage(newPage)
   }
 
-  const handleChangeRowsPerPage = (event) => {
+  const handleChangeRowsPerPage = (
+    event: React.ChangeEvent<HTMLInputElement>
+  ) => {
     setRowsPerPage(parseInt(event.target.value, 10))
     setPage(0)
   }
@@ -220,7 +219,12 @@ const History = () => {
     setPage(0)
   }
 
-  if (!user) {
+  const handleModeToggle = (newMode: 'my' | 'all') => {
+    setMode(newMode)
+    setPage(0)
+  }
+
+  if (!isAuthenticated) {
     return (
       <Box
         sx={{
@@ -241,7 +245,6 @@ const History = () => {
     <>
       <CubeSpaceBackground />
       <Box sx={{ minHeight: '100vh', position: 'relative', zIndex: 2 }}>
-        {/* Кнопка бургер-меню */}
         <IconButton
           onClick={() => setDrawerOpen(true)}
           sx={{
@@ -274,11 +277,72 @@ const History = () => {
                 backgroundClip: 'text',
                 WebkitBackgroundClip: 'text',
                 color: 'transparent',
+                textAlign: 'center',
               }}
             >
-              История проверок
+              {mode === 'my' ? 'Мои проверки' : 'Все проверки'}
             </Typography>
           </motion.div>
+
+          {/* Две кнопки переключения – теперь обе активны для всех */}
+          <Box
+            sx={{ display: 'flex', justifyContent: 'center', gap: 3, mb: 4 }}
+          >
+            <Button
+              variant={mode === 'my' ? 'contained' : 'outlined'}
+              onClick={() => handleModeToggle('my')}
+              startIcon={<PersonIcon />}
+              sx={{
+                borderRadius: '50px',
+                px: 4,
+                py: 1.5,
+                borderColor: '#33ffcc',
+                color: mode === 'my' ? '#000' : '#33ffcc',
+                bgcolor: mode === 'my' ? '#33ffcc' : 'transparent',
+                boxShadow:
+                  mode === 'my' ? '0 0 30px rgba(51,255,204,0.5)' : 'none',
+                transition: 'all 0.3s ease',
+                '&:hover': {
+                  transform: 'scale(1.05)',
+                  boxShadow: '0 0 50px rgba(51,255,204,0.8)',
+                },
+                fontWeight: 'bold',
+                fontSize: '1.1rem',
+              }}
+            >
+              👤 Мои проверки
+            </Button>
+            <Button
+              variant={mode === 'all' ? 'contained' : 'outlined'}
+              onClick={() => handleModeToggle('all')}
+              // ✅ Убрано disabled={!isAdmin}
+              startIcon={<PeopleIcon />}
+              sx={{
+                borderRadius: '50px',
+                px: 4,
+                py: 1.5,
+                borderColor: '#ff3366',
+                color: mode === 'all' ? '#fff' : '#ff3366',
+                bgcolor: mode === 'all' ? '#ff3366' : 'transparent',
+                boxShadow:
+                  mode === 'all' ? '0 0 30px rgba(255,51,102,0.5)' : 'none',
+                transition: 'all 0.3s ease',
+                '&:hover': {
+                  transform: 'scale(1.05)',
+                  boxShadow: '0 0 50px rgba(255,51,102,0.8)',
+                },
+                '&.Mui-disabled': {
+                  opacity: 0.4,
+                  color: '#666',
+                  borderColor: '#666',
+                },
+                fontWeight: 'bold',
+                fontSize: '1.1rem',
+              }}
+            >
+              🌐 Все проверки
+            </Button>
+          </Box>
 
           {/* Карточка статистики */}
           <Card
@@ -297,7 +361,7 @@ const History = () => {
                   <HistoryIcon sx={{ fontSize: 48, color: '#0ff' }} />
                   <Box>
                     <Typography variant="body2" sx={{ color: '#aaa' }}>
-                      Всего проверено видео
+                      Всего записей
                     </Typography>
                     <Typography
                       variant="h4"
@@ -375,7 +439,7 @@ const History = () => {
             }}
           />
 
-          {/* Таблица истории */}
+          {/* Таблица */}
           <TableContainer
             component={Paper}
             sx={{
@@ -389,7 +453,7 @@ const History = () => {
               <TableHead>
                 <TableRow>
                   <TableCell sx={{ color: '#0ff', fontWeight: 'bold' }}>
-                    Название видео
+                    Название
                   </TableCell>
                   <TableCell sx={{ color: '#0ff', fontWeight: 'bold' }}>
                     Ссылка
@@ -398,10 +462,10 @@ const History = () => {
                     sx={{ color: '#0ff', fontWeight: 'bold' }}
                     align="center"
                   >
-                    Риск (%)
+                    Безопасность (%)
                   </TableCell>
                   <TableCell sx={{ color: '#0ff', fontWeight: 'bold' }}>
-                    Тип угрозы
+                    Вердикт
                   </TableCell>
                   <TableCell sx={{ color: '#0ff', fontWeight: 'bold' }}>
                     Дата проверки
@@ -415,76 +479,96 @@ const History = () => {
                       <CircularProgress sx={{ color: '#0ff' }} />
                     </TableCell>
                   </TableRow>
-                ) : history.length === 0 ? (
+                ) : error ? (
+                  <TableRow>
+                    <TableCell
+                      colSpan={5}
+                      align="center"
+                      sx={{ py: 4, color: '#ff3366' }}
+                    >
+                      {error}
+                    </TableCell>
+                  </TableRow>
+                ) : filteredAndPaginated.length === 0 ? (
                   <TableRow>
                     <TableCell
                       colSpan={5}
                       align="center"
                       sx={{ py: 4, color: '#aaa' }}
                     >
-                      Нет данных о проверках
+                      {searchTerm
+                        ? 'Ничего не найдено'
+                        : 'Нет данных о проверках'}
                     </TableCell>
                   </TableRow>
                 ) : (
-                  history.map((item) => (
-                    <TableRow
-                      key={item.id}
-                      sx={{ '&:hover': { bgcolor: 'rgba(0,255,255,0.05)' } }}
-                    >
-                      <TableCell sx={{ color: '#fff' }}>{item.title}</TableCell>
-                      <TableCell sx={{ color: '#88f' }}>
-                        <a
-                          href={item.url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          style={{ color: '#88f', textDecoration: 'none' }}
-                        >
-                          {item.url.length > 50
-                            ? item.url.substring(0, 50) + '...'
-                            : item.url}
-                        </a>
-                      </TableCell>
-                      <TableCell align="center">
-                        <Chip
-                          label={`${item.risk}%`}
-                          size="small"
-                          sx={{
-                            bgcolor:
-                              item.risk > 70
-                                ? '#ff3366'
-                                : item.risk > 40
-                                  ? '#ffaa44'
-                                  : '#44ff66',
-                            color: '#fff',
-                            fontWeight: 'bold',
-                          }}
-                        />
-                      </TableCell>
-                      <TableCell>
-                        <Chip
-                          label={
-                            threatTypes[item.threatType]?.label ||
-                            item.threatType
-                          }
-                          size="small"
-                          sx={{
-                            bgcolor:
-                              threatTypes[item.threatType]?.color || '#aaa',
-                            color: '#fff',
-                          }}
-                        />
-                      </TableCell>
-                      <TableCell sx={{ color: '#aaa', fontSize: '0.85rem' }}>
-                        {new Date(item.checkedAt).toLocaleString()}
-                      </TableCell>
-                    </TableRow>
-                  ))
+                  filteredAndPaginated.map((item) => {
+                    const verdictInfo = VERDICT_MAP[item.verdict_text] || {
+                      label: item.verdict_text,
+                      color: '#aaa',
+                    }
+                    return (
+                      <TableRow
+                        key={item.id}
+                        sx={{ '&:hover': { bgcolor: 'rgba(0,255,255,0.05)' } }}
+                      >
+                        <TableCell sx={{ color: '#fff' }}>
+                          {item.title || 'Без названия'}
+                        </TableCell>
+                        <TableCell sx={{ color: '#88f' }}>
+                          <Link
+                            href={item.video_url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            sx={{
+                              color: '#88f',
+                              textDecoration: 'none',
+                              '&:hover': { textDecoration: 'underline' },
+                            }}
+                          >
+                            {item.video_url.length > 50
+                              ? item.video_url.substring(0, 50) + '...'
+                              : item.video_url}
+                          </Link>
+                        </TableCell>
+                        <TableCell align="center">
+                          <Chip
+                            label={`${item.safety_percent}%`}
+                            size="small"
+                            sx={{
+                              bgcolor:
+                                item.safety_percent < 40
+                                  ? '#ff3366'
+                                  : item.safety_percent < 70
+                                    ? '#ffaa44'
+                                    : '#44ff66',
+                              color: '#fff',
+                              fontWeight: 'bold',
+                            }}
+                          />
+                        </TableCell>
+                        <TableCell>
+                          <Chip
+                            label={verdictInfo.label}
+                            size="small"
+                            sx={{
+                              bgcolor: verdictInfo.color,
+                              color: '#000',
+                              fontWeight: 'bold',
+                            }}
+                          />
+                        </TableCell>
+                        <TableCell sx={{ color: '#aaa', fontSize: '0.85rem' }}>
+                          {new Date(item.checked_at).toLocaleString()}
+                        </TableCell>
+                      </TableRow>
+                    )
+                  })
                 )}
               </TableBody>
             </Table>
           </TableContainer>
 
-          {/* Пагинация */}
           <TablePagination
             rowsPerPageOptions={[5, 10, 25]}
             component="div"
