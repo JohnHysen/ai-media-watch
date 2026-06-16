@@ -377,10 +377,10 @@ const CyberMediaWatchPro = () => {
     if (!videoUrl.trim()) return
     setIsChecking(true)
     try {
-      // ✅ Добавляем userId в query-параметры
+      // ✅ Отправляем запрос через Node.js прокси (порт 3500)
       const userIdParam = user?.user_id ? `&userId=${user.user_id}` : ''
       const response = await fetch(
-        `http://localhost:8000/analyze?url=${encodeURIComponent(videoUrl)}${userIdParam}`
+        `http://localhost:3500/analyze?url=${encodeURIComponent(videoUrl)}${userIdParam}`
       )
       if (!response.ok) {
         const errorText = await response.text()
@@ -409,7 +409,7 @@ const CyberMediaWatchPro = () => {
 
       const durationSeconds = data.duration_seconds || 0
 
-      // ✅ Исправлено: userId берём из user?.user_id
+      // ✅ Передаём userId в Node.js (берём из user?.user_id)
       await $host.post('/video-analysis', {
         video_url: videoUrl,
         title: data.video_title || null,
@@ -420,7 +420,7 @@ const CyberMediaWatchPro = () => {
         duration_seconds: durationSeconds,
         preview_image_url: null,
         checked_at: new Date().toISOString(),
-        userId: user?.user_id || null, // <-- ЗДЕСЬ БЫЛО user?.userId
+        userId: user?.user_id || null,
       })
     } catch (error: any) {
       console.error('Ошибка при проверке видео:', error)

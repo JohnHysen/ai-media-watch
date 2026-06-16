@@ -11,6 +11,9 @@ importers:
       apify-client:
         specifier: ^2.23.4
         version: 2.23.4
+      axios:
+        specifier: ^1.18.0
+        version: 1.18.0
       bcryptjs:
         specifier: ^3.0.2
         version: 3.0.3
