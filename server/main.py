@@ -19,7 +19,6 @@ from .services.nodejs_client import send_video_analysis_to_nodejs
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-
     yield
 
 app = FastAPI(lifespan=lifespan)
@@ -35,7 +34,7 @@ app.add_middleware(
 @app.get("/analyze")
 async def analyze(
     url: str,
-    user_id: Optional[int] = Query(None, description="ID пользователя, если инициировал проверку"),
+    userId: Optional[int] = Query(None, description="ID пользователя, если инициировал проверку"),
     background_tasks: BackgroundTasks = None
 ):
     start_time = time.time()
@@ -85,13 +84,11 @@ async def analyze(
         is_danger = verdict.get("is_dangerous", False)
         confidence = verdict.get("confidence", 0.0)
 
-        # safety_percent: 0..100. Если опасно – тем ниже, чем выше confidence.
         if is_danger:
             safety_percent = round((1 - confidence) * 100, 2)
         else:
             safety_percent = round(confidence * 100, 2)
 
-        # verdict_text для Node.js: 'dangerous', 'safe', 'uncertain'
         if is_danger:
             node_verdict = 'dangerous'
         else:
@@ -100,7 +97,6 @@ async def analyze(
             else:
                 node_verdict = 'safe'
 
-        # Длительность видео (попробуем взять из метаданных, иначе 0)
         duration_seconds = metadata.get('duration', 0)
         if isinstance(duration_seconds, str):
             try:
@@ -108,6 +104,7 @@ async def analyze(
             except:
                 duration_seconds = 0
 
+        # ✅ Передаём userId из параметра запроса
         background_tasks.add_task(
             send_video_analysis_to_nodejs,
             video_url=url,
@@ -116,23 +113,21 @@ async def analyze(
             is_dangerous=is_danger,
             duration_seconds=duration_seconds,
             title=metadata.get("title"),
-            tags=None,                     # можно расширить позже
-            preview_image_url=None,        # можно добавить позже
-            user_id=user_id
+            tags=None,
+            preview_image_url=None,
+            userId=userId,   # <-- добавлено
         )
 
         print(f"\n✨ РЕЗУЛЬТАТ: {result['verdict'].upper()} ({result['confidence']:.0%})")
         return result
 
     except Exception as e:
-        # В случае ошибки всё равно чистим временные файлы
         try:
             remove_video(analyze_id)
         except:
             pass
         raise e
 
-# Остальные эндпоинты (если нужны)
 @app.get("/")
 def read_root():
     return {"Hello": "World"}

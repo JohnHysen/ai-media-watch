@@ -41,6 +41,9 @@ import { useUser } from '../context/user/useUser'
 import { useTranslation } from 'react-i18next'
 import { signIn, signUp } from '../http/API'
 
+// Импортируем тип UserData из UserProvider
+import { UserData } from '../context/user/UserProvider'
+
 interface Props {
   open: boolean
   onClose: () => void
@@ -86,7 +89,7 @@ export default function CyberSidebar({ open, onClose }: Props) {
     navigate('/')
   }
 
-  // Реальный вход через API
+  // ✅ Реальный вход через API с преобразованием id → user_id
   const handleLogin = async () => {
     setAuthError('')
     if (!loginEmail.trim() || !loginPassword.trim()) {
@@ -96,8 +99,19 @@ export default function CyberSidebar({ open, onClose }: Props) {
     setLoading(true)
     try {
       const res = await signIn(loginEmail, loginPassword)
-      if (res && res.token) {
-        login(res.user, res.token)
+      if (res && res.token && res.user) {
+        // Преобразуем id → user_id
+        const userData: UserData = {
+          user_id: res.user.id,
+          role: res.user.role,
+          first_name: res.user.first_name || '',
+          last_name: res.user.last_name || '',
+          email: res.user.email || '',
+          photoURL: res.user.photoURL || '',
+          tg_id: res.user.tg_id || null,
+          is_google: res.user.is_google || false,
+        }
+        login(userData, res.token)
         setAuthDialogOpen(false)
         setLoginEmail('')
         setLoginPassword('')
@@ -111,7 +125,7 @@ export default function CyberSidebar({ open, onClose }: Props) {
     }
   }
 
-  // Реальная регистрация через API
+  // ✅ Реальная регистрация через API с преобразованием id → user_id
   const handleRegister = async () => {
     setAuthError('')
     if (
@@ -135,8 +149,19 @@ export default function CyberSidebar({ open, onClose }: Props) {
     setLoading(true)
     try {
       const res = await signUp(regFirstName, regLastName, regEmail, regPassword)
-      if (res && res.token) {
-        login(res.user, res.token)
+      if (res && res.token && res.user) {
+        // Преобразуем id → user_id
+        const userData: UserData = {
+          user_id: res.user.id,
+          role: res.user.role,
+          first_name: res.user.first_name || '',
+          last_name: res.user.last_name || '',
+          email: res.user.email || '',
+          photoURL: res.user.photoURL || '',
+          tg_id: res.user.tg_id || null,
+          is_google: res.user.is_google || false,
+        }
+        login(userData, res.token)
         setAuthDialogOpen(false)
         setRegFirstName('')
         setRegLastName('')

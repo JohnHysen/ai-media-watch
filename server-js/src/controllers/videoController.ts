@@ -39,8 +39,6 @@ const input = {
   proxyCountryCode: 'None',
 }
 
-// Создание записи (Python будет вызывать этот метод)
-// Создание записи (Python будет вызывать этот метод)
 export const createVideoAnalysis = async (req: Request, res: Response) => {
   try {
     const {
@@ -53,10 +51,9 @@ export const createVideoAnalysis = async (req: Request, res: Response) => {
       duration_seconds,
       preview_image_url,
       checked_at,
-      // userId больше не принимаем из тела!
+      userId,
     } = req.body
 
-    // Проверка обязательных полей
     if (
       !video_url ||
       safety_percent === undefined ||
@@ -70,15 +67,14 @@ export const createVideoAnalysis = async (req: Request, res: Response) => {
       })
     }
 
-    // Валидация verdict_text
     if (!Object.values(DangerStatus).includes(verdict_text)) {
       return res.status(400).json({
         error: `verdict_text must be one of: ${Object.values(DangerStatus).join(', ')}`,
       })
     }
 
-    // Берём userId из авторизованного пользователя (установлен middleware accessLevel)
-    const userId = req.user?.id || null
+    const finalUserId = userId || null
+    console.log('📨 Создание записи для userId:', finalUserId)
 
     const analysis = await VideoAnalysis.create({
       video_url,
@@ -90,31 +86,37 @@ export const createVideoAnalysis = async (req: Request, res: Response) => {
       duration_seconds,
       preview_image_url: preview_image_url || null,
       checked_at: checked_at ? new Date(checked_at) : new Date(),
-      userId, // теперь безопасно
+      userId: finalUserId,
     })
 
     res.status(201).json(analysis)
-  } catch (error) {
-    console.error(error)
+  } catch (error: any) {
+    console.error('❌ Ошибка при создании VideoAnalysis:')
+    console.error('  Сообщение:', error.message)
+    console.error('  Стек:', error.stack)
+    if (error.name === 'SequelizeValidationError') {
+      console.error(
+        '  Детали валидации:',
+        error.errors.map((e: any) => e.message)
+      )
+    }
+    if (error.name === 'SequelizeForeignKeyConstraintError') {
+      console.error('  Ошибка внешнего ключа:', error.message)
+    }
     res.status(500).json({ error: 'Internal server error' })
   }
 }
 
-// Получить все записи с поддержкой фильтров и пагинации
 export const getAllVideoAnalyses = async (req: Request, res: Response) => {
   try {
-    // Параметры фильтрации из query
     const { is_dangerous, userId, limit = 50, offset = 0 } = req.query
-
     const whereClause: any = {}
-
     if (is_dangerous !== undefined) {
       whereClause.is_dangerous = is_dangerous === 'true'
     }
     if (userId) {
       whereClause.userId = userId
     }
-
     const analyses = await VideoAnalysis.findAndCountAll({
       where: whereClause,
       limit: Number(limit),
@@ -124,7 +126,6 @@ export const getAllVideoAnalyses = async (req: Request, res: Response) => {
         { model: User, attributes: ['id', 'email', 'first_name', 'last_name'] },
       ],
     })
-
     res.json({
       total: analyses.count,
       limit: Number(limit),
@@ -137,7 +138,6 @@ export const getAllVideoAnalyses = async (req: Request, res: Response) => {
   }
 }
 
-// Получить одну запись по ID
 export const getVideoAnalysisById = async (req: Request, res: Response) => {
   try {
     const { id } = req.params
@@ -146,11 +146,9 @@ export const getVideoAnalysisById = async (req: Request, res: Response) => {
         { model: User, attributes: ['id', 'email', 'first_name', 'last_name'] },
       ],
     })
-
     if (!analysis) {
       return res.status(404).json({ error: 'Video analysis not found' })
     }
-
     res.json(analysis)
   } catch (error) {
     console.error(error)
@@ -158,7 +156,6 @@ export const getVideoAnalysisById = async (req: Request, res: Response) => {
   }
 }
 
-// Получить все записи конкретного пользователя (альтернативный маршрут)
 export const getAnalysesByUser = async (req: Request, res: Response) => {
   try {
     const { userId } = req.params
@@ -166,12 +163,10 @@ export const getAnalysesByUser = async (req: Request, res: Response) => {
     if (!user) {
       return res.status(404).json({ error: 'User not found' })
     }
-
     const analyses = await VideoAnalysis.findAll({
       where: { userId },
       order: [['checked_at', 'DESC']],
     })
-
     res.json(analyses)
   } catch (error) {
     console.error(error)
@@ -179,7 +174,6 @@ export const getAnalysesByUser = async (req: Request, res: Response) => {
   }
 }
 
-// Удалить запись (если нужно)
 export const deleteVideoAnalysis = async (req: Request, res: Response) => {
   try {
     const { id } = req.params
@@ -187,7 +181,6 @@ export const deleteVideoAnalysis = async (req: Request, res: Response) => {
     if (!analysis) {
       return res.status(404).json({ error: 'Video analysis not found' })
     }
-
     await analysis.destroy()
     res.status(204).send()
   } catch (error) {

@@ -27,5 +27,4 @@ router.get('/video-analysis/user/:userId', getAnalysesByUser)
 router.delete('/video-analysis/:id', deleteVideoAnalysis)
 
 router.get('/video-scrap', scrapVideo)
-
 export default router

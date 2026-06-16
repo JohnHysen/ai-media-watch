@@ -10,7 +10,10 @@ import sequelize from './db/db'
 import { sio_middleware, sio_chat } from './modules/sio/.'
 // import bot from './modules/telegram/.'
 import './modules/cron/.'
-import { createVideoAnalysis } from './controllers/videoController.js'
+import {
+  createVideoAnalysis,
+  getAllVideoAnalyses,
+} from './controllers/videoController.js'
 
 const allowedOrigins = [cfg.CLIENT]
 const PORT = cfg.PORT
@@ -31,6 +34,7 @@ app.use('/static', express.static('static'))
 
 // ✅ 4. Роуты
 app.post('/video-analysis', createVideoAnalysis)
+app.get('/video-analysis', getAllVideoAnalyses)
 app.use('/', router)
 
 // ✅ 5. Тестовый маршрут

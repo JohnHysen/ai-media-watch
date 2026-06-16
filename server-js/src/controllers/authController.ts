@@ -108,6 +108,7 @@ export const googleAuth = async (req: Request, res: Response) => {
         photoURL: payload.picture,
         password: bcrypt.hashSync('googleauthextpassword' + Math.random()),
         role: 'USER',
+        active: true,
         is_google: true,
         activation_code: secret,
       })
@@ -142,3 +143,4 @@ export const getUsers = async (req: Request, res: Response) => {
     unexpectedError(res, e)
   }
 }
+

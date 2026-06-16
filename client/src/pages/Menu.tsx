@@ -65,9 +65,9 @@ import { useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { useUser } from '../context/user/useUser'
 import CyberSidebar from '../components/CyberSidebar'
-import { $host } from '../http/API' // <-- импорт твоего axios-клиента с авторизацией
+import { $host } from '../http/API'
 
-// ---------- 3D фон (без изменений) ----------
+// ---------- 3D фон ----------
 const FloatingIconsOnly = () => {
   const groupRef = useRef<THREE.Group>(null!)
   const elements = useMemo(
@@ -377,9 +377,10 @@ const CyberMediaWatchPro = () => {
     if (!videoUrl.trim()) return
     setIsChecking(true)
     try {
-      // 1. Отправляем видео на анализ в FastAPI
+      // ✅ Добавляем userId в query-параметры
+      const userIdParam = user?.user_id ? `&userId=${user.user_id}` : ''
       const response = await fetch(
-        'http://localhost:8000/analyze?url=' + encodeURIComponent(videoUrl)
+        `http://localhost:8000/analyze?url=${encodeURIComponent(videoUrl)}${userIdParam}`
       )
       if (!response.ok) {
         const errorText = await response.text()
@@ -397,34 +398,30 @@ const CyberMediaWatchPro = () => {
       }
       setCheckResultMessage(message)
 
-      // 2. Отправляем результат в Node.js для сохранения в БД
-      // Формируем payload согласно модели VideoAnalysis
       const isDangerous = data.is_dangerous === true
       const safetyPercent = isDangerous
         ? (1 - data.confidence) * 100
         : data.confidence * 100
-
       let verdictText: 'safe' | 'dangerous' | 'uncertain' = 'safe'
       if (isDangerous) verdictText = 'dangerous'
       else if (data.confidence < 0.6) verdictText = 'uncertain'
       else verdictText = 'safe'
 
-      // Длительность видео (если есть в ответе – используем, иначе 0)
       const durationSeconds = data.duration_seconds || 0
 
+      // ✅ Исправлено: userId берём из user?.user_id
       await $host.post('/video-analysis', {
         video_url: videoUrl,
         title: data.video_title || null,
-        tags: null, // можно добавить позже
+        tags: null,
         safety_percent: safetyPercent,
         verdict_text: verdictText,
         is_dangerous: isDangerous,
         duration_seconds: durationSeconds,
         preview_image_url: null,
         checked_at: new Date().toISOString(),
-        userId: user?.id || null, // если пользователь авторизован
+        userId: user?.user_id || null, // <-- ЗДЕСЬ БЫЛО user?.userId
       })
-      // Не показываем тост об успешной отправке, чтобы не перегружать интерфейс
     } catch (error: any) {
       console.error('Ошибка при проверке видео:', error)
       setCheckResultMessage(`❌ Ошибка: ${error.message}`)

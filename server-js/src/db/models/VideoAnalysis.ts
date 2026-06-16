@@ -26,45 +26,47 @@ export class VideoAnalysis extends Model {
 
   @AllowNull(false)
   @Column(DataType.STRING)
-  declare video_url: string // ссылка на видео
+  declare video_url: string
 
   @AllowNull(true)
   @Column(DataType.STRING)
-  declare title: string | null // название видео
+  declare title: string | null
 
   @AllowNull(true)
   @Column(DataType.TEXT)
-  declare tags: string | null // теги (можно хранить как JSON или строку, я выбрал TEXT с разделителями)
+  declare tags: string | null
 
   @AllowNull(false)
-  @Column(DataType.FLOAT) // процент безопасности от 0 до 100
+  @Column(DataType.FLOAT)
   declare safety_percent: number
 
   @AllowNull(false)
   @Column(DataType.ENUM(...Object.values(DangerStatus)))
-  declare verdict_text: DangerStatus // письменный вердикт: 'safe', 'dangerous', 'uncertain'
+  declare verdict_text: DangerStatus
 
   @AllowNull(false)
   @Column(DataType.BOOLEAN)
-  declare is_dangerous: boolean // true - опасное, false - безопасное
+  declare is_dangerous: boolean
 
   @AllowNull(false)
-  @Column(DataType.INTEGER) // длительность в секундах
+  @Column(DataType.INTEGER)
   declare duration_seconds: number
 
   @AllowNull(true)
-  @Column(DataType.STRING) // ссылка на картинку (превью/скриншот)
+  @Column(DataType.STRING)
   declare preview_image_url: string | null
 
   @AllowNull(true)
   @Column(DataType.DATE)
-  declare checked_at: Date // дата и время проверки (можно использовать автоматическое createdAt, но явное поле удобнее)
+  declare checked_at: Date
 
+  // ✅ Поле должно называться userId
   @ForeignKey(() => User)
   @AllowNull(true)
   @Column(DataType.INTEGER)
   declare userId: number | null
 
-  @BelongsTo(() => User, { foreignKey: 'userId' }) // ← добавили foreignKey
+  // ✅ В BelongsTo указываем правильное имя поля
+  @BelongsTo(() => User, { foreignKey: 'userId' })
   declare initiator: User | null
 }

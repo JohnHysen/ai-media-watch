@@ -16,7 +16,7 @@ async def send_video_analysis_to_nodejs(
     tags: Optional[str] = None,
     preview_image_url: Optional[str] = None,
     checked_at: Optional[datetime] = None,
-    user_id: Optional[int] = None
+    userId: Optional[int] = None
 ):
     """
     Отправляет результат анализа видео в Node.js сервер для сохранения в БД.
@@ -31,9 +31,8 @@ async def send_video_analysis_to_nodejs(
         "tags": tags,
         "preview_image_url": preview_image_url,
         "checked_at": (checked_at or datetime.utcnow()).isoformat(),
-        # "userId": user_id
+        "userId": userId,   # передаём в теле
     }
-    # Убираем поля со значением None
     payload = {k: v for k, v in payload.items() if v is not None}
 
     async with httpx.AsyncClient(timeout=10.0) as client:

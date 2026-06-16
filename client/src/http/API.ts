@@ -138,7 +138,7 @@ export interface VideoAnalysis {
   duration_seconds: number
   preview_image_url: string | null
   checked_at: string
-  userId: number | null
+  user_id: number | null
   createdAt: string
   updatedAt: string
   initiator?: {
@@ -152,7 +152,7 @@ export interface VideoAnalysis {
 // Получить все видео-анализы (с фильтрацией и пагинацией)
 export const getVideoAnalyses = async (params?: {
   is_dangerous?: boolean
-  userId?: number
+  user_id?: number
   limit?: number
   offset?: number
 }) => {
@@ -182,10 +182,10 @@ export const getVideoAnalysisById = async (id: number) => {
 }
 
 // Получить анализы конкретного пользователя
-export const getVideoAnalysesByUser = async (userId: number) => {
+export const getVideoAnalysesByUser = async (user_id: number) => {
   try {
     const res = await $host.get<VideoAnalysis[]>(
-      `video-analysis/user/${userId}`
+      `video-analysis/user/${user_id}`
     )
     return res.data
   } catch (e: any) {
@@ -205,5 +205,14 @@ export const deleteVideoAnalysis = async (id: number) => {
     if (e.response?.data?.error) toast.error(e.response.data.error)
     console.log(e)
     throw e
+  }
+}
+
+export const verify = async () => {
+  try {
+    const res = await $host.post('user/verify')
+    return res.data
+  } catch (e: any) {
+    console.log(e)
   }
 }

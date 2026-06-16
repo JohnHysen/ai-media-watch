@@ -7,31 +7,33 @@ const router = Router()
 
 router.post('/verify', verify)
 
-// GET /user/balance
-router.get('/balance', authMiddleware, async (req, res) => {
+// GET /user/me – получение текущего пользователя (для фронтенда)
+router.get('/me', authMiddleware, async (req, res) => {
   try {
-    // authMiddleware гарантирует, что req.user существует,
-    // но на всякий случай проверяем id
-    const userId = (req as any).user?.id
-    if (!userId) {
-      return res.status(401).json({ error: 'Invalid token: no user id' })
+    const user_id = (req as any).user?.id
+    if (!user_id) {
+      return res.status(401).json({ error: 'Invalid token' })
     }
-    const user = await User.findByPk(userId)
-    if (!user) return res.status(404).json({ error: 'User not found' })
-    res.json({ balance: user.balance })
+    const user = await User.findByPk(user_id)
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' })
+    }
+    // Возвращаем данные пользователя и токен
+    res.json({
+      user: {
+        id: user.id,
+        role: user.role,
+        first_name: user.first_name,
+        last_name: user.last_name,
+        email: user.email,
+        // photoURL: user.photoURL || '',
+        tg_id: user.tg_id || null,
+        is_google: user.is_google || false,
+      },
+      token: req.headers.authorization?.split(' ')[1],
+    })
   } catch (error) {
-    console.error('Balance error:', error)
-    res.status(500).json({ error: 'Server error' })
-  }
-})
-
-// GET /user/count – публичный счётчик пользователей
-router.get('/count', async (req, res) => {
-  try {
-    const count = await User.count()
-    res.json({ count })
-  } catch (error) {
-    console.error('Count error:', error)
+    console.error('Error in /me:', error)
     res.status(500).json({ error: 'Server error' })
   }
 })

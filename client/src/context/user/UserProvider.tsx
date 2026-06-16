@@ -7,6 +7,7 @@ import {
 } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { io, type Socket } from 'socket.io-client'
+import { verify } from '../../http/API'
 import { baseWSURL } from '../../config'
 import { UserContext } from './UserContext'
 import { toast } from 'react-toastify'
@@ -21,7 +22,6 @@ export interface UserData {
   tg_id: string | null
   active?: boolean
   is_google?: boolean
-  // expired_password?: boolean
 }
 
 const noUser: UserData = {
@@ -82,12 +82,13 @@ export const UserProvider = ({ children }: UserProviderProps) => {
         )
       ) {
         localStorage.clear()
+        setUser(noUser)
+        navigate('/')
       } else return
     } else {
       localStorage.removeItem('token')
+      setUser(noUser)
     }
-    setUser(noUser)
-    navigate('/')
   }
 
   const requestNotificationPermission = async () => {
@@ -95,7 +96,6 @@ export const UserProvider = ({ children }: UserProviderProps) => {
       toast.warn('This browser does not support notifications.')
       return
     }
-
     const permission = await Notification.requestPermission()
     if (permission === 'granted') {
       console.log('Notification permission granted!')
@@ -104,15 +104,34 @@ export const UserProvider = ({ children }: UserProviderProps) => {
 
   useEffect(() => {
     requestNotificationPermission()
-    if (localStorage.token) {
-      verify().then((resv) => {
-        if (resv) {
-          login(resv.user, resv.token)
-        } else {
-          navigate('/signin')
-          logout()
-        }
-      })
+    const storedToken = localStorage.token
+    if (storedToken) {
+      verify()
+        .then((resv) => {
+          if (resv && resv.user) {
+            // Преобразуем id → user_id, если сервер возвращает id
+            const mappedUser: UserData = {
+              user_id: resv.user.id || resv.user.user_id, // на случай обоих
+              role: resv.user.role,
+              first_name: resv.user.first_name || '',
+              last_name: resv.user.last_name || '',
+              email: resv.user.email || '',
+              photoURL: resv.user.photoURL || '',
+              tg_id: resv.user.tg_id || null,
+              is_google: resv.user.is_google || false,
+            }
+            login(mappedUser, resv.token || storedToken)
+          } else {
+            localStorage.removeItem('token')
+            setUser(noUser)
+            // Не редиректим, просто остаёмся без пользователя
+          }
+        })
+        .catch((err) => {
+          console.error('Ошибка верификации токена:', err)
+          localStorage.removeItem('token')
+          setUser(noUser)
+        })
     }
   }, [])
 
