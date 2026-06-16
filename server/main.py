@@ -48,10 +48,8 @@ async def analyze(
         print("   ✅ Видео скачано")
 
         metadata = get_video_metadata(analyze_id, url)
-        print(f"   ✅ Название: {metadata.get('title', '')[:50]}")
 
         video_processing(analyze_id)
-        print("   ✅ Обработка завершена")
 
         transcript = transcribe_audio(analyze_id)
         print(f"   ✅ Распознано символов: {len(transcript)}")
