@@ -26,6 +26,17 @@ import {
   ToggleButton,
   ToggleButtonGroup,
   Alert,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableRow,
+  Paper as TablePaper,
+  Link,
 } from '@mui/material'
 import MenuIcon from '@mui/icons-material/Menu'
 import SearchIcon from '@mui/icons-material/Search'
@@ -43,6 +54,7 @@ import YouTubeIcon from '@mui/icons-material/YouTube'
 import InstagramIcon from '@mui/icons-material/Instagram'
 import MusicNoteIcon from '@mui/icons-material/MusicNote'
 import ReportProblemIcon from '@mui/icons-material/ReportProblem'
+import CloseIcon from '@mui/icons-material/Close'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Canvas, useFrame } from '@react-three/fiber'
 import {
@@ -65,36 +77,39 @@ import { useTranslation } from 'react-i18next'
 import { useUser } from '../context/user/useUser'
 import CyberSidebar from '../components/CyberSidebar'
 import { $host, getVideoAnalyses, VideoAnalysis } from '../http/API'
-import tikTokLogo from '../../public/images/tik-tok.png'
 
-// ---------- 3D фон (без изменений) ----------
+// ---------- 3D фон с логотипами соцсетей ----------
 const FloatingIconsOnly = () => {
   const groupRef = useRef<THREE.Group>(null!)
   const elements = useMemo(
     () => [
       {
-        image: tikTokLogo,
-        size: 1.4,
-        startX: -3,
+        image: '/youtube-logo.png',
+        color: '#ff0000',
+        size: 1.6,
+        startX: -3.5,
         startY: 1.5,
         startZ: -2,
       },
       {
-        symbol: '📸',
-        size: 1.4,
+        image: '/instagram-logo.png',
+        color: '#e4405f',
+        size: 1.6,
         startX: 4,
         startY: -1.5,
         startZ: -1.5,
       },
       {
-        symbol: '▶️',
-        size: 1.4,
+        image: '/tik-tok.png',
+        color: '#00f2ea',
+        size: 1.6,
         startX: -2,
         startY: -2.5,
         startZ: -3,
       },
       {
         symbol: '🛡️',
+        color: '#33ffcc',
         size: 1.5,
         startX: 3,
         startY: 2,
@@ -102,6 +117,7 @@ const FloatingIconsOnly = () => {
       },
       {
         symbol: '⚠️',
+        color: '#ff3366',
         size: 1.5,
         startX: 0,
         startY: -0.5,
@@ -110,6 +126,7 @@ const FloatingIconsOnly = () => {
     ],
     []
   )
+
   const motions = useMemo(
     () =>
       elements.map(() => ({
@@ -126,6 +143,7 @@ const FloatingIconsOnly = () => {
       })),
     []
   )
+
   useFrame(({ clock }) => {
     const t = clock.getElapsedTime()
     if (groupRef.current) {
@@ -143,6 +161,7 @@ const FloatingIconsOnly = () => {
       })
     }
   })
+
   return (
     <group ref={groupRef}>
       {elements.map((el, idx) => (
@@ -177,12 +196,23 @@ const FloatingIconsOnly = () => {
               ) : el.image ? (
                 <img
                   src={el.image}
-                  alt="tiktok"
+                  alt="social"
                   style={{
                     width: `${el.size * 45}px`,
                     height: `${el.size * 45}px`,
+                    objectFit: 'contain',
                     filter: `drop-shadow(0 0 8px ${el.color})`,
                     pointerEvents: 'none',
+                  }}
+                  onError={(e) => {
+                    e.currentTarget.style.display = 'none'
+                    const parent = e.currentTarget.parentNode
+                    const fallback = document.createElement('div')
+                    fallback.textContent = '📱'
+                    fallback.style.fontSize = `${el.size * 45}px`
+                    fallback.style.filter = `drop-shadow(0 0 8px ${el.color})`
+                    fallback.style.pointerEvents = 'none'
+                    parent?.appendChild(fallback)
                   }}
                 />
               ) : null}
@@ -406,6 +436,10 @@ const CyberMediaWatchPro = () => {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
+  // Состояния для модального окна
+  const [modalOpen, setModalOpen] = useState(false)
+  const [selectedVideo, setSelectedVideo] = useState<VideoAnalysis | null>(null)
+
   const isAdmin = user?.role === 'ADMIN'
   const { i18n } = useTranslation()
 
@@ -580,9 +614,9 @@ const CyberMediaWatchPro = () => {
     }
   }
 
-  const handleVideoClick = (id: number) => {
-    if (user && (user.role === 'USER' || isAdmin)) navigate(`/video/${id}`)
-    else setDrawerOpen(true)
+  const handleVideoClick = (video: VideoAnalysis) => {
+    setSelectedVideo(video)
+    setModalOpen(true)
   }
 
   const langs = [
@@ -590,6 +624,22 @@ const CyberMediaWatchPro = () => {
     { v: 'en', l: 'English', flag: '🇬🇧' },
     { v: 'kz', l: 'Қазақша', flag: '🇰🇿' },
   ]
+
+  // Функция для получения цвета вердикта
+  const getVerdictChip = (verdict: string) => {
+    const map = {
+      safe: { label: 'Безопасно', color: '#44ff66' },
+      dangerous: { label: 'Опасно', color: '#ff3366' },
+      uncertain: { label: 'Неопределённо', color: '#ffaa44' },
+    }
+    const info = map[verdict as keyof typeof map] || map.uncertain
+    return (
+      <Chip
+        label={info.label}
+        sx={{ bgcolor: info.color, color: '#000', fontWeight: 'bold' }}
+      />
+    )
+  }
 
   return (
     <Box
@@ -865,7 +915,7 @@ const CyberMediaWatchPro = () => {
                     </motion.div>
                   </Grid>
                 ))}
-                {/* Карточка "Платформ" с иконками YouTube, Instagram, TikTok */}
+                {/* Карточка "Платформ" с иконками */}
                 <Grid size={{ xs: 6, md: 3 }}>
                   <motion.div
                     initial={{ y: 50, opacity: 0 }}
@@ -1028,7 +1078,7 @@ const CyberMediaWatchPro = () => {
                       style={{ flex: '0 0 auto', width: 260 }}
                     >
                       <Card
-                        onClick={() => handleVideoClick(video.id)}
+                        onClick={() => handleVideoClick(video)}
                         sx={{
                           cursor: 'pointer',
                           bgcolor: 'rgba(20,20,40,0.8)',
@@ -1161,7 +1211,7 @@ const CyberMediaWatchPro = () => {
                         >
                           <ListItem
                             button
-                            onClick={() => handleVideoClick(threat.id)}
+                            onClick={() => handleVideoClick(threat)}
                           >
                             <ListItemAvatar>
                               <Avatar
@@ -1584,20 +1634,301 @@ const CyberMediaWatchPro = () => {
                 </Typography>
               </Grid>
             </Grid>
-            <Button
-              variant="text"
-              sx={{
-                mt: 3,
-                color: '#0ff',
-                border: '1px solid #0ff',
-                borderRadius: 4,
-              }}
-            >
-              📡 Получить API для интеграции
-            </Button>
           </Box>
         </Box>
       </Box>
+
+      {/* ========== МОДАЛЬНОЕ ОКНО С ДЕТАЛЯМИ ВИДЕО ========== */}
+      <Dialog
+        open={modalOpen}
+        onClose={() => setModalOpen(false)}
+        maxWidth="md"
+        fullWidth
+        PaperProps={{
+          sx: {
+            bgcolor: 'rgba(5,5,20,0.95)',
+            backdropFilter: 'blur(16px)',
+            border: '1px solid rgba(0,255,255,0.3)',
+            boxShadow: '0 0 40px rgba(0,255,255,0.2)',
+            borderRadius: 4,
+            color: '#fff',
+            overflow: 'hidden',
+          },
+        }}
+      >
+        {selectedVideo && (
+          <>
+            <DialogTitle
+              sx={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                borderBottom: '1px solid rgba(0,255,255,0.2)',
+                pb: 2,
+              }}
+            >
+              <Typography
+                variant="h5"
+                sx={{ fontWeight: 'bold', color: '#0ff' }}
+              >
+                Детали проверки
+              </Typography>
+              <IconButton
+                onClick={() => setModalOpen(false)}
+                sx={{ color: '#0ff' }}
+              >
+                <CloseIcon />
+              </IconButton>
+            </DialogTitle>
+            <DialogContent sx={{ pt: 3 }}>
+              {/* Превью */}
+              {selectedVideo.preview_image_url ? (
+                <Box
+                  component="img"
+                  src={selectedVideo.preview_image_url}
+                  alt={selectedVideo.title || 'Превью'}
+                  sx={{
+                    width: '100%',
+                    maxHeight: 200,
+                    objectFit: 'cover',
+                    borderRadius: 2,
+                    mb: 2,
+                  }}
+                />
+              ) : (
+                <Box
+                  sx={{
+                    width: '100%',
+                    height: 120,
+                    bgcolor: '#111',
+                    borderRadius: 2,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    mb: 2,
+                    border: '1px solid #333',
+                  }}
+                >
+                  <VideoLibraryIcon sx={{ fontSize: 48, color: '#555' }} />
+                </Box>
+              )}
+
+              <Typography variant="h6" sx={{ color: '#fff', mb: 2 }}>
+                {selectedVideo.title || 'Без названия'}
+              </Typography>
+
+              <TableContainer
+                component={TablePaper}
+                sx={{ bgcolor: 'transparent', boxShadow: 'none' }}
+              >
+                <Table size="medium">
+                  <TableBody>
+                    <TableRow>
+                      <TableCell
+                        sx={{
+                          color: '#0ff',
+                          fontWeight: 'bold',
+                          borderBottom: '1px solid rgba(0,255,255,0.1)',
+                        }}
+                      >
+                        Вердикт
+                      </TableCell>
+                      <TableCell
+                        sx={{
+                          color: '#fff',
+                          borderBottom: '1px solid rgba(0,255,255,0.1)',
+                        }}
+                      >
+                        {getVerdictChip(selectedVideo.verdict_text)}
+                      </TableCell>
+                    </TableRow>
+                    <TableRow>
+                      <TableCell
+                        sx={{
+                          color: '#0ff',
+                          fontWeight: 'bold',
+                          borderBottom: '1px solid rgba(0,255,255,0.1)',
+                        }}
+                      >
+                        Опасность
+                      </TableCell>
+                      <TableCell
+                        sx={{
+                          color: '#fff',
+                          borderBottom: '1px solid rgba(0,255,255,0.1)',
+                        }}
+                      >
+                        {selectedVideo.is_dangerous ? '⚠️ Да' : '✅ Нет'}
+                      </TableCell>
+                    </TableRow>
+                    <TableRow>
+                      <TableCell
+                        sx={{
+                          color: '#0ff',
+                          fontWeight: 'bold',
+                          borderBottom: '1px solid rgba(0,255,255,0.1)',
+                        }}
+                      >
+                        Безопасность, %
+                      </TableCell>
+                      <TableCell
+                        sx={{
+                          color: '#fff',
+                          borderBottom: '1px solid rgba(0,255,255,0.1)',
+                        }}
+                      >
+                        {selectedVideo.safety_percent}%
+                      </TableCell>
+                    </TableRow>
+                    <TableRow>
+                      <TableCell
+                        sx={{
+                          color: '#0ff',
+                          fontWeight: 'bold',
+                          borderBottom: '1px solid rgba(0,255,255,0.1)',
+                        }}
+                      >
+                        Длительность
+                      </TableCell>
+                      <TableCell
+                        sx={{
+                          color: '#fff',
+                          borderBottom: '1px solid rgba(0,255,255,0.1)',
+                        }}
+                      >
+                        {selectedVideo.duration_seconds} сек.
+                      </TableCell>
+                    </TableRow>
+                    <TableRow>
+                      <TableCell
+                        sx={{
+                          color: '#0ff',
+                          fontWeight: 'bold',
+                          borderBottom: '1px solid rgba(0,255,255,0.1)',
+                        }}
+                      >
+                        Дата проверки
+                      </TableCell>
+                      <TableCell
+                        sx={{
+                          color: '#fff',
+                          borderBottom: '1px solid rgba(0,255,255,0.1)',
+                        }}
+                      >
+                        {new Date(selectedVideo.checked_at).toLocaleString()}
+                      </TableCell>
+                    </TableRow>
+                    <TableRow>
+                      <TableCell
+                        sx={{
+                          color: '#0ff',
+                          fontWeight: 'bold',
+                          borderBottom: '1px solid rgba(0,255,255,0.1)',
+                        }}
+                      >
+                        Инициатор
+                      </TableCell>
+                      <TableCell
+                        sx={{
+                          color: '#fff',
+                          borderBottom: '1px solid rgba(0,255,255,0.1)',
+                        }}
+                      >
+                        {selectedVideo.userId
+                          ? `ID: ${selectedVideo.userId}`
+                          : 'Аноним'}
+                      </TableCell>
+                    </TableRow>
+                    {selectedVideo.tags && (
+                      <TableRow>
+                        <TableCell
+                          sx={{
+                            color: '#0ff',
+                            fontWeight: 'bold',
+                            borderBottom: '1px solid rgba(0,255,255,0.1)',
+                          }}
+                        >
+                          Теги
+                        </TableCell>
+                        <TableCell
+                          sx={{
+                            color: '#fff',
+                            borderBottom: '1px solid rgba(0,255,255,0.1)',
+                          }}
+                        >
+                          {selectedVideo.tags.split(',').map((tag, i) => (
+                            <Chip
+                              key={i}
+                              label={tag.trim()}
+                              size="small"
+                              sx={{ bgcolor: '#333', color: '#fff', mr: 0.5 }}
+                            />
+                          ))}
+                        </TableCell>
+                      </TableRow>
+                    )}
+                    {selectedVideo.reason && (
+                      <TableRow>
+                        <TableCell
+                          sx={{
+                            color: '#0ff',
+                            fontWeight: 'bold',
+                            borderBottom: '1px solid rgba(0,255,255,0.1)',
+                          }}
+                        >
+                          Обоснование
+                        </TableCell>
+                        <TableCell
+                          sx={{
+                            color: '#ddd',
+                            borderBottom: '1px solid rgba(0,255,255,0.1)',
+                            whiteSpace: 'pre-wrap',
+                          }}
+                        >
+                          {selectedVideo.reason}
+                        </TableCell>
+                      </TableRow>
+                    )}
+                    <TableRow>
+                      <TableCell sx={{ color: '#0ff', fontWeight: 'bold' }}>
+                        Ссылка
+                      </TableCell>
+                      <TableCell>
+                        <Link
+                          href={selectedVideo.video_url}
+                          target="_blank"
+                          sx={{
+                            color: '#0ff',
+                            textDecoration: 'none',
+                            '&:hover': { textDecoration: 'underline' },
+                          }}
+                        >
+                          Открыть видео
+                        </Link>
+                      </TableCell>
+                    </TableRow>
+                  </TableBody>
+                </Table>
+              </TableContainer>
+            </DialogContent>
+            <DialogActions
+              sx={{ borderTop: '1px solid rgba(0,255,255,0.2)', p: 2 }}
+            >
+              <Button
+                onClick={() => setModalOpen(false)}
+                variant="contained"
+                sx={{
+                  bgcolor: '#0ff',
+                  color: '#000',
+                  '&:hover': { bgcolor: '#33ffcc' },
+                }}
+              >
+                Закрыть
+              </Button>
+            </DialogActions>
+          </>
+        )}
+      </Dialog>
     </Box>
   )
 }

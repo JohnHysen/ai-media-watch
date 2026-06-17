@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import {
   Box,
   Typography,
@@ -18,6 +18,8 @@ import {
   Divider,
   LinearProgress,
   Avatar,
+  CircularProgress,
+  Alert,
 } from '@mui/material'
 import MenuIcon from '@mui/icons-material/Menu'
 import TrendingUpIcon from '@mui/icons-material/TrendingUp'
@@ -30,13 +32,15 @@ import BlockIcon from '@mui/icons-material/Block'
 import VerifiedIcon from '@mui/icons-material/Verified'
 import ChatIcon from '@mui/icons-material/Chat'
 import LinkIcon from '@mui/icons-material/Link'
+import AnalyticsIcon from '@mui/icons-material/Analytics'
 import { motion } from 'framer-motion'
 import { Canvas, useFrame } from '@react-three/fiber'
 import { OrbitControls, Environment, Stars } from '@react-three/drei'
 import * as THREE from 'three'
 import CyberSidebar from '../components/CyberSidebar'
+import { $host } from '../http/API'
 
-// ---------- Компонент куба (фон) ----------
+// ---------- 3D фон ----------
 const FloatingCube = ({ position, color, size, speed }) => {
   const meshRef = React.useRef<THREE.Mesh>(null)
   useFrame(({ clock }) => {
@@ -112,7 +116,7 @@ const CubeSpaceBackground = () => {
   )
 }
 
-// ---------- Данные угроз: ТОЛЬКО про выявление мошенничества в видео соцсетей ----------
+// ---------- Данные угроз (без изменений) ----------
 const threatCategories = [
   {
     id: 'gambling',
@@ -196,39 +200,35 @@ const threatCategories = [
   },
 ]
 
-// Новости – только о мониторинге соцсетей, AI и борьбе с мошенничеством в видео
-const newsAndSources = [
-  {
-    title:
-      'В Казахстане запущен AI-мониторинг соцсетей для выявления онлайн-казино',
-    date: '12 февраля 2025',
-    source: 'Агентство по финансовому мониторингу',
-    url: 'https://www.gov.kz/memleket/entities/afm/press/news',
-  },
-  {
-    title: 'Как распознать финансовую пирамиду в TikTok: советы FinGramota',
-    date: '25 января 2025',
-    source: 'FinGramota.kz',
-    url: 'https://fingramota.kz/ru/news/kak-raspoznat-finansovuyu-piramidu-v-tiktok',
-  },
-  {
-    title:
-      'Более 2 000 реферальных ссылок на казино заблокировано в Instagram за месяц',
-    date: '5 марта 2025',
-    source: 'Министерство цифрового развития РК',
-    url: 'https://www.gov.kz/memleket/entities/mdai',
-  },
-  {
-    title: 'АФМ: через соцсети распространяется 70% нелегальной рекламы казино',
-    date: '18 февраля 2025',
-    source: 'Zakon.kz',
-    url: 'https://www.zakon.kz',
-  },
-]
-
 // ---------- Главный компонент Analytics ----------
 const Analytics = () => {
   const [drawerOpen, setDrawerOpen] = useState(false)
+
+  // Состояния для новостей
+  const [news, setNews] = useState<any[]>([])
+  const [loadingNews, setLoadingNews] = useState(true)
+  const [newsError, setNewsError] = useState('')
+
+  // Загрузка новостей с бэкенда через $host
+  useEffect(() => {
+    const fetchNews = async () => {
+      try {
+        const res = await $host.get('/news', {
+          params: {
+            q: 'финансовые пирамиды OR казино OR мошенничество',
+            pageSize: 20,
+          },
+        })
+        setNews(res.data.articles || [])
+      } catch (err) {
+        console.error('Ошибка загрузки новостей:', err)
+        setNewsError('Не удалось загрузить новости')
+      } finally {
+        setLoadingNews(false)
+      }
+    }
+    fetchNews()
+  }, [])
 
   return (
     <>
@@ -281,8 +281,17 @@ const Analytics = () => {
           </motion.div>
 
           {/* Рейтинг угроз */}
-          <Typography variant="h5" sx={{ color: '#0ff', mb: 3 }}>
-            📊 Рейтинг угроз по уровню риска (по данным AI)
+          <Typography
+            variant="h5"
+            sx={{
+              color: '#0ff',
+              mb: 3,
+              display: 'flex',
+              alignItems: 'center',
+              gap: 1,
+            }}
+          >
+            <AnalyticsIcon /> Рейтинг угроз по уровню риска (по данным AI)
           </Typography>
           <Grid container spacing={3} sx={{ mb: 6 }}>
             {threatCategories.map((threat, idx) => (
@@ -504,40 +513,107 @@ const Analytics = () => {
                     gap: 1,
                   }}
                 >
-                  <AnnouncementIcon /> Последние новости по теме
+                  <AnnouncementIcon /> Последние новости
                 </Typography>
-                <Box>
-                  {newsAndSources.map((news, idx) => (
-                    <Box
-                      key={idx}
-                      sx={{
-                        mb: 2,
-                        pb: 2,
-                        borderBottom:
-                          idx !== newsAndSources.length - 1
-                            ? '1px solid rgba(0,255,255,0.2)'
-                            : 'none',
-                      }}
-                    >
-                      <Typography variant="caption" sx={{ color: '#ffaa66' }}>
-                        {news.date}
-                      </Typography>
-                      <Typography variant="body2" sx={{ mb: 0.5 }}>
-                        <Link
-                          href={news.url}
-                          target="_blank"
-                          sx={{ color: '#0ff', fontWeight: 500 }}
-                          underline="hover"
-                        >
-                          {news.title}
-                        </Link>
-                      </Typography>
-                      <Typography variant="caption" sx={{ color: '#aaa' }}>
-                        {news.source}
-                      </Typography>
-                    </Box>
-                  ))}
-                </Box>
+                {loadingNews ? (
+                  <Box
+                    sx={{ display: 'flex', justifyContent: 'center', py: 4 }}
+                  >
+                    <CircularProgress sx={{ color: '#0ff' }} />
+                  </Box>
+                ) : newsError ? (
+                  <Alert
+                    severity="warning"
+                    sx={{ bgcolor: 'rgba(255,51,102,0.2)', color: '#ff8888' }}
+                  >
+                    {newsError}
+                  </Alert>
+                ) : news.length === 0 ? (
+                  <Typography sx={{ color: '#aaa' }}>Нет новостей</Typography>
+                ) : (
+                  // Простой прокручиваемый список всех новостей
+                  <Box
+                    sx={{
+                      maxHeight: 400,
+                      overflowY: 'auto',
+                      pr: 1,
+                      '&::-webkit-scrollbar': {
+                        width: '4px',
+                      },
+                      '&::-webkit-scrollbar-track': {
+                        background: 'rgba(0,255,255,0.1)',
+                        borderRadius: '10px',
+                      },
+                      '&::-webkit-scrollbar-thumb': {
+                        background: '#0ff',
+                        borderRadius: '10px',
+                      },
+                    }}
+                  >
+                    {news.map((item, idx) => (
+                      <Box
+                        key={idx}
+                        sx={{
+                          mb: 2,
+                          pb: 2,
+                          borderBottom:
+                            idx !== news.length - 1
+                              ? '1px solid rgba(0,255,255,0.2)'
+                              : 'none',
+                        }}
+                      >
+                        {item.urlToImage && (
+                          <Box
+                            component="img"
+                            src={item.urlToImage}
+                            alt={item.title}
+                            sx={{
+                              width: '100%',
+                              height: 'auto',
+                              maxHeight: 120,
+                              objectFit: 'cover',
+                              borderRadius: 2,
+                              mb: 1,
+                            }}
+                          />
+                        )}
+                        <Typography variant="caption" sx={{ color: '#ffaa66' }}>
+                          {new Date(item.publishedAt).toLocaleDateString(
+                            'ru-RU',
+                            {
+                              day: '2-digit',
+                              month: '2-digit',
+                              year: 'numeric',
+                              hour: '2-digit',
+                              minute: '2-digit',
+                            }
+                          )}
+                        </Typography>
+                        <Typography variant="body2" sx={{ mb: 0.5 }}>
+                          <Link
+                            href={item.url}
+                            target="_blank"
+                            sx={{ color: '#0ff', fontWeight: 500 }}
+                            underline="hover"
+                          >
+                            {item.title}
+                          </Link>
+                        </Typography>
+                        {item.description && (
+                          <Typography
+                            variant="caption"
+                            sx={{ color: '#aaa', display: 'block' }}
+                          >
+                            {item.description}
+                          </Typography>
+                        )}
+                        <Typography variant="caption" sx={{ color: '#aaa' }}>
+                          {item.source}
+                        </Typography>
+                      </Box>
+                    ))}
+                  </Box>
+                )}
                 <Divider sx={{ my: 2, borderColor: 'rgba(0,255,255,0.2)' }} />
                 <Typography variant="body2" sx={{ color: '#ddd' }}>
                   <strong>📞 Куда сообщить о мошенническом видео?</strong>
@@ -560,8 +636,18 @@ const Analytics = () => {
               textAlign: 'center',
             }}
           >
-            <Typography variant="h6" sx={{ color: '#0ff', mb: 2 }}>
-              🤖 Как AI Media Watch защищает вас?
+            <Typography
+              variant="h6"
+              sx={{
+                color: '#0ff',
+                mb: 2,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: 1,
+              }}
+            >
+              <SecurityIcon /> Как AI Media Watch защищает вас?
             </Typography>
             <Grid container spacing={2}>
               <Grid size={{ xs: 12, sm: 6, md: 3 }}>

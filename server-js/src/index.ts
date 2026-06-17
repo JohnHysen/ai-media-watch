@@ -30,6 +30,7 @@ app.use('/static', express.static('static'))
 app.post('/video-analysis', createVideoAnalysis)
 app.get('/video-analysis', getAllVideoAnalyses)
 app.get('/video-analysis/user/:userId', getAnalysesByUser)
+app.use('/static', express.static('static'))
 app.use('/', router) // здесь теперь и прокси, и auth, и user
 
 app.get('/', (req, res) => {

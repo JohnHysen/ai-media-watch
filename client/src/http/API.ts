@@ -216,3 +216,11 @@ export const verify = async () => {
     console.log(e)
   }
 }
+
+export const getUserStats = () => $host.get('/user/stats')
+export const getUserActivity = (days = 7) =>
+  $host.get(`/user/activity?days=${days}`)
+export const getVerdictDistribution = () =>
+  $host.get('/user/verdict-distribution')
+export const getRecentChecks = (limit = 5) =>
+  $host.get(`/user/recent-checks?limit=${limit}`)

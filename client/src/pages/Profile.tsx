@@ -8,38 +8,47 @@ import {
   IconButton,
   Button,
   Grid,
-  Switch,
-  FormControlLabel,
   Chip,
+  Alert,
+  Snackbar,
+  CircularProgress,
+  TextField,
   Dialog,
   DialogTitle,
   DialogContent,
   DialogActions,
-  Alert,
-  InputAdornment,
-  IconButton as MuiIconButton,
-  Stack,
+  List,
+  ListItem,
+  ListItemText,
+  ListItemAvatar,
   Divider,
-  TextField,
+  Link,
 } from '@mui/material'
 import MenuIcon from '@mui/icons-material/Menu'
 import PhotoCameraIcon from '@mui/icons-material/PhotoCamera'
-import NotificationsIcon from '@mui/icons-material/Notifications'
-import SecurityIcon from '@mui/icons-material/Security'
-import Visibility from '@mui/icons-material/Visibility'
-import VisibilityOff from '@mui/icons-material/VisibilityOff'
-import TelegramIcon from '@mui/icons-material/Telegram'
-import TikTokIcon from '@mui/icons-material/MusicNote'
-import InstagramIcon from '@mui/icons-material/Instagram'
-import YouTubeIcon from '@mui/icons-material/YouTube'
+import StarIcon from '@mui/icons-material/Star'
 import { useUser } from '../context/user/useUser'
 import { motion } from 'framer-motion'
 import { Canvas, useFrame } from '@react-three/fiber'
 import { OrbitControls, Environment, Stars } from '@react-three/drei'
 import * as THREE from 'three'
 import CyberSidebar from '../components/CyberSidebar'
+import { $host, VideoAnalysis } from '../http/API'
+import { useNavigate } from 'react-router-dom'
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip as RechartsTooltip,
+  ResponsiveContainer,
+  PieChart,
+  Pie,
+  Cell,
+} from 'recharts'
 
-// ---------- Компонент планеты (без изменений) ----------
+// ---------- Компонент планеты ----------
 const Planet = ({ radius, color, position, speed, emissive = false }) => {
   const meshRef = React.useRef<THREE.Mesh>(null)
   useFrame(({ clock }) => {
@@ -135,107 +144,133 @@ const SpaceBackground = () => {
   )
 }
 
+// ---------- Интерфейсы ----------
+interface UserStats {
+  totalChecks: number
+  threatsFound: number
+  averageRisk: number
+  reputation: number
+}
+
+interface ActivityData {
+  date: string
+  count: number
+}
+
+interface VerdictDistribution {
+  safe: number
+  dangerous: number
+  uncertain: number
+}
+
 // ---------- Главный компонент Profile ----------
 const Profile = () => {
-  const { user } = useUser()
+  const { user, login } = useUser()
+  const navigate = useNavigate()
   const [drawerOpen, setDrawerOpen] = useState(false)
-  const [notificationsEnabled, setNotificationsEnabled] = useState(true)
-  const [twoFactorEnabled, setTwoFactorEnabled] = useState(false)
 
-  // Состояния для статистики (по умолчанию 0)
-  const [stats, setStats] = useState({
+  // Статистика
+  const [stats, setStats] = useState<UserStats>({
     totalChecks: 0,
     threatsFound: 0,
     averageRisk: 0,
     reputation: 0,
   })
-  // Состояния для привязанных соцсетей (по умолчанию false)
-  const [socials, setSocials] = useState({
-    telegram: false,
-    instagram: false,
-    tiktok: false,
-    youtube: false,
+
+  // Данные графиков
+  const [activity, setActivity] = useState<ActivityData[]>([])
+  const [verdictDist, setVerdictDist] = useState<VerdictDistribution>({
+    safe: 0,
+    dangerous: 0,
+    uncertain: 0,
   })
+  const [recentChecks, setRecentChecks] = useState<VideoAnalysis[]>([])
+
   const [loading, setLoading] = useState(true)
+  const [avatarPreview, setAvatarPreview] = useState('')
 
-  // Загрузка данных при монтировании (закомментировано до появления бэкенда)
+  const [avatarDialogOpen, setAvatarDialogOpen] = useState(false)
+  const [avatarUrlInput, setAvatarUrlInput] = useState('')
+  const [avatarSaving, setAvatarSaving] = useState(false)
+
+  const [snackbar, setSnackbar] = useState<{
+    open: boolean
+    message: string
+    severity: 'success' | 'error' | 'info'
+  }>({
+    open: false,
+    message: '',
+    severity: 'info',
+  })
+
   useEffect(() => {
-    if (!user) return
-
-    const fetchData = async () => {
-      setLoading(true)
-      try {
-        // TODO: Раскомментировать, когда бэкенд готов
-        /*
-        const [statsData, socialsData] = await Promise.all([
-          fetch('/api/user/stats').then(res => res.json()),
-          fetch('/api/user/socials').then(res => res.json())
-        ])
-        setStats(statsData)
-        setSocials(socialsData)
-        */
-        // Пока оставляем значения по умолчанию (0, false)
-        console.log(
-          'Заглушка: данные профиля будут подгружаться из API после настройки бэкенда'
-        )
-      } catch (error) {
-        console.error('Ошибка загрузки данных профиля:', error)
-      } finally {
-        setLoading(false)
-      }
+    if (!user) {
+      navigate('/')
+      return
     }
-    fetchData()
+    setAvatarPreview(user.photoURL || '')
+    fetchProfileData()
   }, [user])
 
-  // Диалог смены пароля
-  const [passwordDialogOpen, setPasswordDialogOpen] = useState(false)
-  const [oldPassword, setOldPassword] = useState('')
-  const [newPassword, setNewPassword] = useState('')
-  const [confirmPassword, setConfirmPassword] = useState('')
-  const [showOldPassword, setShowOldPassword] = useState(false)
-  const [showNewPassword, setShowNewPassword] = useState(false)
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false)
-  const [passwordError, setPasswordError] = useState('')
-  const [passwordSuccess, setPasswordSuccess] = useState('')
-
-  // Диалог смены аватара
-  const [avatarDialogOpen, setAvatarDialogOpen] = useState(false)
-  const [avatarUrl, setAvatarUrl] = useState(user?.photoURL || '')
-
-  const handleChangePassword = () => {
-    setPasswordError('')
-    setPasswordSuccess('')
-    if (!oldPassword || !newPassword || !confirmPassword) {
-      setPasswordError('Заполните все поля')
-      return
+  const fetchProfileData = async () => {
+    setLoading(true)
+    try {
+      const [statsRes, activityRes, verdictRes, recentRes] = await Promise.all([
+        $host.get('/user/stats'),
+        $host.get('/user/activity?days=7'),
+        $host.get('/user/verdict-distribution'),
+        $host.get('/user/recent-checks?limit=5'),
+      ])
+      setStats(statsRes.data)
+      setActivity(activityRes.data.data || [])
+      setVerdictDist(verdictRes.data)
+      setRecentChecks(recentRes.data)
+    } catch (error) {
+      console.error('Ошибка загрузки данных профиля:', error)
+      setSnackbar({
+        open: true,
+        message: 'Не удалось загрузить данные',
+        severity: 'error',
+      })
+    } finally {
+      setLoading(false)
     }
-    if (newPassword !== confirmPassword) {
-      setPasswordError('Новый пароль и подтверждение не совпадают')
-      return
-    }
-    if (newPassword.length < 6) {
-      setPasswordError('Пароль должен быть не менее 6 символов')
-      return
-    }
-    // TODO: Заменить на реальный API-вызов
-    // await updatePassword(oldPassword, newPassword)
-    setTimeout(() => {
-      setPasswordSuccess('Пароль успешно изменён')
-      setOldPassword('')
-      setNewPassword('')
-      setConfirmPassword('')
-      setTimeout(() => setPasswordDialogOpen(false), 1500)
-    }, 500)
   }
 
-  const handleChangeAvatar = () => {
-    // TODO: Отправить avatarUrl на сервер
-    setAvatarDialogOpen(false)
-  }
-
-  const handleConnectSocial = (platform: string) => {
-    // TODO: Реальный вызов API для привязки аккаунта
-    alert(`Привязка ${platform} будет реализована позже`)
+  const handleSaveAvatarUrl = async () => {
+    let trimmed = avatarUrlInput.trim()
+    if (!trimmed) {
+      setSnackbar({ open: true, message: 'Введите ссылку', severity: 'error' })
+      return
+    }
+    if (!trimmed.startsWith('http://') && !trimmed.startsWith('https://')) {
+      trimmed = 'https://' + trimmed
+    }
+    setAvatarSaving(true)
+    try {
+      const res = await $host.post('/user/avatar', { avatarUrl: trimmed })
+      if (user) {
+        const updatedUser = { ...user, photoURL: res.data.avatarUrl }
+        login(updatedUser, localStorage.token)
+        setAvatarPreview(res.data.avatarUrl)
+      }
+      setSnackbar({
+        open: true,
+        message: 'Аватар обновлён',
+        severity: 'success',
+      })
+      setAvatarDialogOpen(false)
+      setAvatarUrlInput('')
+    } catch (error) {
+      console.error(error)
+      setSnackbar({
+        open: true,
+        message: 'Ошибка обновления',
+        severity: 'error',
+      })
+    } finally {
+      setAvatarSaving(false)
+    }
   }
 
   if (!user) {
@@ -250,18 +285,27 @@ const Profile = () => {
           justifyContent: 'center',
         }}
       >
-        <Typography sx={{ color: '#fff' }}>
-          Пожалуйста, войдите в систему
-        </Typography>
+        <CircularProgress sx={{ color: '#0ff' }} />
       </Box>
     )
+  }
+
+  const verdictColors = {
+    safe: '#44ff66',
+    dangerous: '#ff3366',
+    uncertain: '#ffaa44',
+  }
+
+  const verdictLabels = {
+    safe: 'Безопасно',
+    dangerous: 'Опасно',
+    uncertain: 'Неопределённо',
   }
 
   return (
     <>
       <SpaceBackground />
       <Box sx={{ minHeight: '100vh', position: 'relative', zIndex: 2 }}>
-        {/* Кнопка бургер-меню */}
         <IconButton
           onClick={() => setDrawerOpen(true)}
           sx={{
@@ -301,7 +345,7 @@ const Profile = () => {
           </motion.div>
 
           <Grid container spacing={4}>
-            {/* Левая колонка */}
+            {/* Левая колонка - аватар */}
             <Grid size={{ xs: 12, md: 4 }}>
               <motion.div
                 initial={{ opacity: 0, x: -30 }}
@@ -320,7 +364,7 @@ const Profile = () => {
                 >
                   <Box sx={{ position: 'relative', display: 'inline-block' }}>
                     <Avatar
-                      src={avatarUrl || user.photoURL || undefined}
+                      src={avatarPreview || user.photoURL || undefined}
                       sx={{
                         width: 120,
                         height: 120,
@@ -329,7 +373,7 @@ const Profile = () => {
                         mx: 'auto',
                       }}
                     >
-                      {!avatarUrl &&
+                      {!avatarPreview &&
                         !user.photoURL &&
                         (user.first_name?.[0] || user.email?.[0])}
                     </Avatar>
@@ -361,105 +405,12 @@ const Profile = () => {
                     sx={{ mt: 2, bgcolor: '#ff3366', color: '#fff' }}
                   />
                 </Card>
-
-                <Card
-                  sx={{
-                    mt: 3,
-                    bgcolor: 'rgba(10,10,30,0.6)',
-                    backdropFilter: 'blur(12px)',
-                    borderRadius: 4,
-                    border: '1px solid rgba(0,255,255,0.3)',
-                    p: 2,
-                  }}
-                >
-                  <Typography
-                    variant="subtitle1"
-                    sx={{
-                      color: '#0ff',
-                      mb: 1,
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: 1,
-                    }}
-                  >
-                    <SecurityIcon fontSize="small" /> Безопасность
-                  </Typography>
-                  <FormControlLabel
-                    control={
-                      <Switch
-                        checked={twoFactorEnabled}
-                        onChange={() => setTwoFactorEnabled(!twoFactorEnabled)}
-                        sx={{
-                          '& .MuiSwitch-switchBase.Mui-checked': {
-                            color: '#0ff',
-                          },
-                        }}
-                      />
-                    }
-                    label={
-                      <Typography sx={{ color: '#fff' }}>
-                        Двухфакторная аутентификация
-                      </Typography>
-                    }
-                  />
-                  <Button
-                    fullWidth
-                    variant="outlined"
-                    onClick={() => setPasswordDialogOpen(true)}
-                    sx={{ mt: 2, borderColor: '#ff3366', color: '#ff3366' }}
-                  >
-                    Сменить пароль
-                  </Button>
-                </Card>
-
-                <Card
-                  sx={{
-                    mt: 3,
-                    bgcolor: 'rgba(10,10,30,0.6)',
-                    backdropFilter: 'blur(12px)',
-                    borderRadius: 4,
-                    border: '1px solid rgba(0,255,255,0.3)',
-                    p: 2,
-                  }}
-                >
-                  <Typography
-                    variant="subtitle1"
-                    sx={{
-                      color: '#0ff',
-                      mb: 1,
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: 1,
-                    }}
-                  >
-                    <NotificationsIcon fontSize="small" /> Уведомления
-                  </Typography>
-                  <FormControlLabel
-                    control={
-                      <Switch
-                        checked={notificationsEnabled}
-                        onChange={() =>
-                          setNotificationsEnabled(!notificationsEnabled)
-                        }
-                        sx={{
-                          '& .MuiSwitch-switchBase.Mui-checked': {
-                            color: '#0ff',
-                          },
-                        }}
-                      />
-                    }
-                    label={
-                      <Typography sx={{ color: '#fff' }}>
-                        Получать уведомления о новых угрозах
-                      </Typography>
-                    }
-                  />
-                </Card>
               </motion.div>
             </Grid>
 
             {/* Правая колонка */}
             <Grid size={{ xs: 12, md: 8 }}>
+              {/* Статистика */}
               <motion.div
                 initial={{ opacity: 0, x: 30 }}
                 animate={{ opacity: 1, x: 0 }}
@@ -475,57 +426,77 @@ const Profile = () => {
                     mb: 4,
                   }}
                 >
-                  <Typography variant="h6" sx={{ color: '#0ff', mb: 2 }}>
-                    📊 Ваша активность
+                  <Typography
+                    variant="h6"
+                    sx={{
+                      color: '#0ff',
+                      mb: 2,
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 1,
+                    }}
+                  >
+                    <StarIcon /> Ваша активность
                   </Typography>
-                  <Grid container spacing={2}>
-                    <Grid size={{ xs: 6, md: 3 }}>
-                      <Typography variant="body2" sx={{ color: '#aaa' }}>
-                        Всего проверок
-                      </Typography>
-                      <Typography
-                        variant="h5"
-                        sx={{ color: '#33ffcc', fontWeight: 'bold' }}
-                      >
-                        {loading ? 0 : stats.totalChecks}
-                      </Typography>
+                  {loading ? (
+                    <CircularProgress sx={{ color: '#0ff' }} />
+                  ) : (
+                    <Grid container spacing={2}>
+                      <Grid size={{ xs: 6, md: 3 }}>
+                        <Typography variant="body2" sx={{ color: '#aaa' }}>
+                          Всего проверок
+                        </Typography>
+                        <Typography
+                          variant="h5"
+                          sx={{ color: '#33ffcc', fontWeight: 'bold' }}
+                        >
+                          {stats.totalChecks}
+                        </Typography>
+                      </Grid>
+                      <Grid size={{ xs: 6, md: 3 }}>
+                        <Typography variant="body2" sx={{ color: '#aaa' }}>
+                          Найдено угроз
+                        </Typography>
+                        <Typography
+                          variant="h5"
+                          sx={{ color: '#ff6666', fontWeight: 'bold' }}
+                        >
+                          {stats.threatsFound}
+                        </Typography>
+                      </Grid>
+                      <Grid size={{ xs: 6, md: 3 }}>
+                        <Typography variant="body2" sx={{ color: '#aaa' }}>
+                          Средний риск
+                        </Typography>
+                        <Typography
+                          variant="h5"
+                          sx={{ color: '#ffaa44', fontWeight: 'bold' }}
+                        >
+                          {stats.averageRisk}%
+                        </Typography>
+                      </Grid>
+                      <Grid size={{ xs: 6, md: 3 }}>
+                        <Typography variant="body2" sx={{ color: '#aaa' }}>
+                          Репутация
+                        </Typography>
+                        <Typography
+                          variant="h5"
+                          sx={{ color: '#0ff', fontWeight: 'bold' }}
+                        >
+                          {stats.reputation}%
+                        </Typography>
+                      </Grid>
                     </Grid>
-                    <Grid size={{ xs: 6, md: 3 }}>
-                      <Typography variant="body2" sx={{ color: '#aaa' }}>
-                        Найдено угроз
-                      </Typography>
-                      <Typography
-                        variant="h5"
-                        sx={{ color: '#ff6666', fontWeight: 'bold' }}
-                      >
-                        {loading ? 0 : stats.threatsFound}
-                      </Typography>
-                    </Grid>
-                    <Grid size={{ xs: 6, md: 3 }}>
-                      <Typography variant="body2" sx={{ color: '#aaa' }}>
-                        Средний риск
-                      </Typography>
-                      <Typography
-                        variant="h5"
-                        sx={{ color: '#ffaa44', fontWeight: 'bold' }}
-                      >
-                        {loading ? 0 : stats.averageRisk}%
-                      </Typography>
-                    </Grid>
-                    <Grid size={{ xs: 6, md: 3 }}>
-                      <Typography variant="body2" sx={{ color: '#aaa' }}>
-                        Репутация
-                      </Typography>
-                      <Typography
-                        variant="h5"
-                        sx={{ color: '#0ff', fontWeight: 'bold' }}
-                      >
-                        {loading ? 0 : stats.reputation}%
-                      </Typography>
-                    </Grid>
-                  </Grid>
+                  )}
                 </Card>
+              </motion.div>
 
+              {/* Активность */}
+              <motion.div
+                initial={{ opacity: 0, y: 30 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.3 }}
+              >
                 <Card
                   sx={{
                     bgcolor: 'rgba(10,10,30,0.6)',
@@ -533,256 +504,236 @@ const Profile = () => {
                     borderRadius: 4,
                     border: '1px solid rgba(0,255,255,0.3)',
                     p: 3,
+                    mb: 4,
                   }}
                 >
                   <Typography variant="h6" sx={{ color: '#0ff', mb: 2 }}>
-                    🔗 Привязанные аккаунты
+                    📊 Активность за последние 7 дней
                   </Typography>
-                  <Grid container spacing={2}>
-                    <Grid size={{ xs: 12, sm: 6 }}>
-                      <Button
-                        fullWidth
-                        variant="outlined"
-                        startIcon={<TelegramIcon />}
-                        onClick={() => handleConnectSocial('Telegram')}
-                        sx={{
-                          justifyContent: 'flex-start',
-                          borderColor: '#0ff',
-                          color: '#0ff',
-                          textTransform: 'none',
-                        }}
-                      >
-                        {socials.telegram
-                          ? '✓ Telegram привязан'
-                          : 'Привязать Telegram'}
-                      </Button>
-                    </Grid>
-                    <Grid size={{ xs: 12, sm: 6 }}>
-                      <Button
-                        fullWidth
-                        variant="outlined"
-                        startIcon={<InstagramIcon />}
-                        onClick={() => handleConnectSocial('Instagram')}
-                        sx={{
-                          justifyContent: 'flex-start',
-                          borderColor: '#e4405f',
-                          color: '#e4405f',
-                          textTransform: 'none',
-                        }}
-                      >
-                        {socials.instagram
-                          ? '✓ Instagram привязан'
-                          : 'Привязать Instagram'}
-                      </Button>
-                    </Grid>
-                    <Grid size={{ xs: 12, sm: 6 }}>
-                      <Button
-                        fullWidth
-                        variant="outlined"
-                        startIcon={<TikTokIcon />}
-                        onClick={() => handleConnectSocial('TikTok')}
-                        sx={{
-                          justifyContent: 'flex-start',
-                          borderColor: '#00f2ea',
-                          color: '#00f2ea',
-                          textTransform: 'none',
-                        }}
-                      >
-                        {socials.tiktok
-                          ? '✓ TikTok привязан'
-                          : 'Привязать TikTok'}
-                      </Button>
-                    </Grid>
-                    <Grid size={{ xs: 12, sm: 6 }}>
-                      <Button
-                        fullWidth
-                        variant="outlined"
-                        startIcon={<YouTubeIcon />}
-                        onClick={() => handleConnectSocial('YouTube')}
-                        sx={{
-                          justifyContent: 'flex-start',
-                          borderColor: '#ff0000',
-                          color: '#ff0000',
-                          textTransform: 'none',
-                        }}
-                      >
-                        {socials.youtube
-                          ? '✓ YouTube привязан'
-                          : 'Привязать YouTube'}
-                      </Button>
-                    </Grid>
-                  </Grid>
-                  <Divider sx={{ my: 3, borderColor: 'rgba(0,255,255,0.2)' }} />
-                  <Typography variant="body2" sx={{ color: '#aaa' }}>
-                    Привязка аккаунтов позволит автоматически анализировать ваши
-                    видео и получать уведомления об угрозах.
-                  </Typography>
+                  {loading ? (
+                    <CircularProgress sx={{ color: '#0ff' }} />
+                  ) : (
+                    <ResponsiveContainer width="100%" height={200}>
+                      <BarChart data={activity}>
+                        <CartesianGrid strokeDasharray="3 3" stroke="#333" />
+                        <XAxis dataKey="date" stroke="#ccc" />
+                        <YAxis stroke="#ccc" allowDecimals={false} />
+                        <RechartsTooltip
+                          contentStyle={{
+                            backgroundColor: '#111',
+                            borderColor: '#0ff',
+                          }}
+                        />
+                        <Bar
+                          dataKey="count"
+                          fill="#33ffcc"
+                          radius={[4, 4, 0, 0]}
+                        />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  )}
                 </Card>
               </motion.div>
+
+              {/* Распределение вердиктов + последние проверки */}
+              <Grid container spacing={4}>
+                <Grid size={{ xs: 12, md: 6 }}>
+                  <motion.div
+                    initial={{ opacity: 0, y: 30 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.4 }}
+                  >
+                    <Card
+                      sx={{
+                        bgcolor: 'rgba(10,10,30,0.6)',
+                        backdropFilter: 'blur(12px)',
+                        borderRadius: 4,
+                        border: '1px solid rgba(0,255,255,0.3)',
+                        p: 3,
+                        height: '100%',
+                      }}
+                    >
+                      <Typography variant="h6" sx={{ color: '#0ff', mb: 2 }}>
+                        🥧 Вердикты
+                      </Typography>
+                      {loading ? (
+                        <CircularProgress sx={{ color: '#0ff' }} />
+                      ) : (
+                        <ResponsiveContainer width="100%" height={220}>
+                          <PieChart>
+                            <Pie
+                              data={[
+                                { name: 'Безопасно', value: verdictDist.safe },
+                                {
+                                  name: 'Опасно',
+                                  value: verdictDist.dangerous,
+                                },
+                                {
+                                  name: 'Неопределённо',
+                                  value: verdictDist.uncertain,
+                                },
+                              ]}
+                              dataKey="value"
+                              nameKey="name"
+                              cx="50%"
+                              cy="50%"
+                              outerRadius={80}
+                              label={({ name, percent }) =>
+                                `${name}: ${(percent * 100).toFixed(0)}%`
+                              }
+                            >
+                              <Cell fill={verdictColors.safe} />
+                              <Cell fill={verdictColors.dangerous} />
+                              <Cell fill={verdictColors.uncertain} />
+                            </Pie>
+                            <RechartsTooltip />
+                          </PieChart>
+                        </ResponsiveContainer>
+                      )}
+                    </Card>
+                  </motion.div>
+                </Grid>
+                <Grid size={{ xs: 12, md: 6 }}>
+                  <motion.div
+                    initial={{ opacity: 0, y: 30 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.5 }}
+                  >
+                    <Card
+                      sx={{
+                        bgcolor: 'rgba(10,10,30,0.6)',
+                        backdropFilter: 'blur(12px)',
+                        borderRadius: 4,
+                        border: '1px solid rgba(0,255,255,0.3)',
+                        p: 3,
+                        height: '100%',
+                      }}
+                    >
+                      <Typography variant="h6" sx={{ color: '#0ff', mb: 2 }}>
+                        🕒 Последние проверки
+                      </Typography>
+                      {loading ? (
+                        <CircularProgress sx={{ color: '#0ff' }} />
+                      ) : recentChecks.length === 0 ? (
+                        <Typography sx={{ color: '#aaa' }}>
+                          Нет проверок
+                        </Typography>
+                      ) : (
+                        <List dense sx={{ maxHeight: 220, overflow: 'auto' }}>
+                          {recentChecks.map((check) => (
+                            <div key={check.id}>
+                              <ListItem
+                                component={Link}
+                                href={check.video_url}
+                                target="_blank"
+                                sx={{ textDecoration: 'none' }}
+                              >
+                                <ListItemAvatar>
+                                  <Avatar
+                                    sx={{
+                                      bgcolor:
+                                        verdictColors[check.verdict_text] ||
+                                        '#aaa',
+                                    }}
+                                  >
+                                    {check.verdict_text === 'safe'
+                                      ? '✅'
+                                      : check.verdict_text === 'dangerous'
+                                        ? '⚠️'
+                                        : '❓'}
+                                  </Avatar>
+                                </ListItemAvatar>
+                                <ListItemText
+                                  primary={check.title || 'Без названия'}
+                                  secondary={`Безопасность: ${check.safety_percent}% • ${new Date(check.checked_at).toLocaleDateString()}`}
+                                  primaryTypographyProps={{ color: '#fff' }}
+                                  secondaryTypographyProps={{ color: '#aaa' }}
+                                />
+                              </ListItem>
+                              <Divider
+                                sx={{ borderColor: 'rgba(0,255,255,0.1)' }}
+                              />
+                            </div>
+                          ))}
+                        </List>
+                      )}
+                    </Card>
+                  </motion.div>
+                </Grid>
+              </Grid>
             </Grid>
           </Grid>
         </Container>
-
-        {/* Диалог смены пароля */}
-        <Dialog
-          open={passwordDialogOpen}
-          onClose={() => setPasswordDialogOpen(false)}
-          maxWidth="xs"
-          fullWidth
-          PaperProps={{
-            sx: { bgcolor: '#111', color: '#fff', border: '1px solid #ff3366' },
-          }}
-        >
-          <DialogTitle sx={{ color: '#fff' }}>Смена пароля</DialogTitle>
-          <DialogContent>
-            <Stack spacing={2} sx={{ mt: 1 }}>
-              <TextField
-                label="Старый пароль"
-                type={showOldPassword ? 'text' : 'password'}
-                fullWidth
-                value={oldPassword}
-                onChange={(e) => setOldPassword(e.target.value)}
-                sx={{ input: { color: '#fff' }, label: { color: '#aaa' } }}
-                InputProps={{
-                  endAdornment: (
-                    <InputAdornment position="end">
-                      <MuiIconButton
-                        onClick={() => setShowOldPassword(!showOldPassword)}
-                        edge="end"
-                        sx={{ color: '#aaa' }}
-                      >
-                        {showOldPassword ? <VisibilityOff /> : <Visibility />}
-                      </MuiIconButton>
-                    </InputAdornment>
-                  ),
-                }}
-              />
-              <TextField
-                label="Новый пароль"
-                type={showNewPassword ? 'text' : 'password'}
-                fullWidth
-                value={newPassword}
-                onChange={(e) => setNewPassword(e.target.value)}
-                sx={{ input: { color: '#fff' }, label: { color: '#aaa' } }}
-                InputProps={{
-                  endAdornment: (
-                    <InputAdornment position="end">
-                      <MuiIconButton
-                        onClick={() => setShowNewPassword(!showNewPassword)}
-                        edge="end"
-                        sx={{ color: '#aaa' }}
-                      >
-                        {showNewPassword ? <VisibilityOff /> : <Visibility />}
-                      </MuiIconButton>
-                    </InputAdornment>
-                  ),
-                }}
-              />
-              <TextField
-                label="Подтвердите пароль"
-                type={showConfirmPassword ? 'text' : 'password'}
-                fullWidth
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
-                sx={{ input: { color: '#fff' }, label: { color: '#aaa' } }}
-                InputProps={{
-                  endAdornment: (
-                    <InputAdornment position="end">
-                      <MuiIconButton
-                        onClick={() =>
-                          setShowConfirmPassword(!showConfirmPassword)
-                        }
-                        edge="end"
-                        sx={{ color: '#aaa' }}
-                      >
-                        {showConfirmPassword ? (
-                          <VisibilityOff />
-                        ) : (
-                          <Visibility />
-                        )}
-                      </MuiIconButton>
-                    </InputAdornment>
-                  ),
-                }}
-              />
-              {passwordError && (
-                <Alert
-                  severity="error"
-                  sx={{ bgcolor: 'rgba(255,51,102,0.2)', color: '#ff8888' }}
-                >
-                  {passwordError}
-                </Alert>
-              )}
-              {passwordSuccess && (
-                <Alert
-                  severity="success"
-                  sx={{ bgcolor: 'rgba(68,255,102,0.2)', color: '#88ff88' }}
-                >
-                  {passwordSuccess}
-                </Alert>
-              )}
-            </Stack>
-          </DialogContent>
-          <DialogActions>
-            <Button
-              onClick={() => setPasswordDialogOpen(false)}
-              sx={{ color: '#aaa' }}
-            >
-              Отмена
-            </Button>
-            <Button
-              onClick={handleChangePassword}
-              variant="contained"
-              sx={{ bgcolor: '#ff3366', color: '#fff' }}
-            >
-              Изменить
-            </Button>
-          </DialogActions>
-        </Dialog>
-
-        {/* Диалог смены аватара */}
-        <Dialog
-          open={avatarDialogOpen}
-          onClose={() => setAvatarDialogOpen(false)}
-          maxWidth="xs"
-          fullWidth
-          PaperProps={{
-            sx: { bgcolor: '#111', color: '#fff', border: '1px solid #0ff' },
-          }}
-        >
-          <DialogTitle sx={{ color: '#fff' }}>Сменить аватар</DialogTitle>
-          <DialogContent>
-            <TextField
-              label="URL изображения"
-              fullWidth
-              value={avatarUrl}
-              onChange={(e) => setAvatarUrl(e.target.value)}
-              sx={{ mt: 1, input: { color: '#fff' }, label: { color: '#aaa' } }}
-            />
-            <Typography
-              variant="caption"
-              sx={{ display: 'block', mt: 1, color: '#aaa' }}
-            >
-              Введите ссылку на изображение (или позже добавим загрузку файла)
-            </Typography>
-          </DialogContent>
-          <DialogActions>
-            <Button
-              onClick={() => setAvatarDialogOpen(false)}
-              sx={{ color: '#aaa' }}
-            >
-              Отмена
-            </Button>
-            <Button
-              onClick={handleChangeAvatar}
-              variant="contained"
-              sx={{ bgcolor: '#0ff', color: '#000' }}
-            >
-              Сохранить
-            </Button>
-          </DialogActions>
-        </Dialog>
       </Box>
+
+      {/* Диалог смены аватара */}
+      <Dialog
+        open={avatarDialogOpen}
+        onClose={() => setAvatarDialogOpen(false)}
+        maxWidth="xs"
+        fullWidth
+        PaperProps={{
+          sx: { bgcolor: '#111', color: '#fff', border: '1px solid #0ff' },
+        }}
+      >
+        <DialogTitle sx={{ color: '#fff' }}>Сменить аватар</DialogTitle>
+        <DialogContent>
+          <TextField
+            label="Ссылка на изображение"
+            fullWidth
+            value={avatarUrlInput}
+            onChange={(e) => setAvatarUrlInput(e.target.value)}
+            sx={{ mt: 1, input: { color: '#fff' }, label: { color: '#aaa' } }}
+            placeholder="example.com/avatar.jpg"
+          />
+          <Typography
+            variant="caption"
+            sx={{ display: 'block', mt: 1, color: '#aaa' }}
+          >
+            Можно ввести как с протоколом, так и без – https:// добавится
+            автоматически
+          </Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button
+            onClick={() => setAvatarDialogOpen(false)}
+            sx={{ color: '#aaa' }}
+          >
+            Отмена
+          </Button>
+          <Button
+            onClick={handleSaveAvatarUrl}
+            variant="contained"
+            disabled={avatarSaving}
+            sx={{ bgcolor: '#0ff', color: '#000' }}
+          >
+            {avatarSaving ? (
+              <CircularProgress size={24} sx={{ color: '#000' }} />
+            ) : (
+              'Сохранить'
+            )}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Snackbar */}
+      <Snackbar
+        open={snackbar.open}
+        autoHideDuration={4000}
+        onClose={() => setSnackbar((prev) => ({ ...prev, open: false }))}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+      >
+        <Alert
+          severity={snackbar.severity}
+          sx={{
+            bgcolor: '#111',
+            color: '#fff',
+            border: `1px solid ${snackbar.severity === 'success' ? '#44ff66' : '#ff3366'}`,
+          }}
+        >
+          {snackbar.message}
+        </Alert>
+      </Snackbar>
     </>
   )
 }

@@ -12,8 +12,6 @@ import {
   ListItem,
   ListItemIcon,
   ListItemText,
-  Switch,
-  FormControlLabel,
   Dialog,
   DialogTitle,
   DialogContent,
@@ -32,8 +30,6 @@ import HistoryIcon from '@mui/icons-material/History'
 import AnalyticsIcon from '@mui/icons-material/Analytics'
 import PersonIcon from '@mui/icons-material/Person'
 import LogoutIcon from '@mui/icons-material/Logout'
-import DarkModeIcon from '@mui/icons-material/DarkMode'
-import LightModeIcon from '@mui/icons-material/LightMode'
 import Visibility from '@mui/icons-material/Visibility'
 import VisibilityOff from '@mui/icons-material/VisibilityOff'
 import { useNavigate } from 'react-router-dom'
@@ -53,7 +49,6 @@ export default function CyberSidebar({ open, onClose }: Props) {
   const { user, login, logout } = useUser()
   const navigate = useNavigate()
   const { t } = useTranslation()
-  const [darkMode, setDarkMode] = useState(true)
   const [logoutConfirmOpen, setLogoutConfirmOpen] = useState(false)
 
   // Состояния для диалога авторизации
@@ -100,7 +95,6 @@ export default function CyberSidebar({ open, onClose }: Props) {
     try {
       const res = await signIn(loginEmail, loginPassword)
       if (res && res.token && res.user) {
-        // Преобразуем id → user_id
         const userData: UserData = {
           user_id: res.user.id,
           role: res.user.role,
@@ -150,7 +144,6 @@ export default function CyberSidebar({ open, onClose }: Props) {
     try {
       const res = await signUp(regFirstName, regLastName, regEmail, regPassword)
       if (res && res.token && res.user) {
-        // Преобразуем id → user_id
         const userData: UserData = {
           user_id: res.user.id,
           role: res.user.role,
@@ -224,7 +217,7 @@ export default function CyberSidebar({ open, onClose }: Props) {
             color: '#fff',
           }}
         >
-          {/* Заголовок и кнопка закрытия */}
+          {/* Заголовок с логотипом */}
           <Box
             sx={{
               display: 'flex',
@@ -234,18 +227,26 @@ export default function CyberSidebar({ open, onClose }: Props) {
               borderBottom: '1px solid rgba(0,255,255,0.2)',
             }}
           >
-            <Typography
-              variant="h6"
-              sx={{
-                fontWeight: 'bold',
-                background: 'linear-gradient(135deg, #ff3366, #33ffcc)',
-                backgroundClip: 'text',
-                WebkitBackgroundClip: 'text',
-                color: 'transparent',
-              }}
-            >
-              AI MEDIA WATCH
-            </Typography>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+              <Box
+                component="img"
+                src="/logo.png"
+                alt="AI Media Watch"
+                sx={{ height: 32, width: 'auto' }}
+              />
+              <Typography
+                variant="h6"
+                sx={{
+                  fontWeight: 'bold',
+                  background: 'linear-gradient(135deg, #ff3366, #33ffcc)',
+                  backgroundClip: 'text',
+                  WebkitBackgroundClip: 'text',
+                  color: 'transparent',
+                }}
+              >
+                AI MEDIA WATCH
+              </Typography>
+            </Box>
             <IconButton
               onClick={onClose}
               sx={{
@@ -312,7 +313,7 @@ export default function CyberSidebar({ open, onClose }: Props) {
             </Box>
           )}
 
-          {/* Список навигации */}
+          {/* Список навигации с красивыми кнопками */}
           <List sx={{ flex: 1, px: 1 }}>
             {menuItems.map((item) => (
               <ListItem
@@ -322,10 +323,19 @@ export default function CyberSidebar({ open, onClose }: Props) {
                 sx={{
                   borderRadius: 2,
                   mb: 0.5,
+                  transition: 'all 0.2s',
                   '&:hover': {
-                    bgcolor: 'rgba(0, 255, 255, 0.1)',
-                    transform: 'translateX(4px)',
+                    bgcolor: 'rgba(0, 255, 255, 0.15)',
+                    transform: 'translateX(8px)',
+                    boxShadow: '0 0 15px rgba(0, 255, 255, 0.2)',
+                  },
+                  '& .MuiListItemIcon-root': {
+                    color: '#0ff',
                     transition: '0.2s',
+                  },
+                  '&:hover .MuiListItemIcon-root': {
+                    color: '#33ffcc',
+                    transform: 'scale(1.1)',
                   },
                 }}
               >
@@ -334,7 +344,13 @@ export default function CyberSidebar({ open, onClose }: Props) {
                 </ListItemIcon>
                 <ListItemText
                   primary={item.text}
-                  primaryTypographyProps={{ fontWeight: 500 }}
+                  primaryTypographyProps={{
+                    fontWeight: 500,
+                    sx: {
+                      transition: '0.2s',
+                      '&:hover': { color: '#33ffcc' },
+                    },
+                  }}
                 />
               </ListItem>
             ))}
@@ -342,34 +358,7 @@ export default function CyberSidebar({ open, onClose }: Props) {
 
           <Divider sx={{ borderColor: 'rgba(0,255,255,0.2)', my: 1 }} />
 
-          {/* Дополнительные настройки */}
-          <Box sx={{ p: 2 }}>
-            <FormControlLabel
-              control={
-                <Switch
-                  checked={darkMode}
-                  onChange={() => setDarkMode(!darkMode)}
-                  sx={{
-                    '& .MuiSwitch-switchBase.Mui-checked': { color: '#0ff' },
-                  }}
-                />
-              }
-              label={
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                  {darkMode ? (
-                    <DarkModeIcon fontSize="small" sx={{ color: '#0ff' }} />
-                  ) : (
-                    <LightModeIcon fontSize="small" />
-                  )}
-                  <Typography variant="body2">Тёмная тема</Typography>
-                </Box>
-              }
-            />
-          </Box>
-
-          <Divider sx={{ borderColor: 'rgba(0,255,255,0.2)' }} />
-
-          {/* Кнопка выхода */}
+          {/* Кнопка выхода (красивая) */}
           {isAuthenticated && (
             <Box sx={{ p: 2 }}>
               <Button
@@ -377,9 +366,15 @@ export default function CyberSidebar({ open, onClose }: Props) {
                 startIcon={<LogoutIcon />}
                 onClick={() => setLogoutConfirmOpen(true)}
                 sx={{
+                  border: '1px solid rgba(255,51,102,0.5)',
                   color: '#ff3366',
-                  borderColor: '#ff3366',
-                  '&:hover': { bgcolor: 'rgba(255,51,102,0.1)' },
+                  transition: 'all 0.3s',
+                  '&:hover': {
+                    bgcolor: 'rgba(255,51,102,0.15)',
+                    borderColor: '#ff3366',
+                    boxShadow: '0 0 20px rgba(255,51,102,0.3)',
+                    transform: 'scale(1.02)',
+                  },
                 }}
               >
                 Выйти

@@ -58,4 +58,8 @@ export class User extends Model {
 
   @HasMany(() => VideoAnalysis, { foreignKey: 'userId' }) // ← добавили foreignKey
   declare video_analyses: VideoAnalysis[]
+
+  @AllowNull(true)
+  @Column(DataType.TEXT)
+  declare photoURL: string | null
 }
