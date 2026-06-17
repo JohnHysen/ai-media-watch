@@ -8,6 +8,7 @@ from pydantic import BaseModel
 from contextlib import asynccontextmanager
 from datetime import datetime
 from typing import Optional
+import logging
 
 from .services.file_lifecycle_service import download_video, remove_video
 from .services.video_processing_service import video_processing
@@ -17,9 +18,13 @@ from .services.frame_analysis_service import analyze_frames, get_first_frame_bas
 from .services.llm_verdict_service import get_llm_verdict
 from .services.nodejs_client import send_video_analysis_to_nodejs
 
+logger = logging.getLogger(__name__)
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     yield
+
 
 app = FastAPI(lifespan=lifespan)
 
@@ -31,110 +36,77 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+
 @app.get("/analyze")
-async def analyze(
-    url: str,
-    userId: Optional[int] = Query(None, description="ID пользователя, если инициировал проверку"),
-    background_tasks: BackgroundTasks = None
-):
+async def analyze(url: str):
     start_time = time.time()
     analyze_id = str(uuid.uuid4())
 
     try:
-        print(f"🔍 Анализ видео: {url}")
-        print(f"📁 ID: {analyze_id}")
+        logger.info(f"Запущен анализ №{analyze_id}. Ссылка: {url}")
 
         download_video(analyze_id, url)
-        print("   ✅ Видео скачано")
+        logger.info("Видео скачано")
 
         metadata = get_video_metadata(analyze_id, url)
 
         video_processing(analyze_id)
 
         transcript = transcribe_audio(analyze_id)
-        print(f"   ✅ Распознано символов: {len(transcript)}")
+        logger.info(f"Распознано символов: {len(transcript)}")
 
         frame_analysis = analyze_frames(analyze_id)
-        print(f"   ✅ Кадров проанализировано: {frame_analysis.get('total_frames', 0)}")
+        logger.info(f"Кадров проанализировано: {frame_analysis.get('total_frames', 0)}")
 
-        print("🖼️ Получение превью...")
+        logger.info("Получение превью...")
         preview_image = get_first_frame_base64(analyze_id)
         if preview_image:
-            print(f"   ✅ Превью создано")
+            logger.info(f"Превью создано")
         else:
-            print("   ⚠️ Превью не создано")
+            logger.warning("Превью не создано")
 
         verdict = get_llm_verdict(analyze_id, metadata, transcript, frame_analysis)
+        print(verdict)
 
-        # Удаляем временные файлы
-        print("🧹 Очистка...")
+        logger.info("Очистка...")
         remove_video(analyze_id)
 
-        duration = round(time.time() - start_time, 2)
+        duration_seconds = round(time.time() - start_time, 2)
 
         # === Подготовка результата для ответа клиенту ===
-        result = {
-            "url": url,
-            "video_title": metadata.get("title", ""),
-            "verdict": verdict.get("verdict", "неизвестно"),
-            "is_dangerous": verdict.get("is_dangerous", False),
-            "confidence": verdict.get("confidence", 0.0),
-            "reason": verdict.get("reason", ""),
-            "frames_analyzed": frame_analysis.get("total_frames", 0),
-            "transcript_length": len(transcript),
-            "time_seconds": duration,
-            "preview_image": preview_image,
-        }
-
-        # === Отправка в Node.js (фоновая задача) ===
-        is_danger = verdict.get("is_dangerous", False)
+        is_dangerous = verdict.get("is_dangerous", False)
         confidence = verdict.get("confidence", 0.0)
 
-        if is_danger:
+        if is_dangerous:
             safety_percent = round((1 - confidence) * 100, 2)
         else:
             safety_percent = round(confidence * 100, 2)
 
         safety_percent = max(0.1, min(99.9, safety_percent))
 
-        if is_danger:
-            node_verdict = 'dangerous'
+        if is_dangerous:
+            verdict_text = "dangerous"
         else:
             if confidence < 0.6:
-                node_verdict = 'uncertain'
+                verdict_text = "uncertain"
             else:
-                node_verdict = 'safe'
+                verdict_text = "safe"
 
-        node_verdict = node_verdict.strip().lower() 
+        verdict_text = verdict_text.strip().lower()
 
-        duration_seconds = metadata.get('duration', 0)
-        if isinstance(duration_seconds, str):
-            try:
-                duration_seconds = int(duration_seconds)
-            except:
-                duration_seconds = 0
+        logger.info(f"РЕЗУЛЬТАТ: {verdict_text.upper()} ({confidence:.0%})")
 
-        if not duration_seconds or duration_seconds == 0:
-            duration_seconds = 10
-
-        duration_seconds = int(duration_seconds)
-
-        # ✅ Передаём userId из параметра запроса
-        background_tasks.add_task(
-            send_video_analysis_to_nodejs,
-            video_url=url,
-            safety_percent=safety_percent,
-            verdict_text=node_verdict,
-            is_dangerous=is_danger,
-            duration_seconds=duration_seconds,
-            title=metadata.get("title"),
-            tags=None,
-            preview_image_url=preview_image,
-            userId=userId,   # <-- добавлено
-        )
-
-        print(f"\n✨ РЕЗУЛЬТАТ: {result['verdict'].upper()} ({result['confidence']:.0%})")
-        return result
+        return {
+            "video_url": url,
+            "title": metadata.get("title", ""),
+            "safety_percent": safety_percent,
+            "verdict_text": verdict_text.strip().lower(),
+            "reason": verdict.get("reason"),
+            "is_dangerous": is_dangerous,
+            "duration_seconds": duration_seconds,
+            "preview_image_url": preview_image,
+            "checked_at": datetime.now(),
+        }
 
     except Exception as e:
         try:
@@ -143,9 +115,11 @@ async def analyze(
             pass
         raise e
 
+
 @app.get("/")
 def read_root():
     return {"Hello": "World"}
+
 
 @app.get("/items/{item_id}")
 def read_item(item_id: int, q: str | None = None):

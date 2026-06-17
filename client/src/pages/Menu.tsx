@@ -76,7 +76,12 @@ import { useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { useUser } from '../context/user/useUser'
 import CyberSidebar from '../components/CyberSidebar'
-import { $host, getVideoAnalyses, VideoAnalysis } from '../http/API'
+import {
+  $host,
+  getVideoAnalyses,
+  VideoAnalysis,
+  createAnalysisJob,
+} from '../http/API'
 
 // ---------- 3D фон с логотипами соцсетей ----------
 const FloatingIconsOnly = () => {
@@ -560,10 +565,7 @@ const CyberMediaWatchPro = () => {
     if (!videoUrl.trim()) return
     setIsChecking(true)
     try {
-      const userIdParam = user?.user_id ? `&userId=${user.user_id}` : ''
-      const response = await fetch(
-        `http://localhost:3500/analyze?url=${encodeURIComponent(videoUrl)}${userIdParam}`
-      )
+      const response = await createAnalysisJob(videoUrl)
       if (!response.ok) {
         const errorText = await response.text()
         throw new Error(errorText || 'Ошибка сервера')
@@ -738,8 +740,8 @@ const CyberMediaWatchPro = () => {
               variant="subtitle1"
               sx={{ textAlign: 'center', color: '#88f', mb: 4 }}
             >
-              🛡️ Мониторинг угроз в реальном времени • 3D-аналитика •
-              Превентивные предупреждения
+              <SecurityIcon /> Мониторинг угроз в реальном времени •
+              3D-аналитика • Превентивные предупреждения
             </Typography>
           </motion.div>
           <AnimatePresence>

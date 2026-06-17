@@ -44,12 +44,16 @@ export class VideoAnalysis extends Model {
   @Column(DataType.ENUM(...Object.values(DangerStatus)))
   declare verdict_text: DangerStatus
 
+  @AllowNull(true)
+  @Column(DataType.TEXT)
+  declare reason: string
+
   @AllowNull(false)
   @Column(DataType.BOOLEAN)
   declare is_dangerous: boolean
 
   @AllowNull(false)
-  @Column(DataType.INTEGER)
+  @Column(DataType.FLOAT)
   declare duration_seconds: number
 
   @AllowNull(true)

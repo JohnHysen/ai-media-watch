@@ -1,11 +1,6 @@
 import axios from 'axios'
 import { toast } from 'react-toastify'
 import { baseURL } from '../config'
-
-const host = axios.create({
-  baseURL,
-})
-
 export const $host = axios.create({ baseURL })
 
 $host.interceptors.request.use((config) => {
@@ -23,7 +18,7 @@ export const signUp = async (
   password: string
 ) => {
   try {
-    const res = await host.post('auth/signup', {
+    const res = await $host.post('auth/signup', {
       first_name,
       last_name,
       email,
@@ -40,7 +35,7 @@ export const signUp = async (
 }
 export const signIn = async (email: string, password: string) => {
   try {
-    const res = await host.post('auth/signin', {
+    const res = await $host.post('auth/signin', {
       email,
       password,
     })
@@ -55,7 +50,7 @@ export const signIn = async (email: string, password: string) => {
 }
 export const googleLogin = async (idToken: string) => {
   try {
-    const res = await host.post('auth/google', {
+    const res = await $host.post('auth/google', {
       idToken,
     })
 
@@ -224,3 +219,14 @@ export const getVerdictDistribution = () =>
   $host.get('/user/verdict-distribution')
 export const getRecentChecks = (limit = 5) =>
   $host.get(`/user/recent-checks?limit=${limit}`)
+
+export const createAnalysisJob = async (url: string) => {
+  try {
+    const res = await $host.post('analysis-queue', {
+      url,
+    })
+    return res.data
+  } catch (e: any) {
+    console.log(e)
+  }
+}
