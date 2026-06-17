@@ -53,7 +53,7 @@ export class VideoAnalysis extends Model {
   declare duration_seconds: number
 
   @AllowNull(true)
-  @Column(DataType.STRING)
+  @Column(DataType.TEXT)
   declare preview_image_url: string | null
 
   @AllowNull(true)

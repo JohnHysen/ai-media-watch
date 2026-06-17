@@ -13,7 +13,7 @@ from .services.file_lifecycle_service import download_video, remove_video
 from .services.video_processing_service import video_processing
 from .services.metadata_service import get_video_metadata
 from .services.speech_to_text_service import transcribe_audio
-from .services.frame_analysis_service import analyze_frames
+from .services.frame_analysis_service import analyze_frames, get_first_frame_base64
 from .services.llm_verdict_service import get_llm_verdict
 from .services.nodejs_client import send_video_analysis_to_nodejs
 
@@ -57,6 +57,13 @@ async def analyze(
         frame_analysis = analyze_frames(analyze_id)
         print(f"   ✅ Кадров проанализировано: {frame_analysis.get('total_frames', 0)}")
 
+        print("🖼️ Получение превью...")
+        preview_image = get_first_frame_base64(analyze_id)
+        if preview_image:
+            print(f"   ✅ Превью создано")
+        else:
+            print("   ⚠️ Превью не создано")
+
         verdict = get_llm_verdict(analyze_id, metadata, transcript, frame_analysis)
 
         # Удаляем временные файлы
@@ -76,6 +83,7 @@ async def analyze(
             "frames_analyzed": frame_analysis.get("total_frames", 0),
             "transcript_length": len(transcript),
             "time_seconds": duration,
+            "preview_image": preview_image,
         }
 
         # === Отправка в Node.js (фоновая задача) ===
@@ -87,6 +95,8 @@ async def analyze(
         else:
             safety_percent = round(confidence * 100, 2)
 
+        safety_percent = max(0.1, min(99.9, safety_percent))
+
         if is_danger:
             node_verdict = 'dangerous'
         else:
@@ -95,12 +105,19 @@ async def analyze(
             else:
                 node_verdict = 'safe'
 
+        node_verdict = node_verdict.strip().lower() 
+
         duration_seconds = metadata.get('duration', 0)
         if isinstance(duration_seconds, str):
             try:
                 duration_seconds = int(duration_seconds)
             except:
                 duration_seconds = 0
+
+        if not duration_seconds or duration_seconds == 0:
+            duration_seconds = 10
+
+        duration_seconds = int(duration_seconds)
 
         # ✅ Передаём userId из параметра запроса
         background_tasks.add_task(
@@ -112,7 +129,7 @@ async def analyze(
             duration_seconds=duration_seconds,
             title=metadata.get("title"),
             tags=None,
-            preview_image_url=None,
+            preview_image_url=preview_image,
             userId=userId,   # <-- добавлено
         )
 

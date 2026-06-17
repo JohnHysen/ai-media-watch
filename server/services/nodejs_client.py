@@ -92,7 +92,12 @@ async def send_video_analysis_to_nodejs(
             else:
                 print(f"❌ Node.js вернул ошибку: {response.status_code}")
                 print(f"   Ответ: {response.text[:200]}")
-                return {"error": f"HTTP {response.status_code}", "details": response.text[:200]}
+                try:
+                    error_data = response.json()
+                    print(f"   Детали: {json.dumps(error_data, ensure_ascii=False, indent=2)}")
+                except:
+                    pass
+            return {"error": f"HTTP {response.status_code}", "details": response.text[:500]}
                 
     except httpx.ConnectError:
         print(f"⚠️ Node.js сервер не доступен на {NODE_API_BASE}")

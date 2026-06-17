@@ -12,8 +12,39 @@ import numpy as np
 import re
 from PIL import Image
 from datetime import datetime
+import base64
 
-# Словари визуальных маркеров для детекции
+def get_first_frame_base64(analyze_id: str) -> str:
+    base_path = Path("temp") / analyze_id
+    frames_dir = base_path / "frames"
+    
+    if not frames_dir.exists():
+        print("⚠️ Папка с кадрами не найдена")
+        return None
+    
+    frame_files = sorted(frames_dir.glob("frame_*.jpg"))
+    
+    if not frame_files:
+        print("⚠️ Кадры не найдены")
+        return None
+    
+    first_frame = frame_files[0]
+    
+    try:
+        with open(first_frame, 'rb') as f:
+            image_data = f.read()
+        
+        base64_string = base64.b64encode(image_data).decode('utf-8')
+        
+        data_url = f"data:image/jpeg;base64,{base64_string}"
+        
+        print(f"✅ Превью создано: {len(base64_string)} символов")
+        return data_url
+        
+    except Exception as e:
+        print(f"⚠️ Ошибка создания превью: {e}")
+        return None
+
 VISUAL_MARKERS = {
     "casino": [
         "slot machine", "roulette", "casino", "poker", "cards", 
