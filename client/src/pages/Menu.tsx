@@ -25,10 +25,6 @@ import {
   LinearProgress,
   ToggleButton,
   ToggleButtonGroup,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
   Alert,
 } from '@mui/material'
 import MenuIcon from '@mui/icons-material/Menu'
@@ -38,6 +34,14 @@ import VideoLibraryIcon from '@mui/icons-material/VideoLibrary'
 import WarningIcon from '@mui/icons-material/Warning'
 import AnalyticsIcon from '@mui/icons-material/Analytics'
 import LinkIcon from '@mui/icons-material/Link'
+import AccessTimeIcon from '@mui/icons-material/AccessTime'
+import PieChartIcon from '@mui/icons-material/PieChart'
+import CasinoIcon from '@mui/icons-material/Casino'
+import SecurityIcon from '@mui/icons-material/Security'
+import CheckCircleIcon from '@mui/icons-material/CheckCircle'
+import YouTubeIcon from '@mui/icons-material/YouTube'
+import InstagramIcon from '@mui/icons-material/Instagram'
+import MusicNoteIcon from '@mui/icons-material/MusicNote'
 import ReportProblemIcon from '@mui/icons-material/ReportProblem'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Canvas, useFrame } from '@react-three/fiber'
@@ -50,14 +54,9 @@ import {
 } from '@react-three/drei'
 import * as THREE from 'three'
 import {
-  LineChart,
-  Area,
   PieChart,
   Pie,
   Cell,
-  XAxis,
-  YAxis,
-  CartesianGrid,
   Tooltip as RechartsTooltip,
   ResponsiveContainer,
 } from 'recharts'
@@ -66,6 +65,7 @@ import { useTranslation } from 'react-i18next'
 import { useUser } from '../context/user/useUser'
 import CyberSidebar from '../components/CyberSidebar'
 import { $host, getVideoAnalyses, VideoAnalysis } from '../http/API'
+import tikTokLogo from '../../public/images/tik-tok.png'
 
 // ---------- 3D фон (без изменений) ----------
 const FloatingIconsOnly = () => {
@@ -73,8 +73,7 @@ const FloatingIconsOnly = () => {
   const elements = useMemo(
     () => [
       {
-        symbol: '📱',
-        color: '#00f2ea',
+        image: tikTokLogo,
         size: 1.4,
         startX: -3,
         startY: 1.5,
@@ -82,7 +81,6 @@ const FloatingIconsOnly = () => {
       },
       {
         symbol: '📸',
-        color: '#e4405f',
         size: 1.4,
         startX: 4,
         startY: -1.5,
@@ -90,7 +88,6 @@ const FloatingIconsOnly = () => {
       },
       {
         symbol: '▶️',
-        color: '#ff0000',
         size: 1.4,
         startX: -2,
         startY: -2.5,
@@ -98,7 +95,6 @@ const FloatingIconsOnly = () => {
       },
       {
         symbol: '🛡️',
-        color: '#33ffcc',
         size: 1.5,
         startX: 3,
         startY: 2,
@@ -106,7 +102,6 @@ const FloatingIconsOnly = () => {
       },
       {
         symbol: '⚠️',
-        color: '#ff3366',
         size: 1.5,
         startX: 0,
         startY: -0.5,
@@ -168,16 +163,29 @@ const FloatingIconsOnly = () => {
               opacity={0.9}
             />
             <Html distanceFactor={14} position={[0, 0, 0.05]} transform center>
-              <div
-                style={{
-                  fontSize: `${el.size * 45}px`,
-                  textAlign: 'center',
-                  filter: `drop-shadow(0 0 8px ${el.color})`,
-                  pointerEvents: 'none',
-                }}
-              >
-                {el.symbol}
-              </div>
+              {el.symbol ? (
+                <div
+                  style={{
+                    fontSize: `${el.size * 45}px`,
+                    textAlign: 'center',
+                    filter: `drop-shadow(0 0 8px ${el.color})`,
+                    pointerEvents: 'none',
+                  }}
+                >
+                  {el.symbol}
+                </div>
+              ) : el.image ? (
+                <img
+                  src={el.image}
+                  alt="tiktok"
+                  style={{
+                    width: `${el.size * 45}px`,
+                    height: `${el.size * 45}px`,
+                    filter: `drop-shadow(0 0 8px ${el.color})`,
+                    pointerEvents: 'none',
+                  }}
+                />
+              ) : null}
             </Html>
           </mesh>
         </Float>
@@ -230,13 +238,157 @@ const CyberBackground3D = () => {
   )
 }
 
-// Типы вердиктов (для цветовой индикации)
+// ---------- Компонент спидометра ----------
+interface CyberSpeedometerProps {
+  value: number
+  label?: string
+  size?: number
+}
+
+const CyberSpeedometer: React.FC<CyberSpeedometerProps> = ({
+  value,
+  label = 'Уровень опасности',
+  size = 200,
+}) => {
+  const [animatedValue, setAnimatedValue] = useState(0)
+  const canvasRef = useRef<HTMLCanvasElement>(null)
+  const animationRef = useRef<number>()
+
+  useEffect(() => {
+    const target = Math.min(100, Math.max(0, value))
+    const duration = 1000
+    const startTime = performance.now()
+
+    const animate = (time: number) => {
+      const progress = Math.min(1, (time - startTime) / duration)
+      const eased = 1 - Math.pow(1 - progress, 3)
+      const current = target * eased
+      setAnimatedValue(current)
+      if (progress < 1) {
+        animationRef.current = requestAnimationFrame(animate)
+      } else {
+        setAnimatedValue(target)
+      }
+    }
+    animationRef.current = requestAnimationFrame(animate)
+    return () => {
+      if (animationRef.current) cancelAnimationFrame(animationRef.current)
+    }
+  }, [value])
+
+  useEffect(() => {
+    const canvas = canvasRef.current
+    if (!canvas) return
+    const ctx = canvas.getContext('2d')
+    if (!ctx) return
+
+    const dpr = window.devicePixelRatio || 1
+    const rect = canvas.getBoundingClientRect()
+    canvas.width = rect.width * dpr
+    canvas.height = rect.height * dpr
+    ctx.scale(dpr, dpr)
+
+    const w = rect.width
+    const h = rect.height
+    const centerX = w / 2
+    const centerY = h / 2
+    const radius = Math.min(w, h) / 2 - 20
+
+    ctx.clearRect(0, 0, w, h)
+
+    const startAngle = Math.PI * 0.75
+    const endAngle = Math.PI * 2.25
+    const arcLength = endAngle - startAngle
+
+    ctx.beginPath()
+    ctx.arc(centerX, centerY, radius, startAngle, endAngle)
+    ctx.strokeStyle = '#333'
+    ctx.lineWidth = 20
+    ctx.lineCap = 'round'
+    ctx.stroke()
+
+    const gradient = ctx.createLinearGradient(0, 0, w, 0)
+    gradient.addColorStop(0, '#33ffcc')
+    gradient.addColorStop(0.5, '#ffaa44')
+    gradient.addColorStop(1, '#ff3366')
+
+    const currentAngle = startAngle + arcLength * (animatedValue / 100)
+    ctx.beginPath()
+    ctx.arc(centerX, centerY, radius, startAngle, currentAngle)
+    ctx.strokeStyle = gradient
+    ctx.lineWidth = 20
+    ctx.lineCap = 'round'
+    ctx.stroke()
+
+    const arrowLength = radius - 10
+    const arrowAngle = startAngle + arcLength * (animatedValue / 100)
+    const arrowX = centerX + Math.cos(arrowAngle) * arrowLength
+    const arrowY = centerY + Math.sin(arrowAngle) * arrowLength
+
+    ctx.beginPath()
+    ctx.moveTo(centerX, centerY)
+    ctx.lineTo(arrowX, arrowY)
+    ctx.strokeStyle = '#0ff'
+    ctx.lineWidth = 4
+    ctx.shadowColor = '#0ff'
+    ctx.shadowBlur = 15
+    ctx.stroke()
+    ctx.shadowBlur = 0
+
+    ctx.beginPath()
+    ctx.arc(centerX, centerY, 12, 0, Math.PI * 2)
+    ctx.fillStyle = '#0ff'
+    ctx.shadowColor = '#0ff'
+    ctx.shadowBlur = 20
+    ctx.fill()
+    ctx.shadowBlur = 0
+
+    ctx.font = `bold ${radius * 0.4}px monospace`
+    ctx.textAlign = 'center'
+    ctx.textBaseline = 'middle'
+    ctx.fillStyle = '#fff'
+    ctx.shadowColor = '#0ff'
+    ctx.shadowBlur = 10
+    ctx.fillText(Math.round(animatedValue) + '%', centerX, centerY - 10)
+    ctx.shadowBlur = 0
+
+    ctx.font = `${radius * 0.12}px sans-serif`
+    ctx.fillStyle = '#aaa'
+    ctx.textBaseline = 'top'
+    ctx.fillText(label, centerX, centerY + radius * 0.3)
+  }, [animatedValue, label])
+
+  return (
+    <Box
+      sx={{
+        width: '100%',
+        height: '100%',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+      }}
+    >
+      <canvas
+        ref={canvasRef}
+        style={{
+          width: '100%',
+          height: '100%',
+          maxHeight: size,
+          maxWidth: size,
+        }}
+      />
+    </Box>
+  )
+}
+
+// ---------- Типы вердиктов ----------
 const VERDICT_TYPES = {
   safe: { label: 'Безопасно', color: '#33ffcc', icon: '✅' },
   dangerous: { label: 'Опасно', color: '#ff3366', icon: '⚠️' },
   uncertain: { label: 'Неопределённо', color: '#ffaa44', icon: '❓' },
 }
 
+// ---------- Главный компонент ----------
 const CyberMediaWatchPro = () => {
   const { user } = useUser()
   const navigate = useNavigate()
@@ -250,11 +402,6 @@ const CyberMediaWatchPro = () => {
   const [selectedVerdictFilter, setSelectedVerdictFilter] = useState<string[]>(
     []
   )
-  const [showReportDialog, setShowReportDialog] = useState(false)
-  const [reportedUrl, setReportedUrl] = useState('')
-  const [reportSuccess, setReportSuccess] = useState(false)
-
-  // Состояния для реальных данных
   const [videoAnalyses, setVideoAnalyses] = useState<VideoAnalysis[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -262,7 +409,6 @@ const CyberMediaWatchPro = () => {
   const isAdmin = user?.role === 'ADMIN'
   const { i18n } = useTranslation()
 
-  // Загрузка реальных данных
   const fetchData = async () => {
     setLoading(true)
     setError(null)
@@ -281,7 +427,6 @@ const CyberMediaWatchPro = () => {
     fetchData()
   }, [])
 
-  // Фильтрация по дате и вердикту
   const filteredThreats = useMemo(() => {
     let threats = [...videoAnalyses]
     const now = new Date()
@@ -306,7 +451,6 @@ const CyberMediaWatchPro = () => {
     return threats
   }, [videoAnalyses, timeframe, selectedVerdictFilter])
 
-  // Статистика по вердиктам (для круговой диаграммы)
   const verdictStats = useMemo(() => {
     const stats: Record<string, number> = {}
     filteredThreats.forEach((t) => {
@@ -319,45 +463,32 @@ const CyberMediaWatchPro = () => {
     }))
   }, [filteredThreats])
 
-  // Динамика по дням (последние 7 дней)
-  const trendByDay = useMemo(() => {
+  const dangerLevel = useMemo(() => {
     const last7Days = Array.from({ length: 7 }, (_, i) => {
       const d = new Date()
       d.setDate(d.getDate() - (6 - i))
-      return {
-        date: d.toLocaleDateString('ru-RU', {
-          day: '2-digit',
-          month: '2-digit',
-        }),
-        count: 0,
-      }
+      return d
     })
-    filteredThreats.forEach((t) => {
-      const threatDate = new Date(t.checked_at).toLocaleDateString('ru-RU', {
-        day: '2-digit',
-        month: '2-digit',
-      })
-      const dayObj = last7Days.find((d) => d.date === threatDate)
-      if (dayObj) dayObj.count += 1
+    const relevant = filteredThreats.filter((t) => {
+      const date = new Date(t.checked_at)
+      return last7Days.some((day) => date.toDateString() === day.toDateString())
     })
-    return last7Days
+    if (relevant.length === 0) return 0
+    const avgDangerPercent =
+      relevant.reduce((sum, t) => sum + (100 - (t.safety_percent || 0)), 0) /
+      relevant.length
+    return Math.round(avgDangerPercent)
   }, [filteredThreats])
 
-  // Топ опасных видео (опасные сначала, затем по возрастанию safety_percent)
   const topRiskyVideos = useMemo(() => {
     return [...filteredThreats]
       .sort((a, b) => {
-        // Сначала опасные
-        if (a.is_dangerous !== b.is_dangerous) {
-          return a.is_dangerous ? -1 : 1
-        }
-        // Чем меньше safety_percent, тем опаснее
+        if (a.is_dangerous !== b.is_dangerous) return a.is_dangerous ? -1 : 1
         return (a.safety_percent || 0) - (b.safety_percent || 0)
       })
       .slice(0, 6)
   }, [filteredThreats])
 
-  // Последние выявленные угрозы
   const recentThreats = useMemo(() => {
     return [...filteredThreats]
       .sort(
@@ -367,14 +498,12 @@ const CyberMediaWatchPro = () => {
       .slice(0, 8)
   }, [filteredThreats])
 
-  // Статистика для карточек
   const stats = useMemo(() => {
     const totalVideos = videoAnalyses.length
     const dangerousCount = videoAnalyses.filter((v) => v.is_dangerous).length
     const uniqueUsers = new Set(
       videoAnalyses.filter((v) => v.userId).map((v) => v.userId)
     ).size
-    // Платформы: извлечение домена из video_url
     const platforms = new Set(
       videoAnalyses.map((v) => {
         try {
@@ -393,7 +522,6 @@ const CyberMediaWatchPro = () => {
     }
   }, [videoAnalyses])
 
-  // Обработчик проверки видео
   const handleCheckVideo = async () => {
     if (!videoUrl.trim()) return
     setIsChecking(true)
@@ -441,7 +569,7 @@ const CyberMediaWatchPro = () => {
         checked_at: new Date().toISOString(),
         userId: user?.user_id || null,
       })
-      await fetchData() // Обновляем список после сохранения
+      await fetchData()
     } catch (error: any) {
       console.error('Ошибка при проверке видео:', error)
       setCheckResultMessage(`❌ Ошибка: ${error.message}`)
@@ -450,16 +578,6 @@ const CyberMediaWatchPro = () => {
       setVideoUrl('')
       setTimeout(() => setCheckResultMessage(null), 7000)
     }
-  }
-
-  const handleReportSubmit = () => {
-    if (!reportedUrl.trim()) return
-    setReportSuccess(true)
-    setTimeout(() => {
-      setShowReportDialog(false)
-      setReportSuccess(false)
-      setReportedUrl('')
-    }, 1500)
   }
 
   const handleVideoClick = (id: number) => {
@@ -522,19 +640,6 @@ const CyberMediaWatchPro = () => {
             gap: 1,
           }}
         >
-          <Button
-            variant="outlined"
-            onClick={() => setShowReportDialog(true)}
-            sx={{
-              borderColor: '#ff3366',
-              color: '#ff3366',
-              borderRadius: 4,
-              backdropFilter: 'blur(10px)',
-              bgcolor: 'rgba(0,0,0,0.5)',
-            }}
-          >
-            Пожаловаться
-          </Button>
           <FormControl
             sx={{
               bgcolor: 'rgba(0,0,0,0.6)',
@@ -716,12 +821,6 @@ const CyberMediaWatchPro = () => {
                     value: stats.uniqueUsers,
                     color: '#ffaa44',
                   },
-                  {
-                    icon: <AnalyticsIcon />,
-                    label: 'Платформ',
-                    value: stats.platformsCount,
-                    color: '#aa66ff',
-                  },
                 ].map((item, idx) => (
                   <Grid size={{ xs: 6, md: 3 }} key={idx}>
                     <motion.div
@@ -766,6 +865,59 @@ const CyberMediaWatchPro = () => {
                     </motion.div>
                   </Grid>
                 ))}
+                {/* Карточка "Платформ" с иконками YouTube, Instagram, TikTok */}
+                <Grid size={{ xs: 6, md: 3 }}>
+                  <motion.div
+                    initial={{ y: 50, opacity: 0 }}
+                    animate={{ y: 0, opacity: 1 }}
+                    transition={{ delay: 0.3 }}
+                  >
+                    <Card
+                      sx={{
+                        bgcolor: 'rgba(0,0,0,0.5)',
+                        backdropFilter: 'blur(8px)',
+                        borderRadius: 3,
+                        border: '1px solid #aa66ff',
+                        textAlign: 'center',
+                        py: 2,
+                        transition: '0.2s',
+                        '&:hover': {
+                          transform: 'translateY(-5px)',
+                          boxShadow: '0 0 20px #aa66ff',
+                        },
+                        height: '100%',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                      }}
+                    >
+                      <CardContent>
+                        <Box
+                          sx={{
+                            display: 'flex',
+                            justifyContent: 'center',
+                            gap: 1,
+                            mb: 1,
+                          }}
+                        >
+                          <YouTubeIcon
+                            sx={{ fontSize: 40, color: '#ff0000' }}
+                          />
+                          <InstagramIcon
+                            sx={{ fontSize: 40, color: '#e4405f' }}
+                          />
+                          <MusicNoteIcon
+                            sx={{ fontSize: 40, color: '#00f2ea' }}
+                          />
+                        </Box>
+                        <Typography variant="body2" sx={{ color: '#fff' }}>
+                          Платформы: YouTube, Instagram, TikTok
+                        </Typography>
+                      </CardContent>
+                    </Card>
+                  </motion.div>
+                </Grid>
               </Grid>
               <Box
                 sx={{
@@ -855,7 +1007,7 @@ const CyberMediaWatchPro = () => {
                   color: '#ff6666',
                 }}
               >
-                <ReportProblemIcon /> 🚨 ТОП-6 самых опасных видео
+                <ReportProblemIcon /> ТОП-6 самых опасных видео
               </Typography>
               <Box
                 sx={{
@@ -976,8 +1128,17 @@ const CyberMediaWatchPro = () => {
                   )
                 })}
               </Box>
-              <Typography variant="h5" sx={{ mb: 2, color: '#88f' }}>
-                ⏱️ Последние выявленные угрозы
+              <Typography
+                variant="h5"
+                sx={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 1,
+                  mb: 2,
+                  color: '#88f',
+                }}
+              >
+                <AccessTimeIcon /> Последние выявленные угрозы
               </Typography>
               <Card
                 sx={{
@@ -1047,6 +1208,124 @@ const CyberMediaWatchPro = () => {
                   </AnimatePresence>
                 </List>
               </Card>
+
+              {/* Спидометр + круговая диаграмма */}
+              <Grid container spacing={4} sx={{ mb: 5 }}>
+                <Grid size={{ xs: 12, md: 7 }}>
+                  <Card
+                    sx={{
+                      bgcolor: 'rgba(0,0,0,0.5)',
+                      backdropFilter: 'blur(8px)',
+                      borderRadius: 3,
+                      p: 2,
+                      border: '1px solid #33ffcc',
+                      height: '100%',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                    }}
+                  >
+                    <Typography
+                      variant="h6"
+                      sx={{
+                        mb: 2,
+                        color: '#0ff',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 1,
+                      }}
+                    >
+                      <AnalyticsIcon /> Уровень опасности (последние 7 дней)
+                    </Typography>
+                    <CyberSpeedometer
+                      value={dangerLevel}
+                      label="Опасность"
+                      size={250}
+                    />
+                    <Box
+                      sx={{
+                        display: 'flex',
+                        gap: 3,
+                        mt: 2,
+                        justifyContent: 'center',
+                        flexWrap: 'wrap',
+                      }}
+                    >
+                      <Typography variant="body2" sx={{ color: '#aaa' }}>
+                        Всего проверок:{' '}
+                        <strong style={{ color: '#fff' }}>
+                          {filteredThreats.length}
+                        </strong>
+                      </Typography>
+                      <Typography variant="body2" sx={{ color: '#aaa' }}>
+                        Опасных:{' '}
+                        <strong style={{ color: '#ff3366' }}>
+                          {filteredThreats.filter((t) => t.is_dangerous).length}
+                        </strong>
+                      </Typography>
+                      <Typography variant="body2" sx={{ color: '#aaa' }}>
+                        Безопасных:{' '}
+                        <strong style={{ color: '#33ffcc' }}>
+                          {
+                            filteredThreats.filter(
+                              (t) =>
+                                !t.is_dangerous && t.verdict_text === 'safe'
+                            ).length
+                          }
+                        </strong>
+                      </Typography>
+                    </Box>
+                  </Card>
+                </Grid>
+                <Grid size={{ xs: 12, md: 5 }}>
+                  <Card
+                    sx={{
+                      bgcolor: 'rgba(0,0,0,0.5)',
+                      backdropFilter: 'blur(8px)',
+                      borderRadius: 3,
+                      p: 2,
+                      border: '1px solid #ffaa44',
+                      height: '100%',
+                    }}
+                  >
+                    <Typography
+                      variant="h6"
+                      sx={{
+                        mb: 2,
+                        color: '#ffaa44',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 1,
+                      }}
+                    >
+                      <PieChartIcon /> Распределение вердиктов
+                    </Typography>
+                    <ResponsiveContainer width="100%" height={260}>
+                      <PieChart>
+                        <Pie
+                          data={verdictStats}
+                          dataKey="value"
+                          nameKey="name"
+                          cx="50%"
+                          cy="50%"
+                          outerRadius={80}
+                          label={({ name, percent }) =>
+                            `${name}: ${(percent * 100).toFixed(0)}%`
+                          }
+                        >
+                          {verdictStats.map((entry, idx) => (
+                            <Cell key={idx} fill={entry.color} />
+                          ))}
+                        </Pie>
+                        <RechartsTooltip />
+                      </PieChart>
+                    </ResponsiveContainer>
+                  </Card>
+                </Grid>
+              </Grid>
+
+              {/* Инфографика */}
               <Grid container spacing={4} sx={{ mb: 5 }}>
                 <Grid size={{ xs: 12, md: 6 }}>
                   <Card
@@ -1064,8 +1343,17 @@ const CyberMediaWatchPro = () => {
                       alt="Как это работает"
                     />
                     <CardContent>
-                      <Typography variant="h6" sx={{ color: '#0ff', mb: 1 }}>
-                        🔍 Как это работает?
+                      <Typography
+                        variant="h6"
+                        sx={{
+                          color: '#0ff',
+                          mb: 1,
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: 1,
+                        }}
+                      >
+                        <SearchIcon /> Как это работает?
                       </Typography>
                       <Typography variant="body2" sx={{ color: '#ddd' }}>
                         AI Media Watch анализирует видео в 3 этапа: 1)
@@ -1093,8 +1381,17 @@ const CyberMediaWatchPro = () => {
                       alt="Почему это важно?"
                     />
                     <CardContent>
-                      <Typography variant="h6" sx={{ color: '#0ff', mb: 1 }}>
-                        ⚠️ Почему это важно?
+                      <Typography
+                        variant="h6"
+                        sx={{
+                          color: '#0ff',
+                          mb: 1,
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: 1,
+                        }}
+                      >
+                        <WarningIcon /> Почему это важно?
                       </Typography>
                       <Typography variant="body2" sx={{ color: '#ddd' }}>
                         Ежедневно тысячи пользователей попадаются на уловки
@@ -1120,8 +1417,16 @@ const CyberMediaWatchPro = () => {
                       alt="Типичные схемы"
                     />
                     <CardContent>
-                      <Typography variant="subtitle1" sx={{ color: '#ffaa44' }}>
-                        🎰 Нелегальные казино
+                      <Typography
+                        variant="subtitle1"
+                        sx={{
+                          color: '#ffaa44',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: 1,
+                        }}
+                      >
+                        <CasinoIcon /> Нелегальные казино
                       </Typography>
                       <Typography variant="body2" sx={{ color: '#ddd' }}>
                         Обещают лёгкий выигрыш, но на деле выводят деньги.
@@ -1144,8 +1449,16 @@ const CyberMediaWatchPro = () => {
                       alt="Финансовые пирамиды"
                     />
                     <CardContent>
-                      <Typography variant="subtitle1" sx={{ color: '#ffaa44' }}>
-                        📈 Финансовые пирамиды
+                      <Typography
+                        variant="subtitle1"
+                        sx={{
+                          color: '#ffaa44',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: 1,
+                        }}
+                      >
+                        <TrendingUpIcon /> Финансовые пирамиды
                       </Typography>
                       <Typography variant="body2" sx={{ color: '#ddd' }}>
                         «Инвестируй 1000, получи 10000» — классическая схема
@@ -1169,105 +1482,22 @@ const CyberMediaWatchPro = () => {
                       alt="Реферальные схемы"
                     />
                     <CardContent>
-                      <Typography variant="subtitle1" sx={{ color: '#ffaa44' }}>
-                        🔗 Реферальные схемы
+                      <Typography
+                        variant="subtitle1"
+                        sx={{
+                          color: '#ffaa44',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: 1,
+                        }}
+                      >
+                        <LinkIcon /> Реферальные схемы
                       </Typography>
                       <Typography variant="body2" sx={{ color: '#ddd' }}>
                         Заработок только на привлечении новых жертв без
                         реального продукта.
                       </Typography>
                     </CardContent>
-                  </Card>
-                </Grid>
-              </Grid>
-              <Grid container spacing={3} sx={{ mb: 5 }}>
-                <Grid size={{ xs: 12, md: 7 }}>
-                  <Card
-                    sx={{
-                      bgcolor: 'rgba(0,0,0,0.5)',
-                      backdropFilter: 'blur(8px)',
-                      borderRadius: 3,
-                      p: 2,
-                      border: '1px solid #33ffcc',
-                    }}
-                  >
-                    <Typography variant="h6" sx={{ mb: 2, color: '#0ff' }}>
-                      📈 Динамика угроз (последние 7 дней)
-                    </Typography>
-                    <ResponsiveContainer width="100%" height={260}>
-                      <LineChart data={trendByDay}>
-                        <CartesianGrid strokeDasharray="3 3" stroke="#333" />
-                        <XAxis dataKey="date" stroke="#ccc" />
-                        <YAxis stroke="#ccc" />
-                        <RechartsTooltip
-                          contentStyle={{
-                            backgroundColor: '#111',
-                            borderColor: '#0ff',
-                          }}
-                        />
-                        <Area
-                          type="monotone"
-                          dataKey="count"
-                          stroke="#ff3366"
-                          fill="url(#gradient)"
-                        />
-                        <defs>
-                          <linearGradient
-                            id="gradient"
-                            x1="0"
-                            y1="0"
-                            x2="0"
-                            y2="1"
-                          >
-                            <stop
-                              offset="0%"
-                              stopColor="#ff3366"
-                              stopOpacity={0.6}
-                            />
-                            <stop
-                              offset="100%"
-                              stopColor="#ff3366"
-                              stopOpacity={0}
-                            />
-                          </linearGradient>
-                        </defs>
-                      </LineChart>
-                    </ResponsiveContainer>
-                  </Card>
-                </Grid>
-                <Grid size={{ xs: 12, md: 5 }}>
-                  <Card
-                    sx={{
-                      bgcolor: 'rgba(0,0,0,0.5)',
-                      backdropFilter: 'blur(8px)',
-                      borderRadius: 3,
-                      p: 2,
-                      border: '1px solid #ffaa44',
-                    }}
-                  >
-                    <Typography variant="h6" sx={{ mb: 2, color: '#ffaa44' }}>
-                      🥧 Распределение вердиктов
-                    </Typography>
-                    <ResponsiveContainer width="100%" height={260}>
-                      <PieChart>
-                        <Pie
-                          data={verdictStats}
-                          dataKey="value"
-                          nameKey="name"
-                          cx="50%"
-                          cy="50%"
-                          outerRadius={80}
-                          label={({ name, percent }) =>
-                            `${name}: ${(percent * 100).toFixed(0)}%`
-                          }
-                        >
-                          {verdictStats.map((entry, idx) => (
-                            <Cell key={idx} fill={entry.color} />
-                          ))}
-                        </Pie>
-                        <RechartsTooltip />
-                      </PieChart>
-                    </ResponsiveContainer>
                   </Card>
                 </Grid>
               </Grid>
@@ -1283,28 +1513,74 @@ const CyberMediaWatchPro = () => {
               backdropFilter: 'blur(8px)',
             }}
           >
-            <Typography variant="h6" sx={{ color: '#0ff', mb: 2 }}>
-              🛡️ Как защитить себя от мошенничества?
+            <Typography
+              variant="h6"
+              sx={{
+                color: '#0ff',
+                mb: 2,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: 1,
+              }}
+            >
+              <SecurityIcon /> Как защитить себя от мошенничества?
             </Typography>
             <Grid container spacing={2}>
               <Grid size={{ xs: 12, md: 3 }}>
-                <Typography variant="body2" sx={{ color: '#ddd' }}>
-                  ✅ Не переходите по подозрительным ссылкам
+                <Typography
+                  variant="body2"
+                  sx={{
+                    color: '#ddd',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 1,
+                  }}
+                >
+                  <CheckCircleIcon sx={{ color: '#33ffcc', fontSize: 18 }} /> Не
+                  переходите по подозрительным ссылкам
                 </Typography>
               </Grid>
               <Grid size={{ xs: 12, md: 3 }}>
-                <Typography variant="body2" sx={{ color: '#ddd' }}>
-                  ✅ Проверяйте отзывы о казино/инвестициях
+                <Typography
+                  variant="body2"
+                  sx={{
+                    color: '#ddd',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 1,
+                  }}
+                >
+                  <CheckCircleIcon sx={{ color: '#33ffcc', fontSize: 18 }} />{' '}
+                  Проверяйте отзывы о казино/инвестициях
                 </Typography>
               </Grid>
               <Grid size={{ xs: 12, md: 3 }}>
-                <Typography variant="body2" sx={{ color: '#ddd' }}>
-                  ✅ Не доверяйте гарантированному доходу
+                <Typography
+                  variant="body2"
+                  sx={{
+                    color: '#ddd',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 1,
+                  }}
+                >
+                  <CheckCircleIcon sx={{ color: '#33ffcc', fontSize: 18 }} /> Не
+                  доверяйте гарантированному доходу
                 </Typography>
               </Grid>
               <Grid size={{ xs: 12, md: 3 }}>
-                <Typography variant="body2" sx={{ color: '#ddd' }}>
-                  ✅ Используйте наш AI для проверки видео
+                <Typography
+                  variant="body2"
+                  sx={{
+                    color: '#ddd',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 1,
+                  }}
+                >
+                  <CheckCircleIcon sx={{ color: '#33ffcc', fontSize: 18 }} />{' '}
+                  Используйте наш AI для проверки видео
                 </Typography>
               </Grid>
             </Grid>
@@ -1322,44 +1598,6 @@ const CyberMediaWatchPro = () => {
           </Box>
         </Box>
       </Box>
-      <Dialog
-        open={showReportDialog}
-        onClose={() => setShowReportDialog(false)}
-        PaperProps={{
-          sx: { bgcolor: '#111', color: '#fff', border: '1px solid #ff3366' },
-        }}
-      >
-        <DialogTitle>Пожаловаться на видео</DialogTitle>
-        <DialogContent>
-          <TextField
-            autoFocus
-            margin="dense"
-            label="Ссылка на видео"
-            fullWidth
-            variant="outlined"
-            value={reportedUrl}
-            onChange={(e) => setReportedUrl(e.target.value)}
-            sx={{ input: { color: '#fff' }, label: { color: '#aaa' } }}
-          />
-          <Typography variant="caption">
-            Мы проверим жалобу и примем меры.
-          </Typography>
-          {reportSuccess && (
-            <Alert severity="success" sx={{ mt: 2 }}>
-              Спасибо! Жалоба отправлена.
-            </Alert>
-          )}
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setShowReportDialog(false)}>Отмена</Button>
-          <Button
-            onClick={handleReportSubmit}
-            sx={{ bgcolor: '#ff3366', color: '#fff' }}
-          >
-            Отправить
-          </Button>
-        </DialogActions>
-      </Dialog>
     </Box>
   )
 }
