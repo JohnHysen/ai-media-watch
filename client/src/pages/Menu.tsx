@@ -623,7 +623,7 @@ const CyberMediaWatchPro = () => {
 
   const langs = [
     { v: 'ru', l: 'Русский', flag: '🇷🇺' },
-    { v: 'en', l: 'English', flag: '🇬🇧' },
+    { v: 'en', l: 'English', flag: 'en' },
     { v: 'kz', l: 'Қазақша', flag: '🇰🇿' },
   ]
 
