@@ -565,50 +565,18 @@ const CyberMediaWatchPro = () => {
     if (!videoUrl.trim()) return
     setIsChecking(true)
     try {
-      const response = await createAnalysisJob(videoUrl)
-      if (!response.ok) {
-        const errorText = await response.text()
-        throw new Error(errorText || 'Ошибка сервера')
-      }
-      const data = await response.json()
-      const riskPercent = data.confidence * 100
-      let message = ''
-      if (riskPercent > 70) {
-        message = `⚠️ КРИТИЧЕСКАЯ УГРОЗА: риск ${riskPercent.toFixed(1)}%! ${data.verdict}`
-      } else if (riskPercent > 40) {
-        message = `🔔 Высокий риск: ${riskPercent.toFixed(1)}%! ${data.verdict}`
-      } else {
-        message = `✅ Видео проверено. Риск ${riskPercent.toFixed(1)}%. ${data.verdict}`
-      }
-      setCheckResultMessage(message)
-
-      const isDangerous = data.is_dangerous === true
-      const safetyPercent = isDangerous
-        ? (1 - data.confidence) * 100
-        : data.confidence * 100
-      let verdictText: 'safe' | 'dangerous' | 'uncertain' = 'safe'
-      if (isDangerous) verdictText = 'dangerous'
-      else if (data.confidence < 0.6) verdictText = 'uncertain'
-      else verdictText = 'safe'
-
-      const durationSeconds = data.duration_seconds || 0
-
-      await $host.post('/video-analysis', {
-        video_url: videoUrl,
-        title: data.video_title || null,
-        tags: null,
-        safety_percent: safetyPercent,
-        verdict_text: verdictText,
-        is_dangerous: isDangerous,
-        duration_seconds: durationSeconds,
-        preview_image_url: null,
-        checked_at: new Date().toISOString(),
-        userId: user?.user_id || null,
+      const response = await $host.post('/analysis-queue', {
+        url: videoUrl,
       })
-      await fetchData()
+      // Ожидаемый ответ: { message: 'Видео добавлено в очередь обработки' }
+      setCheckResultMessage(
+        `✅ ${response.data.message || 'Видео добавлено в очередь обработки'}`
+      )
     } catch (error: any) {
-      console.error('Ошибка при проверке видео:', error)
-      setCheckResultMessage(`❌ Ошибка: ${error.message}`)
+      console.error('Ошибка при добавлении в очередь:', error)
+      const errorMsg =
+        error.response?.data?.message || 'Не удалось добавить видео в очередь'
+      setCheckResultMessage(`❌ Ошибка: ${errorMsg}`)
     } finally {
       setIsChecking(false)
       setVideoUrl('')

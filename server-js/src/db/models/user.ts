@@ -11,6 +11,7 @@ import {
   HasMany,
 } from 'sequelize-typescript'
 import { VideoAnalysis } from './VideoAnalysis'
+import { AnalysisQueue } from './AnalysisQueue'
 
 @Table({ timestamps: true })
 export class User extends Model {
@@ -62,4 +63,7 @@ export class User extends Model {
   @AllowNull(true)
   @Column(DataType.TEXT)
   declare photoURL: string | null
+
+  @HasMany(() => AnalysisQueue, { foreignKey: 'userId' })
+  declare queue_items: AnalysisQueue[]
 }

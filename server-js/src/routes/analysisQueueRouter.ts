@@ -1,9 +1,16 @@
 import { Router } from 'express'
-import { createAnalysisJob } from '../controllers/analysisQueueController'
+import {
+  createAnalysisJob,
+  getQueue,
+} from '../controllers/analysisQueueController'
+import accessLevel from '../middleware/accessLevel.js'
 
-// @ts-expect-error ????
-const router = new Router()
+const router = Router()
 
+// ✅ POST – доступен всем (без accessLevel)
 router.post('/', createAnalysisJob)
+
+// ✅ GET – только для авторизованных (с accessLevel)
+router.get('/', accessLevel(1), getQueue)
 
 export default router

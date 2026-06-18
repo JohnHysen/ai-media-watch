@@ -3,7 +3,8 @@ import cfg from '../config.js'
 
 // Импорт моделей
 import { User } from './models/user.js'
-import { VideoAnalysis } from './models/VideoAnalysis.js' // добавь импорт
+import { VideoAnalysis } from './models/VideoAnalysis.js'
+import { AnalysisQueue } from './models/AnalysisQueue.js'
 
 // Создаём подключение к PostgreSQL
 const sequelize = new Sequelize({
@@ -13,10 +14,10 @@ const sequelize = new Sequelize({
   host: cfg.DB_HOST,
   port: cfg.DB_PORT,
   dialect: 'postgres',
-  models: [User, VideoAnalysis], // добавили VideoAnalysis
+  models: [User, VideoAnalysis, AnalysisQueue], // ✅ добавлена AnalysisQueue
   logging: console.log, // для дебага
 })
 
 // Экспортируем всё необходимое
-export { User, VideoAnalysis }
+export { User, VideoAnalysis, AnalysisQueue }
 export default sequelize

@@ -8,31 +8,38 @@ import cfg from './config.js'
 import router from './routes/index'
 import sequelize from './db/db'
 import { sio_middleware, sio_chat } from './modules/sio/.'
-import './modules/cron/.'
+// Импорт воркера очереди (запускает cron-задачу)
+import './modules/cron/analysisQueueProcessor.js'
 import {
   createVideoAnalysis,
   getAllVideoAnalyses,
+  getAnalysesByUser,
 } from './controllers/videoController.js'
-import { getAnalysesByUser } from './controllers/videoController.js'
 
 const allowedOrigins = [cfg.CLIENT]
 const PORT = cfg.PORT
 const app = express()
 
+// ✅ 1. Парсеры
 app.use(express.json({ limit: '2mb' }))
 app.use(express.urlencoded({ extended: true, limit: '2mb' }))
 app.use(fileUpload({ limits: { fileSize: 50 * 1024 * 1024 } }))
+
+// ✅ 2. CORS
 app.use(cors({ origin: allowedOrigins, credentials: true }))
-app.use('/static', express.static('static'))
 
-// ✅ Все роуты идут через router (включая прокси)
+// ✅ 3. Статика
+app.use('/static', express.static('static')) // одна строка, дублирование убрано
 
+// ✅ 4. Основные роуты для видео-анализов (прямые, без router)
 app.post('/video-analysis', createVideoAnalysis)
 app.get('/video-analysis', getAllVideoAnalyses)
 app.get('/video-analysis/user/:userId', getAnalysesByUser)
-app.use('/static', express.static('static'))
-app.use('/', router) // здесь теперь и прокси, и auth, и user
 
+// ✅ 5. Подключаем все остальные роуты (auth, user, queue, proxy)
+app.use('/', router)
+
+// ✅ 6. Тестовый маршрут
 app.get('/', (req, res) => {
   res.send({ msg: `check on port ${PORT}!` })
 })

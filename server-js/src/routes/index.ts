@@ -13,7 +13,7 @@ router.use('/auth', authRouter)
 router.use('/user', accessLevel(1), userRouter)
 router.use('/video-analysis', videoRoutes)
 router.use('/news', newsRoutes)
-router.use('/analysis-queue', accessLevel(1), analysisQueueRouter)
+router.use('/analysis-queue', analysisQueueRouter)
 router.use('/', proxyRoutes) // <-- подключаем прокси (на корневой путь)
 
 export default router
