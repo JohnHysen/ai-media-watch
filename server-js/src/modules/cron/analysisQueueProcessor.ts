@@ -1,10 +1,9 @@
-// cron/analysisQueueProcessor.ts
 import cron from 'node-cron'
 import { AnalysisQueue, QueueStatus, VideoAnalysis } from '../../db'
 
 let isRunning = false
 
-cron.schedule('* * * * *', async () => {
+cron.schedule('*/1 * * * *', async () => {
   if (isRunning) {
     console.info('⏳ Анализ уже запущен, пропускаем')
     return
@@ -29,19 +28,19 @@ cron.schedule('* * * * *', async () => {
         break
       }
 
-      // Проверяем, не было ли уже проанализировано это видео
-      const exists = await VideoAnalysis.count({
-        where: { video_url: job.url },
+      // 1. Проверяем, не проанализировано ли уже это видео
+      const existingAnalysis = await VideoAnalysis.findOne({
+        where: { video_url: job.url }, // ← исправлено: используем job.url
       })
-
-      if (exists > 0) {
+      if (existingAnalysis) {
         console.warn(
-          `⚠️ Видео ${job.url} уже проанализировано, удаляем из очереди`
+          `⏩ Видео ${job.url} уже проанализировано, удаляем из очереди`
         )
-        await job.destroy()
-        continue
+        await job.destroy() // ← удаляем задачу, чтобы не висела
+        continue // переходим к следующей
       }
 
+      // 2. Обновляем статус на PROCESSING
       await job.update({ status: QueueStatus.PROCESSING })
 
       try {
@@ -92,13 +91,11 @@ cron.schedule('* * * * *', async () => {
 
         await VideoAnalysis.create(videoData)
 
-        await job.update({
-          status: QueueStatus.COMPLETED,
-          processed_at: new Date(),
-        })
+        // ✅ УДАЛЯЕМ ЗАДАЧУ ПОСЛЕ УСПЕШНОГО СОХРАНЕНИЯ
         await job.destroy()
-
-        console.log(`✅ Видео ${job.url} успешно обработано и сохранено`)
+        console.log(
+          `✅ Видео ${job.url} успешно обработано и удалено из очереди`
+        )
       } catch (fetchError: any) {
         console.error(
           `❌ Ошибка при обработке видео ${job.url}:`,
@@ -108,6 +105,7 @@ cron.schedule('* * * * *', async () => {
           status: QueueStatus.FAILED,
           error_message: fetchError.message || 'Unknown error',
         })
+        // Задача остаётся в очереди со статусом FAILED для повторной обработки
       }
     }
   } catch (error) {
@@ -117,4 +115,4 @@ cron.schedule('* * * * *', async () => {
   }
 })
 
-console.log('🕒 Воркер очереди запущен (каждую минуту)')
+console.log('🕒 Воркер очереди запущен (каждые 5 секунд)')
