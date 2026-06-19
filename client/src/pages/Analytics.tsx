@@ -20,6 +20,7 @@ import {
   Avatar,
   CircularProgress,
   Alert,
+  Button,
 } from '@mui/material'
 import MenuIcon from '@mui/icons-material/Menu'
 import TrendingUpIcon from '@mui/icons-material/TrendingUp'
@@ -33,6 +34,10 @@ import VerifiedIcon from '@mui/icons-material/Verified'
 import ChatIcon from '@mui/icons-material/Chat'
 import LinkIcon from '@mui/icons-material/Link'
 import AnalyticsIcon from '@mui/icons-material/Analytics'
+import TelegramIcon from '@mui/icons-material/Telegram'
+import InstagramIcon from '@mui/icons-material/Instagram'
+import MusicNoteIcon from '@mui/icons-material/MusicNote'
+import RefreshIcon from '@mui/icons-material/Refresh'
 import { motion } from 'framer-motion'
 import { Canvas, useFrame } from '@react-three/fiber'
 import { OrbitControls, Environment, Stars } from '@react-three/drei'
@@ -41,7 +46,7 @@ import CyberSidebar from '../components/CyberSidebar'
 import { $host } from '../http/API'
 
 // ---------- 3D фон ----------
-const FloatingCube = ({ position, color, size, speed }) => {
+const FloatingCube = ({ position, color, size, speed }: any) => {
   const meshRef = React.useRef<THREE.Mesh>(null)
   useFrame(({ clock }) => {
     if (meshRef.current) {
@@ -116,7 +121,7 @@ const CubeSpaceBackground = () => {
   )
 }
 
-// ---------- Данные угроз (без изменений) ----------
+// ---------- Данные угроз ----------
 const threatCategories = [
   {
     id: 'gambling',
@@ -200,35 +205,77 @@ const threatCategories = [
   },
 ]
 
+// ---------- Вспомогательная функция обрезки описания до 5 предложений ----------
+const truncateToSentences = (text: string, maxSentences = 5): string => {
+  if (!text) return ''
+  const sentences = text.match(/[^.!?]+[.!?]+/g) || [text]
+  const truncated = sentences.slice(0, maxSentences).join(' ')
+  if (sentences.length > maxSentences) {
+    return truncated.trim() + '…'
+  }
+  return truncated.trim()
+}
+
 // ---------- Главный компонент Analytics ----------
 const Analytics = () => {
   const [drawerOpen, setDrawerOpen] = useState(false)
-
-  // Состояния для новостей
   const [news, setNews] = useState<any[]>([])
   const [loadingNews, setLoadingNews] = useState(true)
   const [newsError, setNewsError] = useState('')
+  const [newsFilter, setNewsFilter] = useState<'all' | 'telegram' | 'media'>(
+    'all'
+  )
+  const [lastUpdated, setLastUpdated] = useState<Date | null>(null)
+  const [updating, setUpdating] = useState(false)
 
-  // Загрузка новостей с бэкенда через $host
-  useEffect(() => {
-    const fetchNews = async () => {
-      try {
-        const res = await $host.get('/news', {
-          params: {
-            q: 'финансовые пирамиды OR казино OR мошенничество',
-            pageSize: 20,
-          },
-        })
-        setNews(res.data.articles || [])
-      } catch (err) {
-        console.error('Ошибка загрузки новостей:', err)
-        setNewsError('Не удалось загрузить новости')
-      } finally {
-        setLoadingNews(false)
-      }
+  // Функция загрузки новостей
+  const fetchNews = async (showLoading = true) => {
+    if (showLoading) setLoadingNews(true)
+    setUpdating(true)
+    try {
+      const res = await $host.get('/news', {
+        params: { limit: 50 },
+      })
+      setNews(res.data.articles || [])
+      setLastUpdated(new Date())
+      setNewsError('')
+    } catch (err) {
+      console.error('Ошибка загрузки новостей:', err)
+      setNewsError('Не удалось загрузить новости')
+    } finally {
+      setLoadingNews(false)
+      setUpdating(false)
     }
-    fetchNews()
+  }
+
+  // Первоначальная загрузка и автообновление каждый час
+  useEffect(() => {
+    fetchNews(true)
+    const interval = setInterval(() => {
+      fetchNews(false)
+    }, 3600000)
+    return () => clearInterval(interval)
   }, [])
+
+  // Фильтрация новостей – исключаем Instagram
+  const filteredNews = news.filter((item) => {
+    const source = item.source?.toLowerCase() || ''
+    if (source.includes('instagram')) return false
+    if (newsFilter === 'all') return true
+    if (newsFilter === 'telegram') return source.includes('telegram')
+    if (newsFilter === 'media') {
+      return !source.includes('telegram')
+    }
+    return true
+  })
+
+  // Определяем иконку для источника (без Instagram)
+  const getSourceIcon = (source: string) => {
+    const s = source?.toLowerCase() || ''
+    if (s.includes('telegram'))
+      return <TelegramIcon sx={{ color: '#0ff', fontSize: 18 }} />
+    return <AnnouncementIcon sx={{ color: '#ffaa44', fontSize: 18 }} />
+  }
 
   return (
     <>
@@ -400,8 +447,237 @@ const Analytics = () => {
             ))}
           </Grid>
 
-          {/* Официальные источники + новости */}
+          {/* Блок новостей и официальные источники */}
           <Grid container spacing={4} sx={{ mb: 6 }}>
+            {/* Левая часть: Новости */}
+            <Grid size={{ xs: 12, md: 6 }}>
+              <Card
+                sx={{
+                  bgcolor: 'rgba(10,10,30,0.7)',
+                  backdropFilter: 'blur(8px)',
+                  borderRadius: 4,
+                  border: '1px solid rgba(0,255,255,0.3)',
+                  p: 3,
+                  height: '100%',
+                  display: 'flex',
+                  flexDirection: 'column',
+                }}
+              >
+                <Box
+                  sx={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    mb: 2,
+                  }}
+                >
+                  <Typography
+                    variant="h6"
+                    sx={{
+                      color: '#33ffcc',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 1,
+                    }}
+                  >
+                    <AnnouncementIcon /> Актуальные новости
+                  </Typography>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    {lastUpdated && (
+                      <Typography variant="caption" sx={{ color: '#aaa' }}>
+                        Обновлено: {lastUpdated.toLocaleTimeString('ru-RU')}
+                      </Typography>
+                    )}
+                    <IconButton
+                      size="small"
+                      onClick={() => fetchNews(true)}
+                      disabled={updating}
+                      sx={{ color: '#0ff' }}
+                    >
+                      <RefreshIcon
+                        sx={{
+                          animation: updating
+                            ? 'spin 1s linear infinite'
+                            : 'none',
+                        }}
+                      />
+                    </IconButton>
+                  </Box>
+                </Box>
+
+                {/* Фильтры (без Instagram) */}
+                <Box sx={{ display: 'flex', gap: 1, mb: 2, flexWrap: 'wrap' }}>
+                  <Chip
+                    label="Все"
+                    onClick={() => setNewsFilter('all')}
+                    color={newsFilter === 'all' ? 'primary' : 'default'}
+                    sx={{ color: newsFilter === 'all' ? '#000' : '#fff' }}
+                  />
+                  <Chip
+                    label="Telegram"
+                    icon={<TelegramIcon />}
+                    onClick={() => setNewsFilter('telegram')}
+                    color={newsFilter === 'telegram' ? 'primary' : 'default'}
+                    sx={{ color: newsFilter === 'telegram' ? '#000' : '#fff' }}
+                  />
+                  <Chip
+                    label="СМИ"
+                    icon={<AnnouncementIcon />}
+                    onClick={() => setNewsFilter('media')}
+                    color={newsFilter === 'media' ? 'primary' : 'default'}
+                    sx={{ color: newsFilter === 'media' ? '#000' : '#fff' }}
+                  />
+                </Box>
+
+                {loadingNews ? (
+                  <Box
+                    sx={{
+                      display: 'flex',
+                      justifyContent: 'center',
+                      py: 4,
+                      flex: 1,
+                    }}
+                  >
+                    <CircularProgress sx={{ color: '#0ff' }} />
+                  </Box>
+                ) : newsError ? (
+                  <Alert
+                    severity="warning"
+                    sx={{ bgcolor: 'rgba(255,51,102,0.2)', color: '#ff8888' }}
+                  >
+                    {newsError}
+                  </Alert>
+                ) : filteredNews.length === 0 ? (
+                  <Typography
+                    sx={{
+                      color: '#aaa',
+                      flex: 1,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                    }}
+                  >
+                    Нет новостей по выбранному фильтру
+                  </Typography>
+                ) : (
+                  <Box
+                    sx={{
+                      height: 520,
+                      overflowY: 'auto',
+                      pr: 1,
+                      '&::-webkit-scrollbar': { width: '4px' },
+                      '&::-webkit-scrollbar-track': {
+                        background: 'rgba(0,255,255,0.1)',
+                        borderRadius: '10px',
+                      },
+                      '&::-webkit-scrollbar-thumb': {
+                        background: '#0ff',
+                        borderRadius: '10px',
+                      },
+                    }}
+                  >
+                    {filteredNews.map((item, idx) => {
+                      const shortDescription = truncateToSentences(
+                        item.description,
+                        5
+                      )
+                      return (
+                        <Box
+                          key={idx}
+                          sx={{
+                            mb: 2,
+                            pb: 2,
+                            borderBottom:
+                              idx !== filteredNews.length - 1
+                                ? '1px solid rgba(0,255,255,0.2)'
+                                : 'none',
+                          }}
+                        >
+                          <Box
+                            sx={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: 1,
+                              mb: 0.5,
+                            }}
+                          >
+                            {getSourceIcon(item.source)}
+                            <Typography
+                              variant="caption"
+                              sx={{ color: '#ffaa66' }}
+                            >
+                              {item.source || 'Неизвестный источник'}
+                            </Typography>
+                            <Typography
+                              variant="caption"
+                              sx={{ color: '#aaa', ml: 'auto' }}
+                            >
+                              {new Date(item.publishedAt).toLocaleDateString(
+                                'ru-RU',
+                                {
+                                  day: '2-digit',
+                                  month: '2-digit',
+                                  hour: '2-digit',
+                                  minute: '2-digit',
+                                }
+                              )}
+                            </Typography>
+                          </Box>
+
+                          <Typography variant="body2" sx={{ mb: 0.5 }}>
+                            <Link
+                              href={item.url}
+                              target="_blank"
+                              sx={{ color: '#0ff', fontWeight: 500 }}
+                              underline="hover"
+                            >
+                              {item.title}
+                            </Link>
+                          </Typography>
+
+                          {shortDescription && (
+                            <Typography
+                              variant="caption"
+                              sx={{
+                                color: '#aaa',
+                                display: '-webkit-box',
+                                WebkitLineClamp: 5,
+                                WebkitBoxOrient: 'vertical',
+                                overflow: 'hidden',
+                                textOverflow: 'ellipsis',
+                                mb: 0.5,
+                              }}
+                            >
+                              {shortDescription}
+                            </Typography>
+                          )}
+
+                          <Button
+                            size="small"
+                            href={item.url}
+                            target="_blank"
+                            sx={{
+                              color: '#0ff',
+                              textTransform: 'none',
+                              p: 0,
+                              minWidth: 'auto',
+                              '&:hover': {
+                                bgcolor: 'transparent',
+                                textDecoration: 'underline',
+                              },
+                            }}
+                          >
+                            Читать дальше →
+                          </Button>
+                        </Box>
+                      )
+                    })}
+                  </Box>
+                )}
+              </Card>
+            </Grid>
+
+            {/* Правая часть: Официальные источники и соцсети */}
             <Grid size={{ xs: 12, md: 6 }}>
               <Card
                 sx={{
@@ -490,137 +766,55 @@ const Analytics = () => {
                     </TableBody>
                   </Table>
                 </TableContainer>
-              </Card>
-            </Grid>
-            <Grid size={{ xs: 12, md: 6 }}>
-              <Card
-                sx={{
-                  bgcolor: 'rgba(10,10,30,0.7)',
-                  backdropFilter: 'blur(8px)',
-                  borderRadius: 4,
-                  border: '1px solid rgba(0,255,255,0.3)',
-                  p: 3,
-                  height: '100%',
-                }}
-              >
+
+                <Divider sx={{ my: 2, borderColor: 'rgba(0,255,255,0.2)' }} />
                 <Typography
-                  variant="h6"
-                  sx={{
-                    color: '#33ffcc',
-                    mb: 2,
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 1,
-                  }}
+                  variant="subtitle2"
+                  sx={{ color: '#33ffcc', mb: 1 }}
                 >
-                  <AnnouncementIcon /> Последние новости
+                  Социальные сети АФМ
                 </Typography>
-                {loadingNews ? (
-                  <Box
-                    sx={{ display: 'flex', justifyContent: 'center', py: 4 }}
-                  >
-                    <CircularProgress sx={{ color: '#0ff' }} />
-                  </Box>
-                ) : newsError ? (
-                  <Alert
-                    severity="warning"
-                    sx={{ bgcolor: 'rgba(255,51,102,0.2)', color: '#ff8888' }}
-                  >
-                    {newsError}
-                  </Alert>
-                ) : news.length === 0 ? (
-                  <Typography sx={{ color: '#aaa' }}>Нет новостей</Typography>
-                ) : (
-                  // Простой прокручиваемый список всех новостей
-                  <Box
+                <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
+                  <Link
+                    href="https://t.me/afm_rk"
+                    target="_blank"
                     sx={{
-                      maxHeight: 400,
-                      overflowY: 'auto',
-                      pr: 1,
-                      '&::-webkit-scrollbar': {
-                        width: '4px',
-                      },
-                      '&::-webkit-scrollbar-track': {
-                        background: 'rgba(0,255,255,0.1)',
-                        borderRadius: '10px',
-                      },
-                      '&::-webkit-scrollbar-thumb': {
-                        background: '#0ff',
-                        borderRadius: '10px',
-                      },
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 0.5,
+                      color: '#0ff',
+                      textDecoration: 'none',
                     }}
                   >
-                    {news.map((item, idx) => (
-                      <Box
-                        key={idx}
-                        sx={{
-                          mb: 2,
-                          pb: 2,
-                          borderBottom:
-                            idx !== news.length - 1
-                              ? '1px solid rgba(0,255,255,0.2)'
-                              : 'none',
-                        }}
-                      >
-                        {item.urlToImage && (
-                          <Box
-                            component="img"
-                            src={item.urlToImage}
-                            alt={item.title}
-                            sx={{
-                              width: '100%',
-                              height: 'auto',
-                              maxHeight: 120,
-                              objectFit: 'cover',
-                              borderRadius: 2,
-                              mb: 1,
-                            }}
-                          />
-                        )}
-                        <Typography variant="caption" sx={{ color: '#ffaa66' }}>
-                          {new Date(item.publishedAt).toLocaleDateString(
-                            'ru-RU',
-                            {
-                              day: '2-digit',
-                              month: '2-digit',
-                              year: 'numeric',
-                              hour: '2-digit',
-                              minute: '2-digit',
-                            }
-                          )}
-                        </Typography>
-                        <Typography variant="body2" sx={{ mb: 0.5 }}>
-                          <Link
-                            href={item.url}
-                            target="_blank"
-                            sx={{ color: '#0ff', fontWeight: 500 }}
-                            underline="hover"
-                          >
-                            {item.title}
-                          </Link>
-                        </Typography>
-                        {item.description && (
-                          <Typography
-                            variant="caption"
-                            sx={{ color: '#aaa', display: 'block' }}
-                          >
-                            {item.description}
-                          </Typography>
-                        )}
-                        <Typography variant="caption" sx={{ color: '#aaa' }}>
-                          {item.source}
-                        </Typography>
-                      </Box>
-                    ))}
-                  </Box>
-                )}
-                <Divider sx={{ my: 2, borderColor: 'rgba(0,255,255,0.2)' }} />
-                <Typography variant="body2" sx={{ color: '#ddd' }}>
-                  <strong>📞 Куда сообщить о мошенническом видео?</strong>
-                  <br />
-                  • АФМ: +7 (7172) 73-01-01
-                  <br />• Жалоба через AI Media Watch (кнопка «Пожаловаться»)
-                </Typography>
+                    <TelegramIcon /> Telegram
+                  </Link>
+                  <Link
+                    href="https://www.instagram.com/afm_rk/"
+                    target="_blank"
+                    sx={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 0.5,
+                      color: '#e4405f',
+                      textDecoration: 'none',
+                    }}
+                  >
+                    <InstagramIcon /> Instagram
+                  </Link>
+                  <Link
+                    href="https://www.tiktok.com/@afm_rk"
+                    target="_blank"
+                    sx={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 0.5,
+                      color: '#00f2ea',
+                      textDecoration: 'none',
+                    }}
+                  >
+                    <MusicNoteIcon /> TikTok
+                  </Link>
+                </Box>
               </Card>
             </Grid>
           </Grid>
