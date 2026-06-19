@@ -1,26 +1,53 @@
 import cron from 'node-cron'
-import { AnalysisQueue, QueueStatus, VideoAnalysis } from '../../db'
+import {
+  AnalysisQueue,
+  QueueStatus,
+  VideoAnalysis,
+  SystemSettings,
+} from '../../db'
 
 let isRunning = false
+let lastRunTime: Date | null = null
+let currentIntervalMinutes = 1
 
-cron.schedule('*/1 * * * *', async () => {
+const getScanInterval = async (): Promise<number> => {
+  try {
+    const settings = await SystemSettings.findOne()
+    return settings?.scanInterval || 5
+  } catch (error) {
+    console.warn(
+      '⚠️ Не удалось получить настройки, используем интервал 5 минут'
+    )
+    return 5
+  }
+}
+
+const processQueue = async () => {
   if (isRunning) {
     console.info('⏳ Анализ уже запущен, пропускаем')
     return
   }
 
-  console.info('🔄 Запущен анализ видео в очереди')
+  const now = new Date()
+  if (lastRunTime) {
+    const diffMinutes = (now.getTime() - lastRunTime.getTime()) / 60000
+    if (diffMinutes < currentIntervalMinutes) {
+      console.info(
+        `⏳ Интервал ${currentIntervalMinutes} мин. ещё не истёк (прошло ${diffMinutes.toFixed(1)} мин.), пропускаем`
+      )
+      return
+    }
+  }
 
+  console.info('🔄 Запущен анализ видео в очереди')
   isRunning = true
+  lastRunTime = now
 
   try {
     while (true) {
       const job = await AnalysisQueue.findOne({
         where: { status: QueueStatus.PENDING },
-        order: [
-          ['priority', 'DESC'],
-          ['createdAt', 'ASC'],
-        ],
+        order: [['createdAt', 'ASC']], // FIFO: сначала старые
       })
 
       if (!job) {
@@ -28,19 +55,17 @@ cron.schedule('*/1 * * * *', async () => {
         break
       }
 
-      // 1. Проверяем, не проанализировано ли уже это видео
       const existingAnalysis = await VideoAnalysis.findOne({
-        where: { video_url: job.url }, // ← исправлено: используем job.url
+        where: { video_url: job.url },
       })
       if (existingAnalysis) {
         console.warn(
           `⏩ Видео ${job.url} уже проанализировано, удаляем из очереди`
         )
-        await job.destroy() // ← удаляем задачу, чтобы не висела
-        continue // переходим к следующей
+        await job.destroy()
+        continue
       }
 
-      // 2. Обновляем статус на PROCESSING
       await job.update({ status: QueueStatus.PROCESSING })
 
       try {
@@ -73,7 +98,6 @@ cron.schedule('*/1 * * * *', async () => {
           JSON.stringify(data, null, 2)
         )
 
-        // Маппинг полей из Python-ответа в модель VideoAnalysis
         const videoData = {
           video_url: job.url,
           title: data.title || null,
@@ -87,11 +111,7 @@ cron.schedule('*/1 * * * *', async () => {
           userId: job.userId,
         }
 
-        console.log('📝 Сохраняемые данные:', videoData)
-
         await VideoAnalysis.create(videoData)
-
-        // ✅ УДАЛЯЕМ ЗАДАЧУ ПОСЛЕ УСПЕШНОГО СОХРАНЕНИЯ
         await job.destroy()
         console.log(
           `✅ Видео ${job.url} успешно обработано и удалено из очереди`
@@ -105,7 +125,6 @@ cron.schedule('*/1 * * * *', async () => {
           status: QueueStatus.FAILED,
           error_message: fetchError.message || 'Unknown error',
         })
-        // Задача остаётся в очереди со статусом FAILED для повторной обработки
       }
     }
   } catch (error) {
@@ -113,6 +132,27 @@ cron.schedule('*/1 * * * *', async () => {
   } finally {
     isRunning = false
   }
-})
+}
 
-console.log('🕒 Воркер очереди запущен (каждые 5 секунд)')
+const startWorker = async () => {
+  currentIntervalMinutes = await getScanInterval()
+  console.log(
+    `🕒 Воркер очереди запущен с интервалом ${currentIntervalMinutes} мин. (проверка каждую минуту)`
+  )
+
+  cron.schedule('*/1 * * * *', async () => {
+    const newInterval = await getScanInterval()
+    if (newInterval !== currentIntervalMinutes) {
+      console.log(
+        `🔄 Интервал обновлён: ${currentIntervalMinutes} → ${newInterval} мин.`
+      )
+      currentIntervalMinutes = newInterval
+    }
+    await processQueue()
+  })
+
+  setTimeout(processQueue, 1000)
+}
+
+startWorker()
+console.log('✅ Воркер очереди инициализирован')

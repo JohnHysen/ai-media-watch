@@ -6,6 +6,7 @@ import proxyRoutes from './proxyRoutes.js' // <-- импорт
 import accessLevel from '../middleware/accessLevel.js'
 import newsRoutes from './newsRoutes.js'
 import analysisQueueRouter from './analysisQueueRouter.js'
+import settingsRouter from './settingsRouter.js'
 
 const router = Router()
 
@@ -14,6 +15,7 @@ router.use('/user', accessLevel(1), userRouter)
 router.use('/video-analysis', videoRoutes)
 router.use('/news', newsRoutes)
 router.use('/analysis-queue', analysisQueueRouter)
+router.use('/settings', settingsRouter)
 router.use('/', proxyRoutes) // <-- подключаем прокси (на корневой путь)
 
 export default router

@@ -21,7 +21,8 @@ import Email from './pages/Email.tsx'
 import Profile from './pages/Profile.tsx'
 import History from './pages/History'
 import Analytics from './pages/Analytics'
-import AdminUsers from './pages/AdminUsers' // ✅ импортируем страницу
+import AdminUsers from './pages/AdminUsers'
+import AdminSettings from './pages/AdminSettings.tsx'
 
 const font = 'teletext, "Roboto", "Arial", sans-serif'
 
@@ -95,6 +96,10 @@ const router = createBrowserRouter([
       {
         path: '/users',
         element: <WithAuth c={<AdminUsers />} roles={['ADMIN']} />,
+      },
+      {
+        path: '/settings',
+        element: <WithAuth c={<AdminSettings />} roles={['ADMIN']} />,
       },
     ],
   },

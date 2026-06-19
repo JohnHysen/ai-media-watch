@@ -1,9 +1,9 @@
 import { Router } from 'express'
 import Parser from 'rss-parser'
+import { SystemSettings } from '../db/models/SystemSettings'
 
 const router = Router()
 
-// ----- Парсер для RSS (СМИ и Telegram) -----
 const parser = new Parser({
   timeout: 20000,
   headers: {
@@ -14,19 +14,30 @@ const parser = new Parser({
   },
 })
 
-// ----- Список RSS-лент СМИ (проверенные) -----
-const RSS_FEEDS = [
-  'https://time.kz/rss', // Time.kz
-  'https://sadaq.kz/ru/rss/latest-posts', // Sadaq.kz
-  'https://newtimes.kz/rss', // Newtimes.kz
-  'https://egemen.kz/rss', // Egemen Qazaqstan
-  'https://tengrinews.kz/rss/', // Tengrinews (иногда работает)
-  // Официальные (если будут работать)
-  'https://www.gov.kz/memleket/entities/afm/press/news/rss', // АФМ (может не работать)
-  'https://fingramota.kz/ru/news/rss',
-]
+// Получение списка RSS-источников из БД или fallback
+const getNewsSources = async (): Promise<string[]> => {
+  try {
+    const settings = await SystemSettings.findOne()
+    if (settings && settings.newsSources) {
+      const parsed = JSON.parse(settings.newsSources)
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        return parsed
+      }
+    }
+  } catch (error) {
+    console.warn(
+      '⚠️ Не удалось получить источники новостей из БД, используем fallback'
+    )
+  }
+  return [
+    'https://time.kz/rss',
+    'https://sadaq.kz/ru/rss/latest-posts',
+    'https://newtimes.kz/rss',
+    'https://egemen.kz/rss',
+  ]
+}
 
-// ----- Инстансы RSSHub для Telegram (с резервированием) -----
+// ----- Инстансы RSSHub для Telegram -----
 const RSSHUB_INSTANCES = [
   'https://rsshub.rssforever.com',
   'https://rsshub.app',
@@ -36,7 +47,7 @@ const RSSHUB_INSTANCES = [
 
 const SOCIAL_FEEDS = [{ path: '/telegram/channel/afm_rk', type: 'telegram' }]
 
-// ----- Вспомогательные функции для RSS -----
+// ----- Статический список ключевых слов для фильтрации (не изменяется админом) -----
 const KEYWORDS = [
   'мошенничеств',
   'обман',
@@ -102,16 +113,16 @@ const parseWithRSSHub = async (path: string): Promise<any> => {
   throw new Error(`Все инстансы RSSHub недоступны: ${lastError?.message}`)
 }
 
-// ----- Основной эндпоинт -----
 router.get('/', async (req, res) => {
   try {
     const limit = parseInt(req.query.limit as string) || 50
     const allArticles: any[] = []
 
-    // 1. СМИ
+    // 1. СМИ (источники из настроек, фильтрация по ключевым словам)
     console.log('📰 Парсинг СМИ...')
+    const sources = await getNewsSources()
     await Promise.all(
-      RSS_FEEDS.map(async (feedUrl) => {
+      sources.map(async (feedUrl) => {
         try {
           const feed = await parser.parseURL(feedUrl)
           const items = feed.items
@@ -136,7 +147,7 @@ router.get('/', async (req, res) => {
       })
     )
 
-    // 2. Telegram
+    // 2. Telegram (фильтрация по ключевым словам)
     console.log('📱 Парсинг Telegram через RSSHub...')
     await Promise.all(
       SOCIAL_FEEDS.map(async (feedConfig) => {
@@ -164,9 +175,6 @@ router.get('/', async (req, res) => {
       })
     )
 
-    // 3. Instagram удалён из-за проблем с парсингом
-
-    // Сортировка по дате (новые сверху)
     allArticles.sort((a, b) => {
       return (
         new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime()

@@ -15,7 +15,6 @@ export const createAnalysisJob = async (req: Request, res: Response) => {
       })
     }
 
-    // ✅ 1. СНАЧАЛА ПРОВЕРЯЕМ В ПРОАНАЛИЗИРОВАННЫХ
     const existingAnalysis = await VideoAnalysis.findOne({
       where: { video_url: url },
     })
@@ -26,7 +25,6 @@ export const createAnalysisJob = async (req: Request, res: Response) => {
       })
     }
 
-    // ✅ 2. ПОТОМ ПРОВЕРЯЕМ В ОЧЕРЕДИ
     const existingInQueue = await AnalysisQueue.findOne({
       where: {
         url,
@@ -40,11 +38,10 @@ export const createAnalysisJob = async (req: Request, res: Response) => {
       })
     }
 
-    // ✅ 3. ТОЛЬКО ПОТОМ ДОБАВЛЯЕМ
     await AnalysisQueue.create({
       url,
-      priority: 1,
       userId,
+      priority: 1,
       status: QueueStatus.PENDING,
       platform: 'unknown',
     })
@@ -65,8 +62,10 @@ export const createAnalysisJob = async (req: Request, res: Response) => {
 export const getQueue = async (req: Request, res: Response) => {
   try {
     const items = await AnalysisQueue.findAll({
-      order: [['createdAt', 'DESC']],
-      include: [{ model: User, attributes: ['id', 'email'] }],
+      order: [['createdAt', 'ASC']], // FIFO: сначала старые
+      include: [
+        { model: User, attributes: ['id', 'email', 'first_name', 'last_name'] },
+      ],
     })
     res.json(items)
   } catch (error) {
