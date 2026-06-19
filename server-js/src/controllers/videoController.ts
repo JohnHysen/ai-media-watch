@@ -1,4 +1,3 @@
-// controllers/videoController.ts
 import { Request, Response } from 'express'
 import { VideoAnalysis, DangerStatus } from '../db/models/VideoAnalysis'
 import { User } from '../db/models/user'
@@ -18,7 +17,6 @@ const input = {
     'cryptosignals',
     'mlm',
   ],
-
   searchQueries: [
     'casino',
     'online casino',
@@ -27,9 +25,7 @@ const input = {
     'ставки',
     'betting',
   ],
-
   searchSection: '/video',
-
   resultsPerPage: 1,
   maxFollowersPerProfile: 0,
   maxFollowingPerProfile: 0,
@@ -39,8 +35,13 @@ const input = {
   proxyCountryCode: 'None',
 }
 
+// ============================================================
+// 1. ПУБЛИЧНЫЙ ЭНДПОИНТ (с авторизацией, userId из req.user)
+// ============================================================
 export const createVideoAnalysis = async (req: Request, res: Response) => {
   try {
+    const userId = req.user?.id || null
+
     const {
       video_url,
       title,
@@ -51,7 +52,6 @@ export const createVideoAnalysis = async (req: Request, res: Response) => {
       duration_seconds,
       preview_image_url,
       checked_at,
-      userId,
     } = req.body
 
     if (
@@ -73,8 +73,7 @@ export const createVideoAnalysis = async (req: Request, res: Response) => {
       })
     }
 
-    const finalUserId = userId || null
-    console.log('📨 Создание записи для userId:', finalUserId)
+    console.log('📨 Создание записи для userId:', userId)
 
     const analysis = await VideoAnalysis.create({
       video_url,
@@ -86,7 +85,7 @@ export const createVideoAnalysis = async (req: Request, res: Response) => {
       duration_seconds,
       preview_image_url: preview_image_url || null,
       checked_at: checked_at ? new Date(checked_at) : new Date(),
-      userId: finalUserId,
+      userId,
     })
 
     res.status(201).json(analysis)
@@ -107,6 +106,77 @@ export const createVideoAnalysis = async (req: Request, res: Response) => {
   }
 }
 
+// ============================================================
+// 2. ВНУТРЕННИЙ ЭНДПОИНТ ДЛЯ FASTAPI (без auth, userId из тела)
+// ============================================================
+export const createVideoAnalysisInternal = async (
+  req: Request,
+  res: Response
+) => {
+  try {
+    const {
+      video_url,
+      title,
+      tags,
+      safety_percent,
+      verdict_text,
+      is_dangerous,
+      duration_seconds,
+      preview_image_url,
+      checked_at,
+      userId,
+    } = req.body
+
+    if (
+      !video_url ||
+      safety_percent === undefined ||
+      !verdict_text ||
+      is_dangerous === undefined ||
+      !duration_seconds
+    ) {
+      return res.status(400).json({ error: 'Missing required fields' })
+    }
+
+    if (!Object.values(DangerStatus).includes(verdict_text)) {
+      return res.status(400).json({ error: 'Invalid verdict_text' })
+    }
+
+    console.log('📨 Внутреннее создание записи для userId:', userId)
+
+    const analysis = await VideoAnalysis.create({
+      video_url,
+      title: title || null,
+      tags: tags || null,
+      safety_percent,
+      verdict_text,
+      is_dangerous,
+      duration_seconds,
+      preview_image_url: preview_image_url || null,
+      checked_at: checked_at ? new Date(checked_at) : new Date(),
+      userId: userId || null,
+    })
+
+    res.status(201).json(analysis)
+  } catch (error: any) {
+    console.error('❌ Ошибка при создании VideoAnalysis (internal):')
+    console.error('  Сообщение:', error.message)
+    console.error('  Стек:', error.stack)
+    if (error.name === 'SequelizeValidationError') {
+      console.error(
+        '  Детали валидации:',
+        error.errors.map((e: any) => e.message)
+      )
+    }
+    if (error.name === 'SequelizeForeignKeyConstraintError') {
+      console.error('  Ошибка внешнего ключа:', error.message)
+    }
+    res.status(500).json({ error: 'Internal server error' })
+  }
+}
+
+// ============================================================
+// 3. ПОЛУЧИТЬ ВСЕ ЗАПИСИ (с фильтром по userId)
+// ============================================================
 export const getAllVideoAnalyses = async (req: Request, res: Response) => {
   try {
     const { is_dangerous, userId, limit = 50, offset = 0 } = req.query
@@ -138,6 +208,9 @@ export const getAllVideoAnalyses = async (req: Request, res: Response) => {
   }
 }
 
+// ============================================================
+// 4. ПОЛУЧИТЬ ОДНУ ЗАПИСЬ ПО ID
+// ============================================================
 export const getVideoAnalysisById = async (req: Request, res: Response) => {
   try {
     const { id } = req.params
@@ -156,6 +229,9 @@ export const getVideoAnalysisById = async (req: Request, res: Response) => {
   }
 }
 
+// ============================================================
+// 5. ПОЛУЧИТЬ ЗАПИСИ ПО ID ПОЛЬЗОВАТЕЛЯ
+// ============================================================
 export const getAnalysesByUser = async (req: Request, res: Response) => {
   try {
     const { userId } = req.params
@@ -168,21 +244,6 @@ export const getAnalysesByUser = async (req: Request, res: Response) => {
       order: [['checked_at', 'DESC']],
     })
     res.json(analyses)
-  } catch (error) {
-    console.error(error)
-    res.status(500).json({ error: 'Internal server error' })
-  }
-}
-
-export const deleteVideoAnalysis = async (req: Request, res: Response) => {
-  try {
-    const { id } = req.params
-    const analysis = await VideoAnalysis.findByPk(id)
-    if (!analysis) {
-      return res.status(404).json({ error: 'Video analysis not found' })
-    }
-    await analysis.destroy()
-    res.status(204).send()
   } catch (error) {
     console.error(error)
     res.status(500).json({ error: 'Internal server error' })

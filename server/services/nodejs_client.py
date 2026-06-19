@@ -4,9 +4,9 @@ from typing import Optional
 from datetime import datetime
 import json
 
+# Используем внутренний эндпоинт без auth
 NODE_API_BASE = "http://localhost:3500"
-ENDPOINT = f"{NODE_API_BASE}/video-analysis"
-
+ENDPOINT = f"{NODE_API_BASE}/video-analysis/internal/create"
 
 async def send_video_analysis_to_nodejs(
     video_url: str,
@@ -45,8 +45,8 @@ async def send_video_analysis_to_nodejs(
         print("❌ Ошибка: duration_seconds обязателен")
         return {"error": "duration_seconds is required"}
     
-    # Проверяем, что verdict_text соответствует ожидаемым значениям
-    valid_verdicts = ['опасный', 'безопасный', 'Опасный', 'Безопасный', 'unknown']
+    # Приводим verdict_text к одному из допустимых значений
+    valid_verdicts = ['safe', 'dangerous', 'uncertain']
     if verdict_text not in valid_verdicts:
         print(f"⚠️ Предупреждение: verdict_text='{verdict_text}' не в списке допустимых")
         # Приводим к нужному формату
@@ -54,8 +54,10 @@ async def send_video_analysis_to_nodejs(
             verdict_text = 'dangerous'
         elif 'безопас' in verdict_text.lower():
             verdict_text = 'safe'
+        else:
+            verdict_text = 'uncertain'
     
-    # Формируем payload в snake_case (как ожидает Node.js)
+    # Формируем payload (поля совпадают с ожидаемыми в Node.js)
     payload = {
         "video_url": video_url,
         "safety_percent": float(safety_percent),

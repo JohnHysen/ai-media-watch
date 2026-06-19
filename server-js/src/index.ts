@@ -10,11 +10,6 @@ import sequelize from './db/db'
 import { sio_middleware, sio_chat } from './modules/sio/.'
 // Импорт воркера очереди (запускает cron-задачу)
 import './modules/cron/analysisQueueProcessor.js'
-import {
-  createVideoAnalysis,
-  getAllVideoAnalyses,
-  getAnalysesByUser,
-} from './controllers/videoController.js'
 
 const allowedOrigins = [cfg.CLIENT]
 const PORT = cfg.PORT
@@ -29,17 +24,12 @@ app.use(fileUpload({ limits: { fileSize: 50 * 1024 * 1024 } }))
 app.use(cors({ origin: allowedOrigins, credentials: true }))
 
 // ✅ 3. Статика
-app.use('/static', express.static('static')) // одна строка, дублирование убрано
+app.use('/static', express.static('static'))
 
-// ✅ 4. Основные роуты для видео-анализов (прямые, без router)
-app.post('/video-analysis', createVideoAnalysis)
-app.get('/video-analysis', getAllVideoAnalyses)
-app.get('/video-analysis/user/:userId', getAnalysesByUser)
-
-// ✅ 5. Подключаем все остальные роуты (auth, user, queue, proxy)
+// ✅ 4. Подключаем все роуты (auth, user, queue, video-analysis и др.)
 app.use('/', router)
 
-// ✅ 6. Тестовый маршрут
+// ✅ 5. Тестовый маршрут
 app.get('/', (req, res) => {
   res.send({ msg: `check on port ${PORT}!` })
 })

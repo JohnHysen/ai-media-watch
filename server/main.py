@@ -38,12 +38,15 @@ app.add_middleware(
 
 
 @app.get("/analyze")
-async def analyze(url: str):
+async def analyze(
+    url: str,
+    userId: Optional[int] = None
+):
     start_time = time.time()
     analyze_id = str(uuid.uuid4())
 
     try:
-        logger.info(f"Запущен анализ №{analyze_id}. Ссылка: {url}")
+        logger.info(f"Запущен анализ №{analyze_id}. Ссылка: {url}, userId: {userId}")
 
         download_video(analyze_id, url)
         logger.info("Видео скачано")
@@ -93,7 +96,6 @@ async def analyze(url: str):
                 verdict_text = "safe"
 
         verdict_text = verdict_text.strip().lower()
-
         logger.info(f"РЕЗУЛЬТАТ: {verdict_text.upper()} ({confidence:.0%})")
 
         return {
@@ -105,8 +107,19 @@ async def analyze(url: str):
             "is_dangerous": is_dangerous,
             "duration_seconds": duration_seconds,
             "preview_image_url": preview_image,
-            "checked_at": datetime.now(),
+            "checked_at": datetime.now().isoformat(),
         }
+
+        # === Сохраняем результат через Node.js (с userId) ===
+        try:
+            nodejs_result = await send_video_analysis_to_nodejs(result_data, userId)
+            logger.info(f"Результат сохранён в Node.js, id: {nodejs_result.get('id')}")
+        except Exception as e:
+            logger.error(f"Ошибка сохранения в Node.js: {e}")
+
+        # Возвращаем результат клиенту (добавляем userId для отображения)
+        result_data["userId"] = userId
+        return result_data
 
     except Exception as e:
         try:

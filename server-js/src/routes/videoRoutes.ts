@@ -1,30 +1,22 @@
-// routes/videoRoutes.ts
 import { Router } from 'express'
 import {
   createVideoAnalysis,
+  createVideoAnalysisInternal,
   getAllVideoAnalyses,
   getVideoAnalysisById,
   getAnalysesByUser,
-  deleteVideoAnalysis,
   scrapVideo,
 } from '../controllers/videoController'
+import authMiddleware from '../middleware/authMiddleware'
 
 const router = Router()
 
-// Создание записи (для Python)
-router.post('/video-analysis', createVideoAnalysis)
+router.post('/create', createVideoAnalysis)
+router.post('/internal/create', createVideoAnalysisInternal)
 
-// Получение всех записей с фильтрацией
-router.get('/video-analysis', getAllVideoAnalyses)
+router.get('/', authMiddleware, getAllVideoAnalyses)
+router.get('/:id', authMiddleware, getVideoAnalysisById)
+router.get('/user/:userId', authMiddleware, getAnalysesByUser)
+router.post('/scrap', authMiddleware, scrapVideo)
 
-// Получение одной записи
-router.get('/video-analysis/:id', getVideoAnalysisById)
-
-// Получение всех записей пользователя
-router.get('/video-analysis/user/:userId', getAnalysesByUser)
-
-// Удаление записи
-router.delete('/video-analysis/:id', deleteVideoAnalysis)
-
-router.get('/video-scrap', scrapVideo)
 export default router
