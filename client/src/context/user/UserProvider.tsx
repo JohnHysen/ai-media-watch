@@ -14,7 +14,7 @@ import { toast } from 'react-toastify'
 
 export interface UserData {
   user_id: number
-  role: 'ADMIN' | 'USER' | null
+  role: 'USER' | 'INSPECTOR' | 'ADMIN' | null // ✅ добавили INSPECTOR
   first_name: string
   last_name: string
   email: string
@@ -111,8 +111,8 @@ export const UserProvider = ({ children }: UserProviderProps) => {
           if (resv && resv.user) {
             // Преобразуем id → user_id, если сервер возвращает id
             const mappedUser: UserData = {
-              user_id: resv.user.id || resv.user.user_id, // на случай обоих
-              role: resv.user.role,
+              user_id: resv.user.id || resv.user.user_id,
+              role: resv.user.role, // теперь может быть 'INSPECTOR'
               first_name: resv.user.first_name || '',
               last_name: resv.user.last_name || '',
               email: resv.user.email || '',
@@ -124,7 +124,6 @@ export const UserProvider = ({ children }: UserProviderProps) => {
           } else {
             localStorage.removeItem('token')
             setUser(noUser)
-            // Не редиректим, просто остаёмся без пользователя
           }
         })
         .catch((err) => {

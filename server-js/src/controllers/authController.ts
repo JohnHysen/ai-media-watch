@@ -2,40 +2,29 @@ import { Request, Response } from 'express'
 import { User } from '../db/models'
 import unexpectedError from '../helpers/unexpectedError'
 import { generateJwt } from '../helpers/generateJwt'
-import { OAuth2Client } from 'google-auth-library'
 import cfg from '../config'
 import bcrypt from 'bcryptjs'
-import { confEmail } from '../modules/email/confEmail'
-
-const googleClient = new OAuth2Client(cfg.GOOGLE_CLIENT_ID)
+// import { confEmail } from '../modules/email/confEmail' // если нужно
+import crypto from 'crypto'
 
 export const signUp = async (req: Request, res: Response) => {
   try {
     const { first_name, last_name, email, password } = req.body
-
     if (!first_name || !last_name || !email || !password)
-      return res.status(400).json({
-        message: 'Введите недостающие данные!',
-      })
-
+      return res.status(400).json({ message: 'Введите недостающие данные!' })
     const candidate = await User.findOne({ where: { email } })
-
     if (candidate)
-      return res.status(409).json({
-        message: 'Данная почта уже зарегистрирована!',
-      })
+      return res
+        .status(409)
+        .json({ message: 'Данная почта уже зарегистрирована!' })
 
-    const secret = crypto.randomUUID()
     const new_user = await User.create({
       email,
       password: bcrypt.hashSync(password),
-      first_name: first_name,
-      last_name: last_name,
+      first_name,
+      last_name,
       role: 'USER',
-      activation_code: secret,
     })
-
-    await confEmail(email, secret)
 
     return res.status(201).json({
       message: 'Пользователь успешно зарегистрирован!',
@@ -43,6 +32,7 @@ export const signUp = async (req: Request, res: Response) => {
       token: generateJwt(new_user.id, new_user.role),
     })
   } catch (e) {
+    console.error('❌ signUp error:', e)
     unexpectedError(res, e)
   }
 }
@@ -50,78 +40,20 @@ export const signUp = async (req: Request, res: Response) => {
 export const signIn = async (req: Request, res: Response) => {
   try {
     const { email, password } = req.body
-
     if (!email || !password)
-      return res.status(400).json({
-        message: 'Введите недостающие данные!',
-      })
-
-    const candidate = await User.findOne({
-      where: { email },
-    })
-
+      return res.status(400).json({ message: 'Введите недостающие данные!' })
+    const candidate = await User.findOne({ where: { email } })
     if (!candidate)
-      return res.status(401).json({
-        message: 'Аккаунт не найден!',
-      })
-
-    if (candidate.is_google)
-      return res.status(401).json({
-        message: 'Авторизуйтесь через Google-аккаунт!',
-      })
-
+      return res.status(401).json({ message: 'Аккаунт не найден!' })
     if (!bcrypt.compareSync(password, candidate.password))
-      return res.status(401).json({
-        message: 'Неверный пароль!',
-      })
-
+      return res.status(401).json({ message: 'Неверный пароль!' })
     return res.json({
       message: `Добро пожаловать, ${candidate.first_name}!`,
       user: candidate,
       token: generateJwt(candidate.id, candidate.role),
     })
   } catch (e) {
-    unexpectedError(res, e)
-  }
-}
-
-export const googleAuth = async (req: Request, res: Response) => {
-  try {
-    const { idToken } = req.body
-    const ticket = await googleClient.verifyIdToken({
-      idToken,
-      audience: cfg.GOOGLE_CLIENT_ID,
-    })
-
-    const payload = ticket.getPayload()
-    const email = payload?.email
-
-    if (!email) return res.status(400).json({ message: 'Invalid token' })
-
-    let user = await User.findOne({ where: { email } })
-    const secret = crypto.randomUUID()
-    if (!user) {
-      user = await User.create({
-        email,
-        first_name: payload.given_name,
-        last_name: payload.family_name,
-        photoURL: payload.picture,
-        password: bcrypt.hashSync('googleauthextpassword' + Math.random()),
-        role: 'USER',
-        active: true,
-        is_google: true,
-        activation_code: secret,
-      })
-    }
-
-    if (user) {
-      return res.json({
-        message: `Добро пожаловать, ${user.first_name}!`,
-        user,
-        token: generateJwt(user.id, user.role),
-      })
-    }
-  } catch (e) {
+    console.error('❌ signIn error:', e)
     unexpectedError(res, e)
   }
 }
@@ -129,18 +61,60 @@ export const googleAuth = async (req: Request, res: Response) => {
 export const getUsers = async (req: Request, res: Response) => {
   try {
     const { id } = req.query
-
     if (id && typeof id === 'string') {
-      return res.json({
-        user: await User.findByPk(Number(id)),
-      })
+      const user = await User.findByPk(Number(id))
+      return res.json({ user })
     } else {
-      return res.json({
-        users: await User.findAll(),
+      const users = await User.findAll({
+        attributes: [
+          'id',
+          'email',
+          'first_name',
+          'last_name',
+          'role',
+          'createdAt',
+          'photoURL',
+        ],
+        order: [['createdAt', 'DESC']],
       })
+      return res.json({ users })
     }
   } catch (e) {
+    console.error('❌ getUsers error:', e)
     unexpectedError(res, e)
   }
 }
 
+export const updateUserRole = async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params
+    const { role } = req.body
+    if (!role || !['USER', 'INSPECTOR', 'ADMIN'].includes(role)) {
+      return res.status(400).json({ error: 'Invalid role' })
+    }
+    const user = await User.findByPk(Number(id))
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' })
+    }
+    if (user.id === req.user.id && user.role === 'ADMIN' && role !== 'ADMIN') {
+      return res
+        .status(403)
+        .json({ error: 'You cannot downgrade your own role' })
+    }
+    user.role = role
+    await user.save()
+    res.json({
+      message: `Роль пользователя ${user.email} обновлена на ${role}`,
+      user: {
+        id: user.id,
+        email: user.email,
+        role: user.role,
+        first_name: user.first_name,
+        last_name: user.last_name,
+      },
+    })
+  } catch (e) {
+    console.error('❌ updateUserRole error:', e)
+    unexpectedError(res, e)
+  }
+}

@@ -40,24 +40,20 @@ export class User extends Model {
   @Default('USER')
   @AllowNull(false)
   @Column(DataType.STRING)
-  declare role: 'ADMIN' | 'USER'
+  declare role: 'ADMIN' | 'USER' | 'INSPECTOR'
 
-  @Default(false)
-  @Column(DataType.BOOLEAN)
-  declare is_google: boolean
+  @Default(0)
+  @Column(DataType.INTEGER)
+  declare score: number
 
   @Default(0)
   @Column(DataType.INTEGER)
   declare balance: number
 
-  @Default(false)
-  @Column(DataType.BOOLEAN)
-  declare is_online: boolean
-
   @Column(DataType.DATE)
   declare last_seen: Date
 
-  @HasMany(() => VideoAnalysis, { foreignKey: 'userId' }) // ← добавили foreignKey
+  @HasMany(() => VideoAnalysis, { foreignKey: 'userId' })
   declare video_analyses: VideoAnalysis[]
 
   @AllowNull(true)

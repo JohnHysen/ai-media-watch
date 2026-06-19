@@ -51,14 +51,6 @@ export class AnalysisQueue extends Model {
   @Column(DataType.TEXT)
   declare error_message: string | null
 
-  @AllowNull(true)
-  @Column(DataType.DATE)
-  declare processed_at: Date | null
-
-  @AllowNull(true)
-  @Column(DataType.INTEGER)
-  declare video_analysis_id: number | null // ссылка на результат
-
   @AllowNull(false)
   @Default(0)
   @Column(DataType.INTEGER)

@@ -110,17 +110,6 @@ async def analyze(
             "checked_at": datetime.now().isoformat(),
         }
 
-        # === Сохраняем результат через Node.js (с userId) ===
-        try:
-            nodejs_result = await send_video_analysis_to_nodejs(result_data, userId)
-            logger.info(f"Результат сохранён в Node.js, id: {nodejs_result.get('id')}")
-        except Exception as e:
-            logger.error(f"Ошибка сохранения в Node.js: {e}")
-
-        # Возвращаем результат клиенту (добавляем userId для отображения)
-        result_data["userId"] = userId
-        return result_data
-
     except Exception as e:
         try:
             remove_video(analyze_id)

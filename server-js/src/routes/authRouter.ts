@@ -1,17 +1,24 @@
 import { Router } from 'express'
 import {
   getUsers,
-  googleAuth,
   signIn,
   signUp,
-} from '../controllers/authController'
+  updateUserRole,
+} from '../controllers/authController.js'
+import authMiddleware from '../middleware/authMiddleware.js'
+import { requireRole } from '../middleware/checkRoleMiddleware.js'
 
-// @ts-expect-error ????
-const router = new Router()
+const router = Router()
 
 router.post('/signup', signUp)
 router.post('/signin', signIn)
-router.post('/google', googleAuth)
-router.get('/users', getUsers)
+
+router.get('/users', authMiddleware, requireRole(['ADMIN']), getUsers)
+router.put(
+  '/users/:id/role',
+  authMiddleware,
+  requireRole(['ADMIN']),
+  updateUserRole
+)
 
 export default router

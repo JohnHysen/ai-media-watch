@@ -28,8 +28,10 @@ import CloseIcon from '@mui/icons-material/Close'
 import DashboardIcon from '@mui/icons-material/Dashboard'
 import HistoryIcon from '@mui/icons-material/History'
 import AnalyticsIcon from '@mui/icons-material/Analytics'
-import PersonIcon from '@mui/icons-material/Person'
 import LogoutIcon from '@mui/icons-material/Logout'
+import QueueIcon from '@mui/icons-material/Queue'
+import AdminPanelSettingsIcon from '@mui/icons-material/AdminPanelSettings'
+import SettingsIcon from '@mui/icons-material/Settings'
 import Visibility from '@mui/icons-material/Visibility'
 import VisibilityOff from '@mui/icons-material/VisibilityOff'
 import { useNavigate } from 'react-router-dom'
@@ -72,6 +74,10 @@ export default function CyberSidebar({ open, onClose }: Props) {
   // Состояние загрузки и ошибок
   const [authError, setAuthError] = useState('')
   const [loading, setLoading] = useState(false)
+
+  const isAuthenticated = !!user?.role
+  const isAdmin = user?.role === 'ADMIN'
+  const isInspector = user?.role === 'INSPECTOR'
 
   const handleNavigation = (path: string) => {
     navigate(path)
@@ -119,7 +125,7 @@ export default function CyberSidebar({ open, onClose }: Props) {
     }
   }
 
-  // ✅ Реальная регистрация через API с преобразованием id → user_id
+  // ✅ Реальная регистрация через API
   const handleRegister = async () => {
     setAuthError('')
     if (
@@ -176,14 +182,41 @@ export default function CyberSidebar({ open, onClose }: Props) {
     setAuthError('')
   }
 
-  const menuItems = [
+  // ✅ Базовое меню для всех
+  const baseMenuItems = [
     { text: 'Главная', icon: <DashboardIcon />, path: '/' },
-    { text: 'Профиль', icon: <PersonIcon />, path: '/profile' },
     { text: 'История проверок', icon: <HistoryIcon />, path: '/history' },
     { text: 'Аналитика угроз', icon: <AnalyticsIcon />, path: '/analytics' },
   ]
 
-  const isAuthenticated = !!user?.role
+  // ✅ Ролевые пункты
+  const roleMenuItems = []
+
+  // Для инспектора и админа – очередь
+  if (isAdmin || isInspector) {
+    roleMenuItems.push({
+      text: 'Управление очередью',
+      icon: <QueueIcon />,
+      path: '/queue',
+    })
+  }
+
+  // Для админа – управление пользователями и настройки
+  if (isAdmin) {
+    roleMenuItems.push({
+      text: 'Управление пользователями',
+      icon: <AdminPanelSettingsIcon />,
+      path: '/users',
+    })
+    roleMenuItems.push({
+      text: 'Настройки системы',
+      icon: <SettingsIcon />,
+      path: '/settings',
+    })
+  }
+
+  // Объединяем меню
+  const menuItems = [...baseMenuItems, ...roleMenuItems]
 
   return (
     <>
@@ -258,14 +291,21 @@ export default function CyberSidebar({ open, onClose }: Props) {
             </IconButton>
           </Box>
 
-          {/* Профиль пользователя (если авторизован) */}
+          {/* Профиль пользователя – кликабельный */}
           {isAuthenticated ? (
             <Box
               sx={{
                 p: 2,
                 borderBottom: '1px solid rgba(0,255,255,0.2)',
                 mb: 2,
+                cursor: 'pointer',
+                transition: '0.2s',
+                '&:hover': {
+                  bgcolor: 'rgba(0,255,255,0.05)',
+                  borderRadius: 1,
+                },
               }}
+              onClick={() => handleNavigation('/profile')}
             >
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
                 <Avatar
@@ -313,7 +353,7 @@ export default function CyberSidebar({ open, onClose }: Props) {
             </Box>
           )}
 
-          {/* Список навигации с красивыми кнопками */}
+          {/* Список навигации */}
           <List sx={{ flex: 1, px: 1 }}>
             {menuItems.map((item) => (
               <ListItem
@@ -358,7 +398,7 @@ export default function CyberSidebar({ open, onClose }: Props) {
 
           <Divider sx={{ borderColor: 'rgba(0,255,255,0.2)', my: 1 }} />
 
-          {/* Кнопка выхода (красивая) */}
+          {/* Кнопка выхода */}
           {isAuthenticated && (
             <Box sx={{ p: 2 }}>
               <Button
@@ -402,7 +442,7 @@ export default function CyberSidebar({ open, onClose }: Props) {
         </DialogActions>
       </Dialog>
 
-      {/* Диалог авторизации (вход / регистрация) */}
+      {/* Диалог авторизации (без изменений) */}
       <Dialog
         open={authDialogOpen}
         onClose={() => setAuthDialogOpen(false)}
@@ -443,7 +483,6 @@ export default function CyberSidebar({ open, onClose }: Props) {
             </Alert>
           )}
 
-          {/* Форма входа */}
           {authTab === 0 && (
             <Stack spacing={2}>
               <TextField
@@ -487,7 +526,6 @@ export default function CyberSidebar({ open, onClose }: Props) {
             </Stack>
           )}
 
-          {/* Форма регистрации */}
           {authTab === 1 && (
             <Stack spacing={2}>
               <TextField
