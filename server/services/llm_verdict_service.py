@@ -27,13 +27,23 @@ def get_llm_verdict(analyze_id: str, metadata: dict, transcript: str, frame_anal
 Расшифровка аудио: {transcript_text}
 Анализ кадров: {suspicious_frames} из {total_frames} кадров подозрительные, тип схемы: {scheme_type}
 
+ОПРЕДЕЛИ ОСНОВНОЙ РИСК из списка:
+1. КАЗИНО - азартные игры, слоты, рулетка, ставки, онлайн-казино
+2. ПИРАМИДА - финансовые пирамиды, MLM, матричные схемы
+3. ИНВЕСТИЦИИ - мошеннические инвестиции, фейковые проекты
+4. КРИПТО - крипто-мошенничество, скам-токены, ICO
+5. РЕФЕРАЛЫ - реферальные схемы, приглашения за вознаграждение
+6. ПОНЦИ - схема Понци, выплаты за счет новых участников
+
 ОТВЕТЬ СТРОГО В ФОРМАТЕ (каждая строка начинается с ключевого слова):
 Опасно: ДА или НЕТ
+Основной риск: только один из списка выше (например: КАЗИНО)
 Причина: одно предложение с объяснением
 Уверенность: число от 0.0 до 1.0
 
 Пример правильного ответа:
 Опасно: ДА
+Основной риск: КРИПТО
 Причина: Видео рекламирует онлайн-казино с обещанием быстрого заработка
 Уверенность: 0.9
 
@@ -45,16 +55,14 @@ def get_llm_verdict(analyze_id: str, metadata: dict, transcript: str, frame_anal
         output = llm.generate(
             prompt=prompt,
             max_tokens=150,
-            temperature=0.1  # Минимальная температура для стабильности
+            temperature=0.1
         )
         
         response_text = output["choices"][0]["text"].strip()
         print(f"📝 Ответ модели: {response_text[:200]}...")
         
-        # Парсим ответ
         verdict = _parse_response(response_text)
         
-        # Проверка: если парсинг не дал четкого ответа, используем ключевые слова
         if verdict.get("verdict") == "неизвестно" or verdict.get("confidence", 0) < 0.3:
             print("⚠️ Нечеткий ответ модели, использую анализ по ключевым словам")
             verdict = _keyword_analysis(title, description, transcript_text, frame_analysis)
@@ -63,7 +71,6 @@ def get_llm_verdict(analyze_id: str, metadata: dict, transcript: str, frame_anal
         print(f"❌ Ошибка LLM: {e}")
         verdict = _keyword_analysis(title, description, transcript_text, frame_analysis)
     
-    # Сохраняем результат
     base_path = Path("temp") / analyze_id
     verdict_path = base_path / "verdict.json"
     with open(verdict_path, 'w', encoding='utf-8') as f:
@@ -80,7 +87,6 @@ def _parse_response(text: str) -> dict:
     # Ищем "опасно: да" или "опасно: нет"
     is_dangerous = None
     
-    # Разные варианты написания
     patterns = [
         (r'опасно:\s*да', True),
         (r'опасно:\s*д\s', True),
@@ -95,13 +101,27 @@ def _parse_response(text: str) -> dict:
             is_dangerous = value
             break
     
-    # Если не нашли, ищем по наличию слов "казино", "пирамида" и т.д.
     if is_dangerous is None:
         danger_indicators = ['казино', 'пирамид', 'мошен', 'джекпот', 'заработок', 'casino', 'pyramid', 'scam']
         if any(word in text for word in danger_indicators):
             is_dangerous = True
         else:
             is_dangerous = False
+    
+    primary_risk = "не определен"
+    risk_patterns = [
+        (r'основной риск:\s*казино', 'казино'),
+        (r'основной риск:\s*пирамид', 'пирамида'),
+        (r'основной риск:\s*инвестиц', 'инвестиции'),
+        (r'основной риск:\s*крипто', 'крипто'),
+        (r'основной риск:\s*реферал', 'рефералы'),
+        (r'основной риск:\s*понци', 'понци'),
+    ]
+    
+    for pattern, risk in risk_patterns:
+        if re.search(pattern, text):
+            primary_risk = risk
+            break
     
     # Поиск уверенности
     confidence = 0.7
@@ -119,48 +139,54 @@ def _parse_response(text: str) -> dict:
     if match:
         reason = match.group(1).strip()[:200]
     elif len(text) > 20:
-        # Если нет "причина:", берем первые 200 символов текста
         reason = text[:200]
     
     return {
         "is_dangerous": is_dangerous,
         "confidence": confidence,
         "verdict": "опасный" if is_dangerous else "безопасный",
-        "reason": reason
+        "reason": reason,
+        "primary_risk": primary_risk
     }
 
 
 def _keyword_analysis(title: str, description: str, transcript: str, frame_analysis: dict) -> dict:
     """Надежный анализ на основе ключевых слов и визуальных маркеров"""
     
-    # Объединяем весь текст
     full_text = f"{title} {description} {transcript}".lower()
     
-    # Группы ключевых слов
     casino_words = ['казино', 'casino', 'джекпот', 'jackpot', 'слот', 'slot', 'рулетка', 'roulette', 'ставка', 'bet', 'выиграл', 'победил', 'занос', 'игровой автомат']
     pyramid_words = ['пирамид', 'матрица', 'пассивный доход', 'быстрый заработок', 'приглашай друзей', 'реферал', 'mlm']
     invest_words = ['инвестиц', 'трейдинг', 'форекс', 'forex', 'криптовалют', 'бинарные опционы', 'доходность', 'гарантированный доход']
     
-    # Поиск совпадений
     found = []
+    risk_types = []
+    
     for word in casino_words:
         if word in full_text:
             found.append(("казино", word))
+            risk_types.append("казино")
     for word in pyramid_words:
         if word in full_text:
             found.append(("пирамида", word))
+            risk_types.append("пирамида")
     for word in invest_words:
         if word in full_text:
             found.append(("инвестиции", word))
+            risk_types.append("инвестиции")
     
-    # Учитываем анализ кадров
+    # Определяем основной риск (самый частый)
+    primary_risk = "не определен"
+    if risk_types:
+        from collections import Counter
+        risk_counts = Counter(risk_types)
+        primary_risk = risk_counts.most_common(1)[0][0]
+    
     frame_suspicious = frame_analysis.get('suspicious_frames', 0) > 0
     scheme_type = frame_analysis.get('scheme_type', '')
     
-    # Определяем опасность
     is_dangerous = len(found) > 0 or frame_suspicious or scheme_type != 'clean'
     
-    # Уверенность
     confidence = 0.5
     if len(found) > 0:
         confidence = min(0.6 + len(found) * 0.1, 0.95)
@@ -169,7 +195,6 @@ def _keyword_analysis(title: str, description: str, transcript: str, frame_analy
     if scheme_type in ['illegal_casino', 'financial_pyramid', 'investment_scam']:
         confidence = max(confidence, 0.8)
     
-    # Формируем причину
     if found:
         types = list(set([t for t, _ in found]))
         words = [w for _, w in found[:4]]
@@ -183,5 +208,6 @@ def _keyword_analysis(title: str, description: str, transcript: str, frame_analy
         "is_dangerous": is_dangerous,
         "confidence": confidence,
         "verdict": "опасный" if is_dangerous else "безопасный",
-        "reason": reason[:200]
+        "reason": reason[:200],
+        "primary_risk": primary_risk
     }

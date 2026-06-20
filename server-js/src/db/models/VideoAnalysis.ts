@@ -64,6 +64,10 @@ export class VideoAnalysis extends Model {
   @Column(DataType.DATE)
   declare checked_at: Date
 
+  @AllowNull(true)
+  @Column(DataType.STRING)
+  declare primary_risk: string | null
+
   // ✅ Поле должно называться userId
   @ForeignKey(() => User)
   @AllowNull(true)

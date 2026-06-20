@@ -136,6 +136,8 @@ export interface VideoAnalysis {
   user_id: number | null
   createdAt: string
   updatedAt: string
+  primary_risk: string | null
+  reason: string | null
   initiator?: {
     id: number
     email: string

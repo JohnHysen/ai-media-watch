@@ -47,7 +47,6 @@ import AnalyticsIcon from '@mui/icons-material/Analytics'
 import LinkIcon from '@mui/icons-material/Link'
 import AccessTimeIcon from '@mui/icons-material/AccessTime'
 import PieChartIcon from '@mui/icons-material/PieChart'
-import CasinoIcon from '@mui/icons-material/Casino'
 import SecurityIcon from '@mui/icons-material/Security'
 import CheckCircleIcon from '@mui/icons-material/CheckCircle'
 import YouTubeIcon from '@mui/icons-material/YouTube'
@@ -55,6 +54,13 @@ import InstagramIcon from '@mui/icons-material/Instagram'
 import MusicNoteIcon from '@mui/icons-material/MusicNote'
 import ReportProblemIcon from '@mui/icons-material/ReportProblem'
 import CloseIcon from '@mui/icons-material/Close'
+import HelpIcon from '@mui/icons-material/Help'
+import CasinoIcon from '@mui/icons-material/Casino'
+import AccountTreeIcon from '@mui/icons-material/AccountTree'
+import ShowChartIcon from '@mui/icons-material/ShowChart'
+import CurrencyBitcoinIcon from '@mui/icons-material/CurrencyBitcoin'
+import PeopleAltIcon from '@mui/icons-material/PeopleAlt'
+import WarningAmberIcon from '@mui/icons-material/WarningAmber'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Canvas, useFrame } from '@react-three/fiber'
 import {
@@ -416,11 +422,55 @@ const CyberSpeedometer: React.FC<CyberSpeedometerProps> = ({
   )
 }
 
-// ---------- Типы вердиктов ----------
 const VERDICT_TYPES = {
-  safe: { label: 'Безопасно', color: '#33ffcc', icon: '✅' },
-  dangerous: { label: 'Опасно', color: '#ff3366', icon: '⚠️' },
-  uncertain: { label: 'Неопределённо', color: '#ffaa44', icon: '❓' },
+  safe: {
+    label: 'Безопасно',
+    color: '#33ffcc',
+    icon: <CheckCircleIcon sx={{ fontSize: 16, color: '#33ffcc' }} />,
+  },
+  dangerous: {
+    label: 'Опасно',
+    color: '#ff3366',
+    icon: <WarningIcon sx={{ fontSize: 16, color: '#ff3366' }} />,
+  },
+  uncertain: {
+    label: 'Неопределённо',
+    color: '#ffaa44',
+    icon: <HelpIcon sx={{ fontSize: 16, color: '#ffaa44' }} />,
+  },
+}
+
+const RISK_TYPES = {
+  казино: {
+    label: 'Казино',
+    color: '#ff3366',
+    icon: <CasinoIcon sx={{ fontSize: 16, color: '#ff3366' }} />,
+  },
+  пирамида: {
+    label: 'Пирамида',
+    color: '#ffaa44',
+    icon: <AccountTreeIcon sx={{ fontSize: 16, color: '#ffaa44' }} />,
+  },
+  инвестиции: {
+    label: 'Инвестиции',
+    color: '#ffaa44',
+    icon: <ShowChartIcon sx={{ fontSize: 16, color: '#ffaa44' }} />,
+  },
+  крипто: {
+    label: 'Крипто',
+    color: '#ffaa44',
+    icon: <CurrencyBitcoinIcon sx={{ fontSize: 16, color: '#ffaa44' }} />,
+  },
+  рефералы: {
+    label: 'Рефералы',
+    color: '#ffaa44',
+    icon: <PeopleAltIcon sx={{ fontSize: 16, color: '#ffaa44' }} />,
+  },
+  понци: {
+    label: 'Понци',
+    color: '#ffaa44',
+    icon: <WarningAmberIcon sx={{ fontSize: 16, color: '#ffaa44' }} />,
+  },
 }
 
 // ---------- Главный компонент ----------
@@ -444,7 +494,8 @@ const CyberMediaWatchPro = () => {
   // Состояния для модального окна
   const [modalOpen, setModalOpen] = useState(false)
   const [selectedVideo, setSelectedVideo] = useState<VideoAnalysis | null>(null)
-
+  // Добавьте новое состояние для фильтра по риску
+  const [selectedRiskFilter, setSelectedRiskFilter] = useState<string[]>([])
   const isAdmin = user?.role === 'ADMIN'
   const { i18n } = useTranslation()
 
@@ -487,8 +538,13 @@ const CyberMediaWatchPro = () => {
         selectedVerdictFilter.includes(t.verdict_text)
       )
     }
+    if (selectedRiskFilter.length > 0) {
+      threats = threats.filter((t) =>
+        selectedRiskFilter.includes(t.primary_risk || '')
+      )
+    }
     return threats
-  }, [videoAnalyses, timeframe, selectedVerdictFilter])
+  }, [videoAnalyses, timeframe, selectedVerdictFilter, selectedRiskFilter])
 
   const verdictStats = useMemo(() => {
     const stats: Record<string, number> = {}
@@ -606,7 +662,7 @@ const CyberMediaWatchPro = () => {
     return (
       <Chip
         label={info.label}
-        sx={{ bgcolor: info.color, color: '#000', fontWeight: 'bold' }}
+        sx={{ bgcolor: info.color, color: '#ffffff', fontWeight: 'bold' }}
       />
     )
   }
@@ -806,7 +862,7 @@ const CyberMediaWatchPro = () => {
                 variant="caption"
                 sx={{ mt: 1, color: '#aaa', display: 'block' }}
               >
-                🧠 Мультимодальный AI: видео, аудио, OCR, граф связей. Результат
+                Мультимодальный AI: видео, аудио, OCR, граф связей. Результат
                 через 1-2 минуты.
               </Typography>
             </Card>
@@ -1016,6 +1072,58 @@ const CyberMediaWatchPro = () => {
                     )}
                   </Select>
                 </FormControl>
+                <FormControl
+                  size="small"
+                  sx={{
+                    minWidth: 180,
+                    bgcolor: 'rgba(0,0,0,0.5)',
+                    borderRadius: 2,
+                  }}
+                >
+                  <InputLabel sx={{ color: '#ffaa44' }}>
+                    Основной риск
+                  </InputLabel>
+                  <Select
+                    multiple
+                    value={selectedRiskFilter}
+                    onChange={(e) =>
+                      setSelectedRiskFilter(
+                        typeof e.target.value === 'string'
+                          ? e.target.value.split(',')
+                          : e.target.value
+                      )
+                    }
+                    label="Основной риск"
+                    renderValue={(selected) => (
+                      <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                        {selected.map((value) => (
+                          <Chip
+                            key={value}
+                            label={
+                              RISK_TYPES[value as keyof typeof RISK_TYPES]
+                                ?.label || value
+                            }
+                            size="small"
+                            sx={{
+                              bgcolor:
+                                RISK_TYPES[value as keyof typeof RISK_TYPES]
+                                  ?.color || '#ffaa44',
+                              color: '#fff',
+                            }}
+                          />
+                        ))}
+                      </Box>
+                    )}
+                  >
+                    {Object.entries(RISK_TYPES).map(
+                      ([key, { label, icon }]) => (
+                        <MenuItem key={key} value={key}>
+                          {icon} {label}
+                        </MenuItem>
+                      )
+                    )}
+                  </Select>
+                </FormControl>
               </Box>
               <Typography
                 variant="h5"
@@ -1127,7 +1235,31 @@ const CyberMediaWatchPro = () => {
                               flexWrap: 'wrap',
                             }}
                           >
+                            {video.primary_risk && (
+                              <Chip
+                                icon={
+                                  RISK_TYPES[
+                                    video.primary_risk as keyof typeof RISK_TYPES
+                                  ]?.icon
+                                }
+                                label={
+                                  RISK_TYPES[
+                                    video.primary_risk as keyof typeof RISK_TYPES
+                                  ]?.label || video.primary_risk
+                                }
+                                size="small"
+                                sx={{
+                                  bgcolor:
+                                    RISK_TYPES[
+                                      video.primary_risk as keyof typeof RISK_TYPES
+                                    ]?.color || '#ffaa44',
+                                  color: '#fff',
+                                  fontSize: '0.65rem',
+                                }}
+                              />
+                            )}
                             <Chip
+                              icon={VERDICT_TYPES[video.verdict_text]?.icon}
                               label={
                                 VERDICT_TYPES[video.verdict_text]?.label ||
                                 video.verdict_text
@@ -1194,7 +1326,36 @@ const CyberMediaWatchPro = () => {
                               </Avatar>
                             </ListItemAvatar>
                             <ListItemText
-                              primary={threat.title || 'Без названия'}
+                              primary={
+                                <Box
+                                  sx={{
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: 1,
+                                  }}
+                                >
+                                  <span>{threat.title || 'Без названия'}</span>
+                                  {threat.primary_risk && (
+                                    <Chip
+                                      label={
+                                        RISK_TYPES[
+                                          threat.primary_risk as keyof typeof RISK_TYPES
+                                        ]?.label || threat.primary_risk
+                                      }
+                                      size="small"
+                                      sx={{
+                                        bgcolor:
+                                          RISK_TYPES[
+                                            threat.primary_risk as keyof typeof RISK_TYPES
+                                          ]?.color || '#ffaa44',
+                                        color: '#fff',
+                                        fontSize: '0.6rem',
+                                        height: 20,
+                                      }}
+                                    />
+                                  )}
+                                </Box>
+                              }
                               secondary={`Дата: ${new Date(threat.checked_at).toLocaleString()} • Опасность: ${Math.round(dangerPercent)}%`}
                               primaryTypographyProps={{ color: '#fff' }}
                               secondaryTypographyProps={{ color: '#aaa' }}
@@ -1693,6 +1854,43 @@ const CyberMediaWatchPro = () => {
               >
                 <Table size="medium">
                   <TableBody>
+                    <TableRow>
+                      <TableCell
+                        sx={{
+                          color: '#0ff',
+                          fontWeight: 'bold',
+                          borderBottom: '1px solid rgba(0,255,255,0.1)',
+                        }}
+                      >
+                        Основной риск
+                      </TableCell>
+                      <TableCell
+                        sx={{
+                          color: '#fff',
+                          borderBottom: '1px solid rgba(0,255,255,0.1)',
+                        }}
+                      >
+                        {selectedVideo.primary_risk ? (
+                          <Chip
+                            label={
+                              RISK_TYPES[
+                                selectedVideo.primary_risk as keyof typeof RISK_TYPES
+                              ]?.label || selectedVideo.primary_risk
+                            }
+                            size="small"
+                            sx={{
+                              bgcolor:
+                                RISK_TYPES[
+                                  selectedVideo.primary_risk as keyof typeof RISK_TYPES
+                                ]?.color || '#ffaa44',
+                              color: '#fff',
+                            }}
+                          />
+                        ) : (
+                          'Не определен'
+                        )}
+                      </TableCell>
+                    </TableRow>
                     <TableRow>
                       <TableCell
                         sx={{

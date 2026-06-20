@@ -36,6 +36,7 @@ import ArrowUpwardIcon from '@mui/icons-material/ArrowUpward'
 import ArrowDownwardIcon from '@mui/icons-material/ArrowDownward'
 import SearchIcon from '@mui/icons-material/Search'
 import SortIcon from '@mui/icons-material/Sort'
+import QueueIcon from '@mui/icons-material/Queue'
 import CyberSidebar from '../components/CyberSidebar'
 
 interface QueueItem {
@@ -230,7 +231,7 @@ const QueueManager = () => {
           }}
         >
           <Typography variant="h4" sx={{ color: '#0ff' }}>
-            📋 Управление очередью
+            <QueueIcon sx={{ mr: 1 }} /> Управление очередью
           </Typography>
           <Button
             startIcon={<RefreshIcon />}

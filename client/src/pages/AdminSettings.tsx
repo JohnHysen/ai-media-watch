@@ -17,6 +17,11 @@ import MenuIcon from '@mui/icons-material/Menu'
 import SaveIcon from '@mui/icons-material/Save'
 import RefreshIcon from '@mui/icons-material/Refresh'
 import AddIcon from '@mui/icons-material/Add'
+import SettingsIcon from '@mui/icons-material/Settings'
+import TimerIcon from '@mui/icons-material/Timer'
+import NewsIcon from '@mui/icons-material/Feed'
+import RssFeedIcon from '@mui/icons-material/RssFeed'
+import LinkIcon from '@mui/icons-material/Link'
 import { motion } from 'framer-motion'
 import { Canvas, useFrame } from '@react-three/fiber'
 import {
@@ -352,7 +357,7 @@ const AdminSettings = () => {
               color: 'transparent',
             }}
           >
-            ⚙️ Настройки системы
+            <SettingsIcon sx={{ mr: 1 }} /> Настройки системы
           </Typography>
         </motion.div>
 
@@ -386,7 +391,7 @@ const AdminSettings = () => {
               gap: 1,
             }}
           >
-            🕒 Интервал автоматической проверки видео
+            <TimerIcon sx={{ mr: 1 }} /> Интервал автоматической проверки видео
           </Typography>
           <Box
             sx={{
@@ -445,7 +450,7 @@ const AdminSettings = () => {
               gap: 1,
             }}
           >
-            📰 Автообновление новостей
+            <NewsIcon sx={{ mr: 1 }} /> Автообновление новостей
           </Typography>
           <FormControlLabel
             control={
@@ -491,7 +496,7 @@ const AdminSettings = () => {
               gap: 1,
             }}
           >
-            📡 Интервал парсинга новостей
+            <RssFeedIcon sx={{ mr: 1 }} /> Интервал парсинга новостей
           </Typography>
           <Box
             sx={{
@@ -550,7 +555,7 @@ const AdminSettings = () => {
               gap: 1,
             }}
           >
-            📰 Источники новостей (RSS)
+            <LinkIcon sx={{ mr: 1 }} /> Источники новостей (RSS)
           </Typography>
           <Box sx={{ display: 'flex', gap: 1, mb: 2 }}>
             <TextField

@@ -31,6 +31,12 @@ import TrendingDownIcon from '@mui/icons-material/TrendingDown'
 import TrendingUpIcon from '@mui/icons-material/TrendingUp'
 import PersonIcon from '@mui/icons-material/Person'
 import PeopleIcon from '@mui/icons-material/People'
+import CasinoIcon from '@mui/icons-material/Casino'
+import AccountTreeIcon from '@mui/icons-material/AccountTree'
+import ShowChartIcon from '@mui/icons-material/ShowChart'
+import CurrencyBitcoinIcon from '@mui/icons-material/CurrencyBitcoin'
+import PeopleAltIcon from '@mui/icons-material/PeopleAlt'
+import WarningAmberIcon from '@mui/icons-material/WarningAmber'
 import { useUser } from '../context/user/useUser'
 import { motion } from 'framer-motion'
 import { Canvas, useFrame } from '@react-three/fiber'
@@ -124,6 +130,39 @@ const VERDICT_MAP = {
   safe: { label: 'Безопасно', color: '#44ff66' },
   dangerous: { label: 'Опасно', color: '#ff3366' },
   uncertain: { label: 'Неопределённо', color: '#ffaa44' },
+}
+
+const RISK_MAP = {
+  казино: {
+    label: 'Казино',
+    color: '#ff3366',
+    icon: <CasinoIcon sx={{ fontSize: 14 }} />,
+  },
+  пирамида: {
+    label: 'Пирамида',
+    color: '#ffaa44',
+    icon: <AccountTreeIcon sx={{ fontSize: 14 }} />,
+  },
+  инвестиции: {
+    label: 'Инвестиции',
+    color: '#ffaa44',
+    icon: <ShowChartIcon sx={{ fontSize: 14 }} />,
+  },
+  крипто: {
+    label: 'Крипто',
+    color: '#ffaa44',
+    icon: <CurrencyBitcoinIcon sx={{ fontSize: 14 }} />,
+  },
+  рефералы: {
+    label: 'Рефералы',
+    color: '#ffaa44',
+    icon: <PeopleAltIcon sx={{ fontSize: 14 }} />,
+  },
+  понци: {
+    label: 'Понци',
+    color: '#ffaa44',
+    icon: <WarningAmberIcon sx={{ fontSize: 14 }} />,
+  },
 }
 
 // ---------- Главный компонент ----------
@@ -310,7 +349,7 @@ const History = () => {
                 fontSize: '1.1rem',
               }}
             >
-              👤 Мои проверки
+              Мои проверки
             </Button>
             <Button
               variant={mode === 'all' ? 'contained' : 'outlined'}
@@ -340,7 +379,7 @@ const History = () => {
                 fontSize: '1.1rem',
               }}
             >
-              🌐 Все проверки
+              Все проверки
             </Button>
           </Box>
 
@@ -468,6 +507,9 @@ const History = () => {
                     Вердикт
                   </TableCell>
                   <TableCell sx={{ color: '#0ff', fontWeight: 'bold' }}>
+                    Основной риск
+                  </TableCell>
+                  <TableCell sx={{ color: '#0ff', fontWeight: 'bold' }}>
                     Дата проверки
                   </TableCell>
                 </TableRow>
@@ -507,6 +549,8 @@ const History = () => {
                       label: item.verdict_text,
                       color: '#aaa',
                     }
+                    const riskInfo =
+                      RISK_MAP[item.primary_risk as keyof typeof RISK_MAP]
                     return (
                       <TableRow
                         key={item.id}
@@ -553,10 +597,32 @@ const History = () => {
                             size="small"
                             sx={{
                               bgcolor: verdictInfo.color,
-                              color: '#000',
+                              color: '#ffffff',
                               fontWeight: 'bold',
                             }}
                           />
+                        </TableCell>
+                        <TableCell>
+                          {riskInfo ? (
+                            <Chip
+                              icon={riskInfo.icon}
+                              label={riskInfo.label}
+                              size="small"
+                              sx={{
+                                bgcolor: riskInfo.color,
+                                color: '#fff',
+                                fontWeight: 'bold',
+                                '& .MuiChip-icon': { color: '#fff' },
+                              }}
+                            />
+                          ) : (
+                            <Typography
+                              variant="caption"
+                              sx={{ color: '#666' }}
+                            >
+                              Не определен
+                            </Typography>
+                          )}
                         </TableCell>
                         <TableCell sx={{ color: '#aaa', fontSize: '0.85rem' }}>
                           {new Date(item.checked_at).toLocaleString()}

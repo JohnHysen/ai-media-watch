@@ -40,7 +40,8 @@ app.add_middleware(
 @app.get("/analyze")
 async def analyze(
     url: str,
-    userId: Optional[int] = None
+    userId: Optional[int] = None,
+    background_tasks: BackgroundTasks = None
 ):
     start_time = time.time()
     analyze_id = str(uuid.uuid4())
@@ -79,6 +80,7 @@ async def analyze(
         # === Подготовка результата для ответа клиенту ===
         is_dangerous = verdict.get("is_dangerous", False)
         confidence = verdict.get("confidence", 0.0)
+        primary_risk = verdict.get("primary_risk", "не определен")
 
         if is_dangerous:
             safety_percent = round((1 - confidence) * 100, 2)
@@ -97,6 +99,7 @@ async def analyze(
 
         verdict_text = verdict_text.strip().lower()
         logger.info(f"РЕЗУЛЬТАТ: {verdict_text.upper()} ({confidence:.0%})")
+        logger.info(f"ОСНОВНОЙ РИСК: {primary_risk}")
 
         return {
             "video_url": url,
@@ -108,6 +111,7 @@ async def analyze(
             "duration_seconds": duration_seconds,
             "preview_image_url": preview_image,
             "checked_at": datetime.now().isoformat(),
+            "primary_risk": primary_risk
         }
 
     except Exception as e:

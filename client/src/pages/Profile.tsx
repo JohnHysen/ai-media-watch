@@ -26,6 +26,17 @@ import {
 } from '@mui/material'
 import MenuIcon from '@mui/icons-material/Menu'
 import PhotoCameraIcon from '@mui/icons-material/PhotoCamera'
+import CheckCircleIcon from '@mui/icons-material/CheckCircle'
+import WarningIcon from '@mui/icons-material/Warning'
+import HelpIcon from '@mui/icons-material/Help'
+import HistoryIcon from '@mui/icons-material/History'
+import TrendingUpIcon from '@mui/icons-material/TrendingUp'
+import TrendingDownIcon from '@mui/icons-material/TrendingDown'
+import SecurityIcon from '@mui/icons-material/Security'
+import ShieldIcon from '@mui/icons-material/Shield'
+import PersonIcon from '@mui/icons-material/Person'
+import EmailIcon from '@mui/icons-material/Email'
+import AdminPanelSettingsIcon from '@mui/icons-material/AdminPanelSettings'
 import StarIcon from '@mui/icons-material/Star'
 import { useUser } from '../context/user/useUser'
 import { motion } from 'framer-motion'
@@ -373,9 +384,9 @@ const Profile = () => {
                         mx: 'auto',
                       }}
                     >
-                      {!avatarPreview &&
-                        !user.photoURL &&
-                        (user.first_name?.[0] || user.email?.[0])}
+                      {!avatarPreview && !user.photoURL && (
+                        <PersonIcon sx={{ fontSize: 60, color: '#aaa' }} />
+                      )}
                     </Avatar>
                     <IconButton
                       sx={{
@@ -398,6 +409,13 @@ const Profile = () => {
                     {user.email}
                   </Typography>
                   <Chip
+                    icon={
+                      user.role === 'ADMIN' ? (
+                        <AdminPanelSettingsIcon />
+                      ) : (
+                        <PersonIcon />
+                      )
+                    }
                     label={
                       user.role === 'ADMIN' ? 'Администратор' : 'Пользователь'
                     }
@@ -436,7 +454,7 @@ const Profile = () => {
                       gap: 1,
                     }}
                   >
-                    <StarIcon /> Ваша активность
+                    <HistoryIcon /> Ваша активность
                   </Typography>
                   {loading ? (
                     <CircularProgress sx={{ color: '#0ff' }} />
@@ -508,7 +526,8 @@ const Profile = () => {
                   }}
                 >
                   <Typography variant="h6" sx={{ color: '#0ff', mb: 2 }}>
-                    📊 Активность за последние 7 дней
+                    <TrendingUpIcon sx={{ mr: 1 }} /> Активность за последние 7
+                    дней
                   </Typography>
                   {loading ? (
                     <CircularProgress sx={{ color: '#0ff' }} />
@@ -554,7 +573,7 @@ const Profile = () => {
                       }}
                     >
                       <Typography variant="h6" sx={{ color: '#0ff', mb: 2 }}>
-                        🥧 Вердикты
+                        <SecurityIcon sx={{ mr: 1 }} /> Вердикты
                       </Typography>
                       {loading ? (
                         <CircularProgress sx={{ color: '#0ff' }} />
@@ -610,7 +629,7 @@ const Profile = () => {
                       }}
                     >
                       <Typography variant="h6" sx={{ color: '#0ff', mb: 2 }}>
-                        🕒 Последние проверки
+                        <HistoryIcon sx={{ mr: 1 }} /> Последние проверки
                       </Typography>
                       {loading ? (
                         <CircularProgress sx={{ color: '#0ff' }} />
@@ -636,11 +655,13 @@ const Profile = () => {
                                         '#aaa',
                                     }}
                                   >
-                                    {check.verdict_text === 'safe'
-                                      ? '✅'
-                                      : check.verdict_text === 'dangerous'
-                                        ? '⚠️'
-                                        : '❓'}
+                                    {check.verdict_text === 'safe' ? (
+                                      <CheckCircleIcon sx={{ color: '#fff' }} />
+                                    ) : check.verdict_text === 'dangerous' ? (
+                                      <WarningIcon sx={{ color: '#fff' }} />
+                                    ) : (
+                                      <HelpIcon sx={{ color: '#fff' }} />
+                                    )}
                                   </Avatar>
                                 </ListItemAvatar>
                                 <ListItemText

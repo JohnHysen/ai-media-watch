@@ -52,6 +52,8 @@ export const createVideoAnalysis = async (req: Request, res: Response) => {
       duration_seconds,
       preview_image_url,
       checked_at,
+      reason,
+      primary_risk,
     } = req.body
 
     if (
@@ -86,6 +88,8 @@ export const createVideoAnalysis = async (req: Request, res: Response) => {
       preview_image_url: preview_image_url || null,
       checked_at: checked_at ? new Date(checked_at) : new Date(),
       userId,
+      reason: reason || null,
+      primary_risk: primary_risk || null,
     })
 
     res.status(201).json(analysis)
@@ -124,6 +128,7 @@ export const createVideoAnalysisInternal = async (
       duration_seconds,
       preview_image_url,
       checked_at,
+      primary_risk,
       userId,
     } = req.body
 
@@ -153,6 +158,7 @@ export const createVideoAnalysisInternal = async (
       duration_seconds,
       preview_image_url: preview_image_url || null,
       checked_at: checked_at ? new Date(checked_at) : new Date(),
+      primary_risk: primary_risk || null,
       userId: userId || null,
     })
 

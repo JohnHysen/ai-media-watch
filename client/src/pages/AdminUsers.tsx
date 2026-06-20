@@ -23,6 +23,7 @@ import {
 import SearchIcon from '@mui/icons-material/Search'
 import RefreshIcon from '@mui/icons-material/Refresh'
 import MenuIcon from '@mui/icons-material/Menu'
+import PeopleIcon from '@mui/icons-material/People'
 import { $host } from '../http/API'
 import { useUser } from '../context/user/useUser'
 import { toast } from 'react-toastify'
@@ -365,7 +366,7 @@ const AdminUsers = () => {
               color: 'transparent',
             }}
           >
-            👥 Управление пользователями
+            <PeopleIcon sx={{ mr: 1 }} /> Управление пользователями
           </Typography>
           <Button
             startIcon={<RefreshIcon />}

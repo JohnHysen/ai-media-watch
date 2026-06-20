@@ -131,6 +131,7 @@ const processQueue = async () => {
           preview_image_url: data.preview_image_url || null,
           checked_at: data.checked_at ? new Date(data.checked_at) : new Date(),
           userId: job.userId,
+          primary_risk: data.primary_risk || null,
         }
 
         // ✅ Меняем статус на PROCESSING непосредственно перед сохранением
