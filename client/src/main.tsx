@@ -23,6 +23,7 @@ import History from './pages/History'
 import Analytics from './pages/Analytics'
 import AdminUsers from './pages/AdminUsers'
 import AdminSettings from './pages/AdminSettings.tsx'
+import QueueManager from './pages/QueueManager'
 
 const font = 'teletext, "Roboto", "Arial", sans-serif'
 
@@ -100,6 +101,12 @@ const router = createBrowserRouter([
       {
         path: '/settings',
         element: <WithAuth c={<AdminSettings />} roles={['ADMIN']} />,
+      },
+      {
+        path: '/queue',
+        element: (
+          <WithAuth c={<QueueManager />} roles={['INSPECTOR', 'ADMIN']} />
+        ),
       },
     ],
   },
