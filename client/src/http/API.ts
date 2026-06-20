@@ -1,6 +1,7 @@
 import axios from 'axios'
 import { toast } from 'react-toastify'
 import { baseURL } from '../config'
+
 export const $host = axios.create({ baseURL })
 
 $host.interceptors.request.use((config) => {
@@ -11,6 +12,7 @@ $host.interceptors.request.use((config) => {
   return config
 })
 
+// ========== Auth ==========
 export const signUp = async (
   first_name: string,
   last_name: string,
@@ -24,38 +26,34 @@ export const signUp = async (
       email,
       password,
     })
-
     toast.success(res.data.message)
-
     return res.data
   } catch (e: any) {
     if (e.response?.data?.message) toast.error(e.response.data.message)
     console.log(e)
   }
 }
+
 export const signIn = async (email: string, password: string) => {
   try {
     const res = await $host.post('auth/signin', {
       email,
       password,
     })
-
     toast.success(res.data.message)
-
     return res.data
   } catch (e: any) {
     if (e.response?.data?.message) toast.error(e.response.data.message)
     console.log(e)
   }
 }
+
 export const googleLogin = async (idToken: string) => {
   try {
     const res = await $host.post('auth/google', {
       idToken,
     })
-
     toast.success(res.data.message)
-
     return res.data
   } catch (e: any) {
     if (e.response?.data?.message) toast.error(e.response.data.message)
@@ -63,6 +61,7 @@ export const googleLogin = async (idToken: string) => {
   }
 }
 
+// ========== User ==========
 export const bindTg = async (tg_id: string) => {
   try {
     const res = await $host.post('user/bind_tg', { tg_id })
@@ -110,9 +109,7 @@ export const confirmEmail = async (secret: string) => {
 export const getUsers = async (id?: string) => {
   try {
     const res = await $host.get('auth/users', { params: { id } })
-
     toast.success(res.data.message)
-
     return res.data
   } catch (e: any) {
     if (e.response?.data?.message) toast.error(e.response.data.message)
@@ -120,8 +117,24 @@ export const getUsers = async (id?: string) => {
   }
 }
 
-// ========== Video Analysis API ==========
+export const verify = async () => {
+  try {
+    const res = await $host.post('user/verify')
+    return res.data
+  } catch (e: any) {
+    console.log(e)
+  }
+}
 
+export const getUserStats = () => $host.get('/user/stats')
+export const getUserActivity = (days = 7) =>
+  $host.get(`/user/activity?days=${days}`)
+export const getVerdictDistribution = () =>
+  $host.get('/user/verdict-distribution')
+export const getRecentChecks = (limit = 5) =>
+  $host.get(`/user/recent-checks?limit=${limit}`)
+
+// ========== Video Analysis ==========
 export interface VideoAnalysis {
   id: number
   video_url: string
@@ -146,7 +159,6 @@ export interface VideoAnalysis {
   }
 }
 
-// Получить все видео-анализы (с фильтрацией и пагинацией)
 export const getVideoAnalyses = async (params?: {
   is_dangerous?: boolean
   user_id?: number
@@ -166,7 +178,6 @@ export const getVideoAnalyses = async (params?: {
   }
 }
 
-// Получить один видео-анализ по ID
 export const getVideoAnalysisById = async (id: number) => {
   try {
     const res = await $host.get<VideoAnalysis>(`video-analysis/${id}`)
@@ -178,7 +189,6 @@ export const getVideoAnalysisById = async (id: number) => {
   }
 }
 
-// Получить анализы конкретного пользователя
 export const getVideoAnalysesByUser = async (user_id: number) => {
   try {
     const res = await $host.get<VideoAnalysis[]>(
@@ -192,7 +202,6 @@ export const getVideoAnalysesByUser = async (user_id: number) => {
   }
 }
 
-// Удалить анализ (только для админа или владельца)
 export const deleteVideoAnalysis = async (id: number) => {
   try {
     const res = await $host.delete(`video-analysis/${id}`)
@@ -205,23 +214,7 @@ export const deleteVideoAnalysis = async (id: number) => {
   }
 }
 
-export const verify = async () => {
-  try {
-    const res = await $host.post('user/verify')
-    return res.data
-  } catch (e: any) {
-    console.log(e)
-  }
-}
-
-export const getUserStats = () => $host.get('/user/stats')
-export const getUserActivity = (days = 7) =>
-  $host.get(`/user/activity?days=${days}`)
-export const getVerdictDistribution = () =>
-  $host.get('/user/verdict-distribution')
-export const getRecentChecks = (limit = 5) =>
-  $host.get(`/user/recent-checks?limit=${limit}`)
-
+// ========== Queue ==========
 export const createAnalysisJob = async (url: string) => {
   try {
     const res = await $host.post('analysis-queue', {
@@ -230,5 +223,116 @@ export const createAnalysisJob = async (url: string) => {
     return res.data
   } catch (e: any) {
     console.log(e)
+  }
+}
+
+// ============================================================
+//  НОВЫЕ МЕТОДЫ ДЛЯ УПРАВЛЕНИЯ НАСТРОЙКАМИ И ПАРСИНГОМ
+// ============================================================
+
+// ---------- Интерфейсы ----------
+export interface SystemSettings {
+  scanInterval: number
+  autoRefreshNews: boolean
+  newsParseInterval: number
+  newsSources: string[]
+  videoScrapeInterval: number
+  scrapeLimitPerPlatform: number
+  scrapeTimeoutSeconds: number
+  enableYouTube: boolean
+  enableTikTok: boolean
+  enableInstagram: boolean
+  scrapingEnabled: boolean
+}
+
+export interface ScrapeStatus {
+  scrapingEnabled: boolean
+  lastRun: string | null
+  addedCount: number
+  totalFound: number
+  error: string | null
+  queueCount: number
+  totalAnalyzed: number
+}
+
+// ---------- Получить все настройки ----------
+export const getSettings = async (): Promise<SystemSettings> => {
+  try {
+    const res = await $host.get<SystemSettings>('/settings')
+    return res.data
+  } catch (e: any) {
+    if (e.response?.data?.error) toast.error(e.response.data.error)
+    console.log(e)
+    throw e
+  }
+}
+
+// ---------- Обновить настройки ----------
+export const updateSettings = async (
+  settings: SystemSettings
+): Promise<{ message: string; settings: SystemSettings }> => {
+  try {
+    const res = await $host.put<{ message: string; settings: SystemSettings }>(
+      '/settings',
+      settings
+    )
+    toast.success(res.data.message)
+    return res.data
+  } catch (e: any) {
+    if (e.response?.data?.error) toast.error(e.response.data.error)
+    console.log(e)
+    throw e
+  }
+}
+
+// ---------- Включить/выключить циклический парсинг ----------
+export const toggleScraping = async (): Promise<{
+  message: string
+  scrapingEnabled: boolean
+}> => {
+  try {
+    const res = await $host.post<{
+      message: string
+      scrapingEnabled: boolean
+    }>('/settings/toggle-scraping')
+    toast.success(res.data.message)
+    return res.data
+  } catch (e: any) {
+    if (e.response?.data?.error) toast.error(e.response.data.error)
+    console.log(e)
+    throw e
+  }
+}
+
+// ---------- Ручной запуск сбора видео ----------
+export const triggerScrape = async (): Promise<{
+  message: string
+  addedCount: number
+  totalFound: number
+}> => {
+  try {
+    const res = await $host.post<{
+      message: string
+      addedCount: number
+      totalFound: number
+    }>('/settings/scrape-video')
+    toast.success(res.data.message)
+    return res.data
+  } catch (e: any) {
+    if (e.response?.data?.error) toast.error(e.response.data.error)
+    console.log(e)
+    throw e
+  }
+}
+
+// ---------- Получить статус парсинга ----------
+export const getScrapeStatus = async (): Promise<ScrapeStatus> => {
+  try {
+    const res = await $host.get<ScrapeStatus>('/settings/status')
+    return res.data
+  } catch (e: any) {
+    if (e.response?.data?.error) toast.error(e.response.data.error)
+    console.log(e)
+    throw e
   }
 }

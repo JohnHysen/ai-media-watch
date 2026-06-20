@@ -2,7 +2,7 @@ import asyncio
 import os
 import re
 from playwright.async_api import async_playwright
-from queue_client import add_video_to_queue
+from queue_client import add_video_to_queue  # ✅ относительный импорт
 
 # Файл для сохранения состояния браузера
 STATE_FILE = "tiktok_state.json"

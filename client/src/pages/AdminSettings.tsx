@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useMemo } from 'react'
+import React, { useState, useEffect } from 'react'
 import {
   Box,
   Typography,
@@ -12,6 +12,8 @@ import {
   Alert,
   Slider,
   CircularProgress,
+  Grid,
+  Paper,
 } from '@mui/material'
 import MenuIcon from '@mui/icons-material/Menu'
 import SaveIcon from '@mui/icons-material/Save'
@@ -22,136 +24,44 @@ import TimerIcon from '@mui/icons-material/Timer'
 import NewsIcon from '@mui/icons-material/Feed'
 import RssFeedIcon from '@mui/icons-material/RssFeed'
 import LinkIcon from '@mui/icons-material/Link'
+import PlayArrowIcon from '@mui/icons-material/PlayArrow'
+import StopIcon from '@mui/icons-material/Stop'
+import AnalyticsIcon from '@mui/icons-material/Analytics'
+import CloudDownloadIcon from '@mui/icons-material/CloudDownload'
+import WarningIcon from '@mui/icons-material/Warning'
 import { motion } from 'framer-motion'
-import { Canvas, useFrame } from '@react-three/fiber'
-import {
-  OrbitControls,
-  Float,
-  Environment,
-  Html,
-  Stars,
-} from '@react-three/drei'
-import * as THREE from 'three'
 import CyberSidebar from '../components/CyberSidebar'
 import { useUser } from '../context/user/useUser'
 import { $host } from '../http/API'
 import { toast } from 'react-toastify'
 
-// ---------- 3D фон ----------
-const FloatingIconsOnly = () => {
-  const groupRef = useRef<THREE.Group>(null!)
-  const elements = useMemo(
-    () => [
-      {
-        symbol: '⚙️',
-        color: '#33ffcc',
-        size: 2.0,
-        startX: -2,
-        startY: 1,
-        startZ: -3,
-      },
-      {
-        symbol: '🔧',
-        color: '#ffaa44',
-        size: 1.8,
-        startX: 3,
-        startY: -1,
-        startZ: -2,
-      },
-      {
-        symbol: '📊',
-        color: '#ff3366',
-        size: 1.8,
-        startX: 0,
-        startY: 2.5,
-        startZ: -4,
-      },
-      {
-        symbol: '🛡️',
-        color: '#aa66ff',
-        size: 1.5,
-        startX: -3,
-        startY: -2,
-        startZ: -3,
-      },
-    ],
-    []
-  )
-
-  const motions = useMemo(
-    () =>
-      elements.map(() => ({
-        ampX: 2.0 + Math.random() * 1.5,
-        ampY: 1.5 + Math.random() * 1.2,
-        ampZ: 1.2 + Math.random() * 1.0,
-        freqX: 0.12 + Math.random() * 0.08,
-        freqY: 0.1 + Math.random() * 0.08,
-        freqZ: 0.09 + Math.random() * 0.07,
-        phaseX: Math.random() * Math.PI * 2,
-        phaseY: Math.random() * Math.PI * 2,
-        phaseZ: Math.random() * Math.PI * 2,
-        rotSpeed: 0.003 + Math.random() * 0.003,
-      })),
-    []
-  )
-
-  useFrame(({ clock }) => {
-    const t = clock.getElapsedTime()
-    if (groupRef.current) {
-      groupRef.current.children.forEach((child, idx) => {
-        const el = elements[idx]
-        const m = motions[idx]
-        if (el && m) {
-          const x = el.startX + m.ampX * Math.sin(m.freqX * t + m.phaseX)
-          const y = el.startY + m.ampY * Math.sin(m.freqY * t + m.phaseY)
-          const z = el.startZ + m.ampZ * Math.sin(m.freqZ * t + m.phaseZ)
-          child.position.set(x, y, z)
-          child.rotation.y += m.rotSpeed
-          child.rotation.x += m.rotSpeed * 0.5
-        }
-      })
-    }
-  })
-
-  return (
-    <group ref={groupRef}>
-      {elements.map((el, idx) => (
-        <Float
-          key={idx}
-          speed={0.4}
-          rotationIntensity={0.15}
-          floatIntensity={0.2}
-        >
-          <mesh position={[el.startX, el.startY, el.startZ]}>
-            <planeGeometry args={[el.size, el.size]} />
-            <meshStandardMaterial
-              color={el.color}
-              emissive={el.color}
-              emissiveIntensity={0.25}
-              side={THREE.DoubleSide}
-              transparent
-              opacity={0.9}
-            />
-            <Html distanceFactor={14} position={[0, 0, 0.05]} transform center>
-              <div
-                style={{
-                  fontSize: `${el.size * 45}px`,
-                  textAlign: 'center',
-                  filter: `drop-shadow(0 0 8px ${el.color})`,
-                  pointerEvents: 'none',
-                }}
-              >
-                {el.symbol}
-              </div>
-            </Html>
-          </mesh>
-        </Float>
-      ))}
-    </group>
-  )
+// ---------- Интерфейсы ----------
+interface Settings {
+  scanInterval: number
+  autoRefreshNews: boolean
+  newsParseInterval: number
+  newsSources: string[]
+  videoScrapeInterval: number
+  scrapeLimitPerPlatform: number
+  scrapeTimeoutSeconds: number
+  enableYouTube: boolean
+  enableTikTok: boolean
+  enableInstagram: boolean
+  scrapingEnabled: boolean
 }
 
-const CyberBackground3D = () => (
+interface ScrapeStatus {
+  scrapingEnabled: boolean
+  lastRun: string | null
+  addedCount: number
+  totalFound: number
+  error: string | null
+  queueCount: number
+  totalAnalyzed: number
+}
+
+// ---------- Геометрический фон ----------
+const GeometricBackground = () => (
   <Box
     sx={{
       position: 'fixed',
@@ -161,45 +71,58 @@ const CyberBackground3D = () => (
       height: '100%',
       zIndex: -1,
       backgroundColor: '#03030f',
+      overflow: 'hidden',
     }}
   >
-    <Canvas
-      camera={{ position: [0, 1, 14], fov: 50 }}
-      dpr={[1, 2]}
-      performance={{ min: 0.5 }}
+    <Box
+      component="svg"
+      sx={{ width: '100%', height: '100%', opacity: 0.3 }}
+      viewBox="0 0 1000 1000"
+      preserveAspectRatio="none"
     >
-      <ambientLight intensity={0.5} />
-      <pointLight position={[10, 10, 10]} intensity={0.7} />
-      <pointLight position={[-5, -5, 5]} color="#ff3366" intensity={0.3} />
-      <FloatingIconsOnly />
-      <Stars
-        radius={100}
-        depth={50}
-        count={1200}
-        factor={4}
-        saturation={0}
-        fade
-        speed={0.2}
+      <polygon points="0,0 200,0 100,200" fill="#33ffcc" opacity="0.3" />
+      <polygon points="300,0 500,0 400,300" fill="#ff3366" opacity="0.2" />
+      <polygon points="600,0 800,0 700,200" fill="#ffaa44" opacity="0.25" />
+      <polygon points="850,0 1000,0 900,250" fill="#aa66ff" opacity="0.2" />
+      <polygon points="0,300 200,200 100,500" fill="#33ffcc" opacity="0.15" />
+      <polygon points="500,500 700,400 600,700" fill="#ff3366" opacity="0.2" />
+      <polygon points="200,800 400,700 300,950" fill="#ffaa44" opacity="0.25" />
+      <polygon points="600,800 800,700 700,950" fill="#aa66ff" opacity="0.2" />
+      <circle cx="800" cy="200" r="80" fill="#33ffcc" opacity="0.15" />
+      <circle cx="200" cy="600" r="60" fill="#ff3366" opacity="0.2" />
+      <circle cx="700" cy="700" r="100" fill="#ffaa44" opacity="0.15" />
+      <rect
+        x="100"
+        y="200"
+        width="40"
+        height="40"
+        fill="#33ffcc"
+        opacity="0.2"
+        transform="rotate(45, 120, 220)"
       />
-      <Environment preset="night" />
-      <OrbitControls
-        enableZoom={false}
-        enablePan={false}
-        autoRotate
-        autoRotateSpeed={0.15}
-        target={[0, 0, 0]}
+      <rect
+        x="800"
+        y="500"
+        width="50"
+        height="50"
+        fill="#ff3366"
+        opacity="0.2"
+        transform="rotate(30, 825, 525)"
       />
-    </Canvas>
+      <rect
+        x="400"
+        y="100"
+        width="60"
+        height="60"
+        fill="#aa66ff"
+        opacity="0.15"
+        transform="rotate(60, 430, 130)"
+      />
+    </Box>
   </Box>
 )
 
-interface Settings {
-  scanInterval: number
-  autoRefreshNews: boolean
-  newsParseInterval: number
-  newsSources: string[]
-}
-
+// ---------- Главный компонент ----------
 const AdminSettings = () => {
   const { user } = useUser()
   const [drawerOpen, setDrawerOpen] = useState(false)
@@ -208,10 +131,29 @@ const AdminSettings = () => {
     autoRefreshNews: true,
     newsParseInterval: 60,
     newsSources: [],
+    videoScrapeInterval: 60,
+    scrapeLimitPerPlatform: 5,
+    scrapeTimeoutSeconds: 30,
+    enableYouTube: true,
+    enableTikTok: true,
+    enableInstagram: true,
+    scrapingEnabled: false,
+  })
+  const [status, setStatus] = useState<ScrapeStatus>({
+    scrapingEnabled: false,
+    lastRun: null,
+    addedCount: 0,
+    totalFound: 0,
+    error: null,
+    queueCount: 0,
+    totalAnalyzed: 0,
   })
   const [newSource, setNewSource] = useState('')
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
+  const [toggling, setToggling] = useState(false)
+  const [statusLoading, setStatusLoading] = useState(false)
+  const [scrapingManually, setScrapingManually] = useState(false)
   const [error, setError] = useState('')
 
   const isAdmin = user?.role === 'ADMIN'
@@ -229,13 +171,41 @@ const AdminSettings = () => {
             : true,
         newsParseInterval: res.data.newsParseInterval || 60,
         newsSources: res.data.newsSources || [],
+        videoScrapeInterval: res.data.videoScrapeInterval || 60,
+        scrapeLimitPerPlatform: res.data.scrapeLimitPerPlatform || 5,
+        scrapeTimeoutSeconds: res.data.scrapeTimeoutSeconds || 30,
+        enableYouTube:
+          res.data.enableYouTube !== undefined ? res.data.enableYouTube : true,
+        enableTikTok:
+          res.data.enableTikTok !== undefined ? res.data.enableTikTok : true,
+        enableInstagram:
+          res.data.enableInstagram !== undefined
+            ? res.data.enableInstagram
+            : true,
+        scrapingEnabled:
+          res.data.scrapingEnabled !== undefined
+            ? res.data.scrapingEnabled
+            : false,
       })
+      await fetchStatus()
     } catch (err: any) {
       console.error('Ошибка загрузки настроек:', err)
       setError('Не удалось загрузить настройки')
       toast.error('Ошибка загрузки настроек')
     } finally {
       setLoading(false)
+    }
+  }
+
+  const fetchStatus = async () => {
+    setStatusLoading(true)
+    try {
+      const res = await $host.get('/settings/status')
+      setStatus(res.data)
+    } catch (err) {
+      console.error('Ошибка загрузки статуса:', err)
+    } finally {
+      setStatusLoading(false)
     }
   }
 
@@ -249,6 +219,7 @@ const AdminSettings = () => {
     try {
       await $host.put('/settings', settings)
       toast.success('Настройки сохранены')
+      await fetchStatus()
     } catch (err: any) {
       console.error('Ошибка сохранения:', err)
       setError('Не удалось сохранить настройки')
@@ -279,6 +250,44 @@ const AdminSettings = () => {
     }))
   }
 
+  // ============================================================
+  // УПРАВЛЕНИЕ ПАРСИНГОМ
+  // ============================================================
+  const handleToggleScraping = async () => {
+    setToggling(true)
+    try {
+      const res = await $host.post('/settings/toggle-scraping')
+      setSettings((prev) => ({
+        ...prev,
+        scrapingEnabled: res.data.scrapingEnabled,
+      }))
+      toast.success(res.data.message)
+      await fetchStatus()
+    } catch (err: any) {
+      console.error('Ошибка переключения парсинга:', err)
+      toast.error(err.response?.data?.error || 'Ошибка переключения парсинга')
+    } finally {
+      setToggling(false)
+    }
+  }
+
+  const handleManualScrape = async () => {
+    setScrapingManually(true)
+    try {
+      const res = await $host.post('/settings/scrape-video')
+      toast.success(res.data.message || 'Сбор видео запущен')
+      await fetchStatus()
+    } catch (err: any) {
+      console.error('Ошибка ручного запуска:', err)
+      toast.error(err.response?.data?.error || 'Ошибка запуска сбора')
+    } finally {
+      setScrapingManually(false)
+    }
+  }
+
+  const handleDrawerOpen = () => setDrawerOpen(true)
+  const handleDrawerClose = () => setDrawerOpen(false)
+
   if (!isAdmin) {
     return (
       <Box
@@ -288,6 +297,7 @@ const AdminSettings = () => {
           alignItems: 'center',
           justifyContent: 'center',
           color: '#fff',
+          backgroundColor: '#03030f',
         }}
       >
         <Typography variant="h5">
@@ -305,6 +315,7 @@ const AdminSettings = () => {
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
+          backgroundColor: '#03030f',
         }}
       >
         <CircularProgress sx={{ color: '#0ff' }} />
@@ -314,23 +325,29 @@ const AdminSettings = () => {
 
   return (
     <Box sx={{ minHeight: '100vh', position: 'relative', overflowX: 'hidden' }}>
-      <CyberBackground3D />
-      <IconButton
-        onClick={() => setDrawerOpen(true)}
-        sx={{
-          position: 'fixed',
-          top: 20,
-          left: 20,
-          zIndex: 1300,
-          color: '#0ff',
-          bgcolor: 'rgba(0,0,0,0.6)',
-          backdropFilter: 'blur(10px)',
-          '&:hover': { bgcolor: '#0ff', color: '#000' },
-        }}
-      >
-        <MenuIcon />
-      </IconButton>
-      <CyberSidebar open={drawerOpen} onClose={() => setDrawerOpen(false)} />
+      <GeometricBackground />
+
+      {!drawerOpen && (
+        <IconButton
+          onClick={handleDrawerOpen}
+          sx={{
+            position: 'fixed',
+            top: 20,
+            left: 20,
+            zIndex: 1200,
+            color: '#0ff',
+            bgcolor: 'rgba(0,0,0,0.6)',
+            backdropFilter: 'blur(10px)',
+            '&:hover': { bgcolor: '#0ff', color: '#000' },
+            transition: 'opacity 0.3s',
+          }}
+        >
+          <MenuIcon />
+        </IconButton>
+      )}
+
+      <CyberSidebar open={drawerOpen} onClose={handleDrawerClose} />
+
       <Box
         sx={{
           position: 'relative',
@@ -370,10 +387,12 @@ const AdminSettings = () => {
           </Alert>
         )}
 
-        {/* Интервал проверки видео */}
+        {/* ============================================ */}
+        {/* ПАНЕЛЬ 1: УПРАВЛЕНИЕ ПАРСИНГОМ */}
+        {/* ============================================ */}
         <Card
           sx={{
-            mb: 3,
+            mb: 4,
             bgcolor: 'rgba(10,10,30,0.7)',
             backdropFilter: 'blur(8px)',
             borderRadius: 4,
@@ -382,27 +401,413 @@ const AdminSettings = () => {
           }}
         >
           <Typography
-            variant="h6"
+            variant="h5"
             sx={{
               color: '#33ffcc',
-              mb: 2,
+              mb: 3,
               display: 'flex',
               alignItems: 'center',
               gap: 1,
             }}
           >
-            <TimerIcon sx={{ mr: 1 }} /> Интервал автоматической проверки видео
+            <CloudDownloadIcon /> Управление парсингом
           </Typography>
-          <Box
+
+          <Grid container spacing={3}>
+            {/* Левая колонка: управление */}
+            <Grid size={{ xs: 12, md: 6 }}>
+              {/* КНОПКА ЗАПУСКА/ОСТАНОВКИ (ПЕРВАЯ) */}
+              <Box
+                sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 3 }}
+              >
+                <Button
+                  variant="contained"
+                  onClick={handleToggleScraping}
+                  disabled={toggling}
+                  startIcon={
+                    toggling ? (
+                      <CircularProgress size={20} sx={{ color: '#000' }} />
+                    ) : settings.scrapingEnabled ? (
+                      <StopIcon />
+                    ) : (
+                      <PlayArrowIcon />
+                    )
+                  }
+                  sx={{
+                    bgcolor: settings.scrapingEnabled ? '#ff3366' : '#33ffcc',
+                    color: '#000',
+                    '&:hover': {
+                      bgcolor: settings.scrapingEnabled ? '#ff0000' : '#00e676',
+                    },
+                  }}
+                >
+                  {settings.scrapingEnabled
+                    ? 'Остановить парсинг'
+                    : 'Запустить парсинг'}
+                </Button>
+                <Typography sx={{ color: '#aaa' }}>
+                  {settings.scrapingEnabled ? 'Активен' : 'Остановлен'}
+                </Typography>
+              </Box>
+
+              {/* Остальные настройки парсинга */}
+              <Box sx={{ mb: 2 }}>
+                <Typography sx={{ color: '#fff', mb: 1 }}>
+                  Интервал между циклами: {settings.videoScrapeInterval} мин.
+                </Typography>
+                <Slider
+                  value={settings.videoScrapeInterval}
+                  onChange={(_, val) =>
+                    setSettings((prev) => ({
+                      ...prev,
+                      videoScrapeInterval: val as number,
+                    }))
+                  }
+                  min={10}
+                  max={1440}
+                  step={5}
+                  sx={{
+                    color: '#0ff',
+                    '& .MuiSlider-track': { color: '#0ff' },
+                    '& .MuiSlider-thumb': { color: '#0ff' },
+                  }}
+                />
+                <Typography variant="caption" sx={{ color: '#aaa' }}>
+                  Как часто запускать сбор видео (10–1440 мин.)
+                </Typography>
+              </Box>
+
+              <Box sx={{ mb: 2 }}>
+                <Typography sx={{ color: '#fff', mb: 1 }}>
+                  Количество видео с платформы:{' '}
+                  {settings.scrapeLimitPerPlatform}
+                </Typography>
+                <Slider
+                  value={settings.scrapeLimitPerPlatform}
+                  onChange={(_, val) =>
+                    setSettings((prev) => ({
+                      ...prev,
+                      scrapeLimitPerPlatform: val as number,
+                    }))
+                  }
+                  min={1}
+                  max={20}
+                  step={1}
+                  sx={{
+                    color: '#0ff',
+                    '& .MuiSlider-track': { color: '#0ff' },
+                    '& .MuiSlider-thumb': { color: '#0ff' },
+                  }}
+                />
+                <Typography variant="caption" sx={{ color: '#aaa' }}>
+                  Сколько видео собирать с каждой активной платформы за один
+                  запуск
+                </Typography>
+              </Box>
+
+              <Box sx={{ mb: 2 }}>
+                <Typography sx={{ color: '#fff', mb: 1 }}>
+                  Таймаут между платформами: {settings.scrapeTimeoutSeconds}{' '}
+                  сек.
+                </Typography>
+                <Slider
+                  value={settings.scrapeTimeoutSeconds}
+                  onChange={(_, val) =>
+                    setSettings((prev) => ({
+                      ...prev,
+                      scrapeTimeoutSeconds: val as number,
+                    }))
+                  }
+                  min={5}
+                  max={120}
+                  step={5}
+                  sx={{
+                    color: '#0ff',
+                    '& .MuiSlider-track': { color: '#0ff' },
+                    '& .MuiSlider-thumb': { color: '#0ff' },
+                  }}
+                />
+                <Typography variant="caption" sx={{ color: '#aaa' }}>
+                  Задержка между запросами к разным платформам
+                </Typography>
+              </Box>
+
+              <Typography sx={{ color: '#fff', mb: 1 }}>
+                Активные платформы:
+              </Typography>
+              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                <FormControlLabel
+                  control={
+                    <Switch
+                      checked={settings.enableYouTube}
+                      onChange={(e) =>
+                        setSettings((prev) => ({
+                          ...prev,
+                          enableYouTube: e.target.checked,
+                        }))
+                      }
+                      sx={{
+                        '& .MuiSwitch-switchBase.Mui-checked': {
+                          color: '#ff0000',
+                        },
+                        '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track':
+                          { bgcolor: '#ff0000' },
+                      }}
+                    />
+                  }
+                  label={
+                    <Typography sx={{ color: '#fff' }}>YouTube</Typography>
+                  }
+                />
+                <FormControlLabel
+                  control={
+                    <Switch
+                      checked={settings.enableTikTok}
+                      onChange={(e) =>
+                        setSettings((prev) => ({
+                          ...prev,
+                          enableTikTok: e.target.checked,
+                        }))
+                      }
+                      sx={{
+                        '& .MuiSwitch-switchBase.Mui-checked': {
+                          color: '#00f2ea',
+                        },
+                        '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track':
+                          { bgcolor: '#00f2ea' },
+                      }}
+                    />
+                  }
+                  label={<Typography sx={{ color: '#fff' }}>TikTok</Typography>}
+                />
+                <FormControlLabel
+                  control={
+                    <Switch
+                      checked={settings.enableInstagram}
+                      onChange={(e) =>
+                        setSettings((prev) => ({
+                          ...prev,
+                          enableInstagram: e.target.checked,
+                        }))
+                      }
+                      sx={{
+                        '& .MuiSwitch-switchBase.Mui-checked': {
+                          color: '#e4405f',
+                        },
+                        '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track':
+                          { bgcolor: '#e4405f' },
+                      }}
+                    />
+                  }
+                  label={
+                    <Typography sx={{ color: '#fff' }}>Instagram</Typography>
+                  }
+                />
+              </Box>
+
+              <Button
+                variant="outlined"
+                startIcon={
+                  scrapingManually ? (
+                    <CircularProgress size={20} sx={{ color: '#0ff' }} />
+                  ) : (
+                    <RefreshIcon />
+                  )
+                }
+                onClick={handleManualScrape}
+                disabled={scrapingManually}
+                sx={{ mt: 2, borderColor: '#0ff', color: '#0ff' }}
+              >
+                {scrapingManually ? 'Сбор...' : 'Запустить сбор сейчас'}
+              </Button>
+            </Grid>
+
+            {/* Правая колонка: статус */}
+            <Grid size={{ xs: 12, md: 6 }}>
+              <Box
+                sx={{
+                  bgcolor: 'rgba(0,0,0,0.4)',
+                  borderRadius: 2,
+                  p: 2,
+                  height: '100%',
+                }}
+              >
+                <Box
+                  sx={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    mb: 2,
+                  }}
+                >
+                  <Typography variant="subtitle1" sx={{ color: '#0ff' }}>
+                    Статус парсинга
+                  </Typography>
+                  <IconButton
+                    size="small"
+                    onClick={fetchStatus}
+                    disabled={statusLoading}
+                    sx={{ color: '#0ff' }}
+                  >
+                    <RefreshIcon fontSize="small" />
+                  </IconButton>
+                </Box>
+
+                <Grid container spacing={2}>
+                  <Grid size={{ xs: 6 }}>
+                    <Paper
+                      sx={{
+                        bgcolor: 'rgba(0,0,0,0.5)',
+                        p: 1.5,
+                        textAlign: 'center',
+                      }}
+                    >
+                      <Typography
+                        variant="h5"
+                        sx={{
+                          color: status.scrapingEnabled ? '#33ffcc' : '#ff6666',
+                          fontWeight: 'bold',
+                          fontSize: '1.2rem',
+                        }}
+                      >
+                        {status.scrapingEnabled ? 'Активен' : 'Остановлен'}
+                      </Typography>
+                      <Typography variant="caption" sx={{ color: '#aaa' }}>
+                        Статус
+                      </Typography>
+                    </Paper>
+                  </Grid>
+                  <Grid size={{ xs: 6 }}>
+                    <Paper
+                      sx={{
+                        bgcolor: 'rgba(0,0,0,0.5)',
+                        p: 1.5,
+                        textAlign: 'center',
+                      }}
+                    >
+                      <Typography
+                        variant="h5"
+                        sx={{
+                          color: '#ffaa44',
+                          fontWeight: 'bold',
+                          fontSize: '1.2rem',
+                        }}
+                      >
+                        {status.queueCount}
+                      </Typography>
+                      <Typography variant="caption" sx={{ color: '#aaa' }}>
+                        В очереди
+                      </Typography>
+                    </Paper>
+                  </Grid>
+                  <Grid size={{ xs: 6 }}>
+                    <Paper
+                      sx={{
+                        bgcolor: 'rgba(0,0,0,0.5)',
+                        p: 1.5,
+                        textAlign: 'center',
+                      }}
+                    >
+                      <Typography
+                        variant="h5"
+                        sx={{
+                          color: '#33ffcc',
+                          fontWeight: 'bold',
+                          fontSize: '1.2rem',
+                        }}
+                      >
+                        {status.totalAnalyzed}
+                      </Typography>
+                      <Typography variant="caption" sx={{ color: '#aaa' }}>
+                        Обработано
+                      </Typography>
+                    </Paper>
+                  </Grid>
+                  <Grid size={{ xs: 6 }}>
+                    <Paper
+                      sx={{
+                        bgcolor: 'rgba(0,0,0,0.5)',
+                        p: 1.5,
+                        textAlign: 'center',
+                      }}
+                    >
+                      <Typography
+                        variant="h5"
+                        sx={{
+                          color: '#0ff',
+                          fontWeight: 'bold',
+                          fontSize: '1.2rem',
+                        }}
+                      >
+                        {status.lastRun
+                          ? new Date(status.lastRun).toLocaleTimeString()
+                          : '—'}
+                      </Typography>
+                      <Typography variant="caption" sx={{ color: '#aaa' }}>
+                        Последний запуск
+                      </Typography>
+                    </Paper>
+                  </Grid>
+                </Grid>
+
+                {status.error && (
+                  <Alert
+                    severity="error"
+                    sx={{
+                      mt: 2,
+                      bgcolor: 'rgba(255,51,102,0.2)',
+                      color: '#ff8888',
+                    }}
+                  >
+                    <WarningIcon sx={{ mr: 1, fontSize: 18 }} />
+                    {status.error}
+                  </Alert>
+                )}
+
+                {status.addedCount > 0 && (
+                  <Typography
+                    variant="caption"
+                    sx={{ display: 'block', mt: 2, color: '#aaa' }}
+                  >
+                    Последний сбор: добавлено {status.addedCount} из{' '}
+                    {status.totalFound} найденных видео
+                  </Typography>
+                )}
+              </Box>
+            </Grid>
+          </Grid>
+        </Card>
+
+        {/* ============================================ */}
+        {/* ПАНЕЛЬ 2: УПРАВЛЕНИЕ АНАЛИЗОМ ВИДЕО */}
+        {/* ============================================ */}
+        <Card
+          sx={{
+            mb: 4,
+            bgcolor: 'rgba(10,10,30,0.7)',
+            backdropFilter: 'blur(8px)',
+            borderRadius: 4,
+            border: '1px solid rgba(0,255,255,0.3)',
+            p: 3,
+          }}
+        >
+          <Typography
+            variant="h5"
             sx={{
+              color: '#ffaa44',
+              mb: 3,
               display: 'flex',
               alignItems: 'center',
-              gap: 3,
-              flexWrap: 'wrap',
+              gap: 1,
             }}
           >
-            <Typography sx={{ color: '#fff', minWidth: 60 }}>
-              {settings.scanInterval} мин.
+            <AnalyticsIcon /> Управление анализом видео
+          </Typography>
+
+          <Box sx={{ mb: 2 }}>
+            <Typography sx={{ color: '#fff', mb: 1 }}>
+              Интервал автоматической проверки видео: {settings.scanInterval}{' '}
+              мин.
             </Typography>
             <Slider
               value={settings.scanInterval}
@@ -419,20 +824,21 @@ const AdminSettings = () => {
                 flex: 1,
                 color: '#0ff',
                 '& .MuiSlider-track': { color: '#0ff' },
-                '& .MuiSlider-thumb': {
-                  color: '#0ff',
-                  '&:hover': { boxShadow: '0 0 20px #0ff' },
-                },
+                '& .MuiSlider-thumb': { color: '#0ff' },
               }}
             />
-            <Typography sx={{ color: '#aaa' }}>(1-60 мин.)</Typography>
+            <Typography variant="caption" sx={{ color: '#aaa' }}>
+              Как часто очередь проверяет новые видео (1–60 мин.)
+            </Typography>
           </Box>
         </Card>
 
-        {/* Автообновление новостей */}
+        {/* ============================================ */}
+        {/* ПАНЕЛЬ 3: УПРАВЛЕНИЕ НОВОСТЯМИ */}
+        {/* ============================================ */}
         <Card
           sx={{
-            mb: 3,
+            mb: 4,
             bgcolor: 'rgba(10,10,30,0.7)',
             backdropFilter: 'blur(8px)',
             borderRadius: 4,
@@ -441,73 +847,49 @@ const AdminSettings = () => {
           }}
         >
           <Typography
-            variant="h6"
+            variant="h5"
             sx={{
               color: '#33ffcc',
-              mb: 2,
+              mb: 3,
               display: 'flex',
               alignItems: 'center',
               gap: 1,
             }}
           >
-            <NewsIcon sx={{ mr: 1 }} /> Автообновление новостей
+            <NewsIcon /> Управление новостями
           </Typography>
-          <FormControlLabel
-            control={
-              <Switch
-                checked={settings.autoRefreshNews}
-                onChange={(e) =>
-                  setSettings((prev) => ({
-                    ...prev,
-                    autoRefreshNews: e.target.checked,
-                  }))
-                }
-                sx={{
-                  '& .MuiSwitch-switchBase.Mui-checked': { color: '#0ff' },
-                  '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track': {
-                    bgcolor: '#0ff',
-                  },
-                }}
-              />
-            }
-            label={settings.autoRefreshNews ? 'Включено' : 'Выключено'}
-            sx={{ color: '#fff' }}
-          />
-        </Card>
 
-        {/* Интервал парсинга новостей */}
-        <Card
-          sx={{
-            mb: 3,
-            bgcolor: 'rgba(10,10,30,0.7)',
-            backdropFilter: 'blur(8px)',
-            borderRadius: 4,
-            border: '1px solid rgba(0,255,255,0.3)',
-            p: 3,
-          }}
-        >
-          <Typography
-            variant="h6"
-            sx={{
-              color: '#33ffcc',
-              mb: 2,
-              display: 'flex',
-              alignItems: 'center',
-              gap: 1,
-            }}
-          >
-            <RssFeedIcon sx={{ mr: 1 }} /> Интервал парсинга новостей
-          </Typography>
-          <Box
-            sx={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: 3,
-              flexWrap: 'wrap',
-            }}
-          >
-            <Typography sx={{ color: '#fff', minWidth: 60 }}>
-              {settings.newsParseInterval} мин.
+          <Box sx={{ mb: 2 }}>
+            <FormControlLabel
+              control={
+                <Switch
+                  checked={settings.autoRefreshNews}
+                  onChange={(e) =>
+                    setSettings((prev) => ({
+                      ...prev,
+                      autoRefreshNews: e.target.checked,
+                    }))
+                  }
+                  sx={{
+                    '& .MuiSwitch-switchBase.Mui-checked': { color: '#0ff' },
+                    '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track': {
+                      bgcolor: '#0ff',
+                    },
+                  }}
+                />
+              }
+              label={
+                settings.autoRefreshNews
+                  ? 'Автообновление включено'
+                  : 'Автообновление выключено'
+              }
+              sx={{ color: '#fff' }}
+            />
+          </Box>
+
+          <Box sx={{ mb: 2 }}>
+            <Typography sx={{ color: '#fff', mb: 1 }}>
+              Интервал парсинга новостей: {settings.newsParseInterval} мин.
             </Typography>
             <Slider
               value={settings.newsParseInterval}
@@ -524,90 +906,69 @@ const AdminSettings = () => {
                 flex: 1,
                 color: '#0ff',
                 '& .MuiSlider-track': { color: '#0ff' },
-                '& .MuiSlider-thumb': {
-                  color: '#0ff',
-                  '&:hover': { boxShadow: '0 0 20px #0ff' },
-                },
+                '& .MuiSlider-thumb': { color: '#0ff' },
               }}
             />
-            <Typography sx={{ color: '#aaa' }}>(10-1440 мин.)</Typography>
+            <Typography variant="caption" sx={{ color: '#aaa' }}>
+              Как часто обновлять новости (10–1440 мин.)
+            </Typography>
+          </Box>
+
+          <Box sx={{ mt: 2 }}>
+            <Typography sx={{ color: '#fff', mb: 1 }}>
+              Источники новостей (RSS):
+            </Typography>
+            <Box sx={{ display: 'flex', gap: 1, mb: 2 }}>
+              <TextField
+                placeholder="Введите URL RSS-ленты..."
+                value={newSource}
+                onChange={(e) => setNewSource(e.target.value)}
+                onKeyPress={(e) => e.key === 'Enter' && handleAddSource()}
+                sx={{
+                  flex: 1,
+                  '& .MuiOutlinedInput-root': {
+                    bgcolor: 'rgba(0,0,0,0.4)',
+                    '& fieldset': { borderColor: '#0ff' },
+                  },
+                  input: { color: '#fff' },
+                }}
+              />
+              <Button
+                variant="contained"
+                onClick={handleAddSource}
+                sx={{
+                  bgcolor: '#0ff',
+                  color: '#000',
+                  '&:hover': { bgcolor: '#33ffcc' },
+                }}
+              >
+                <AddIcon />
+              </Button>
+            </Box>
+            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
+              {settings.newsSources.length === 0 ? (
+                <Typography sx={{ color: '#aaa' }}>
+                  Нет добавленных источников
+                </Typography>
+              ) : (
+                settings.newsSources.map((url, idx) => (
+                  <Chip
+                    key={idx}
+                    label={url}
+                    onDelete={() => handleRemoveSource(url)}
+                    sx={{
+                      bgcolor: 'rgba(0,255,255,0.15)',
+                      color: '#0ff',
+                      border: '1px solid #0ff',
+                      '& .MuiChip-deleteIcon': { color: '#ff3366' },
+                    }}
+                  />
+                ))
+              )}
+            </Box>
           </Box>
         </Card>
 
-        {/* Источники новостей */}
-        <Card
-          sx={{
-            mb: 3,
-            bgcolor: 'rgba(10,10,30,0.7)',
-            backdropFilter: 'blur(8px)',
-            borderRadius: 4,
-            border: '1px solid rgba(0,255,255,0.3)',
-            p: 3,
-          }}
-        >
-          <Typography
-            variant="h6"
-            sx={{
-              color: '#33ffcc',
-              mb: 2,
-              display: 'flex',
-              alignItems: 'center',
-              gap: 1,
-            }}
-          >
-            <LinkIcon sx={{ mr: 1 }} /> Источники новостей (RSS)
-          </Typography>
-          <Box sx={{ display: 'flex', gap: 1, mb: 2 }}>
-            <TextField
-              placeholder="Введите URL RSS-ленты..."
-              value={newSource}
-              onChange={(e) => setNewSource(e.target.value)}
-              onKeyPress={(e) => e.key === 'Enter' && handleAddSource()}
-              sx={{
-                flex: 1,
-                '& .MuiOutlinedInput-root': {
-                  bgcolor: 'rgba(0,0,0,0.4)',
-                  '& fieldset': { borderColor: '#0ff' },
-                },
-                input: { color: '#fff' },
-              }}
-            />
-            <Button
-              variant="contained"
-              onClick={handleAddSource}
-              sx={{
-                bgcolor: '#0ff',
-                color: '#000',
-                '&:hover': { bgcolor: '#33ffcc' },
-              }}
-            >
-              <AddIcon />
-            </Button>
-          </Box>
-          <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
-            {settings.newsSources.length === 0 ? (
-              <Typography sx={{ color: '#aaa' }}>
-                Нет добавленных источников
-              </Typography>
-            ) : (
-              settings.newsSources.map((url, idx) => (
-                <Chip
-                  key={idx}
-                  label={url}
-                  onDelete={() => handleRemoveSource(url)}
-                  sx={{
-                    bgcolor: 'rgba(0,255,255,0.15)',
-                    color: '#0ff',
-                    border: '1px solid #0ff',
-                    '& .MuiChip-deleteIcon': { color: '#ff3366' },
-                  }}
-                />
-              ))
-            )}
-          </Box>
-        </Card>
-
-        {/* Кнопка сохранения */}
         <Button
           variant="contained"
           startIcon={
@@ -629,7 +990,7 @@ const AdminSettings = () => {
             '&:hover': { bgcolor: '#33ffcc' },
           }}
         >
-          {saving ? 'Сохранение...' : 'Сохранить настройки'}
+          {saving ? 'Сохранение...' : 'Сохранить все настройки'}
         </Button>
       </Box>
     </Box>
