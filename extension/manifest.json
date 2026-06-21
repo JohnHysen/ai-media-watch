@@ -1,0 +1,17 @@
+{
+    "name": "AI Media Watch Extension",
+    "description": "Расширение позволяет отправлять видео с нежелательным контентом из любой вкладки, а также помогает собирать видео из реальных персонализированных лент пользователей.",
+    "version": "1.0",
+    "manifest_version": 3,
+    "icons": {
+        "16":"icons/logo.png",
+        "32":"icons/logo.png",
+        "48":"icons/logo.png",
+        "128":"icons/logo.png"
+    },
+    "action": {
+        "default_popup":"popup.html"
+    },
+    "permissions": ["scripting", "activeTab"],
+    "background":{}
+}
