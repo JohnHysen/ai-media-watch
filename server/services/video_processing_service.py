@@ -15,8 +15,8 @@ def extract_audio(analyze_id: str):
     input_path = base_path / "video.mp4"
 
     if not input_path.exists():
-            raise FileNotFoundError(f"Видео не найдено: {input_path}")
-    
+        raise FileNotFoundError(f"Видео не найдено: {input_path}")
+
     audio_dir = base_path / "audio"
     audio_dir.mkdir(parents=True, exist_ok=True)
 
@@ -42,7 +42,7 @@ def extract_frames(analyze_id: str):
 
     (
         ffmpeg.input(str(input_path))
-        .output(str(output_path), vf="fps=0.2")
+        .output(str(output_path), vf="fps=1")
         .run(overwrite_output=True, quiet=True)
     )
     print(f"✅ Кадры сохранены")

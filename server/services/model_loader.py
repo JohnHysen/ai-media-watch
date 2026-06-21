@@ -19,15 +19,20 @@ def get_whisper_model():
         print("✅ Whisper загружен")
     return _whisper_model
 
-
 class LlamaCppClient:
-    
+
     def __init__(self, server_url: str = LLAMA_SERVER_URL):
         self.server_url = server_url
         self.session = requests.Session()
         self.session.timeout = 180
 
-    def generate(self, prompt: str, max_tokens: int = 500, temperature: float = 0.3, top_p: float = 0.95):
+    def generate(
+        self,
+        prompt: str,
+        max_tokens: int = 500,
+        temperature: float = 0.3,
+        top_p: float = 0.95,
+    ):
 
         payload = {
             "prompt": prompt,
@@ -38,49 +43,48 @@ class LlamaCppClient:
             "stream": False,
             "cache_prompt": True,
         }
-        
+
         try:
             response = self.session.post(
-                f"{self.server_url}/completion",
-                json=payload,
-                timeout=180
+                f"{self.server_url}/completion", json=payload, timeout=180
             )
-            
+
             if response.status_code == 200:
                 result = response.json()
                 content = result.get("content", "").strip()
-                
+
                 if not content and temperature < 0.5:
                     print("🔄 Пустой ответ, пробую с более высокой температурой...")
                     payload["temperature"] = 0.7
                     response = self.session.post(
-                        f"{self.server_url}/completion",
-                        json=payload,
-                        timeout=180
+                        f"{self.server_url}/completion", json=payload, timeout=180
                     )
                     if response.status_code == 200:
                         content = response.json().get("content", "").strip()
-                
+
                 return {
-                    "choices": [{
-                        "text": content,
-                        "finish_reason": result.get("stop", False)
-                    }]
+                    "choices": [
+                        {"text": content, "finish_reason": result.get("stop", False)}
+                    ]
                 }
             else:
                 raise Exception(f"HTTP {response.status_code}: {response.text[:100]}")
-                
+
         except requests.exceptions.Timeout:
             print("❌ Таймаут при запросе к llama.cpp")
             raise Exception("Таймаут сервера")
         except requests.exceptions.ConnectionError:
             print(f"❌ Не удалось подключиться к {self.server_url}")
             raise Exception("Сервер llama.cpp не запущен")
-    
-    def __call__(self, prompt, max_tokens=500, temperature=0.3, top_p=0.95, stop=None, echo=False):
+
+    def __call__(
+        self, prompt, max_tokens=500, temperature=0.3, top_p=0.95, stop=None, echo=False
+    ):
         return self.generate(prompt, max_tokens, temperature)
 
+
 _llm_client = None
+
 
 def get_llm_model():
     global _llm_client
