@@ -14,7 +14,7 @@ import { toast } from 'react-toastify'
 
 export interface UserData {
   user_id: number
-  role: 'USER' | 'INSPECTOR' | 'ADMIN' | null // ✅ добавили INSPECTOR
+  role: 'USER' | 'INSPECTOR' | 'ADMIN' | null
   first_name: string
   last_name: string
   email: string

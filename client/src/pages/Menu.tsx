@@ -37,6 +37,7 @@ import {
   TableRow,
   Paper as TablePaper,
   Link,
+  TableHead,
 } from '@mui/material'
 import MenuIcon from '@mui/icons-material/Menu'
 import SearchIcon from '@mui/icons-material/Search'
@@ -61,15 +62,10 @@ import ShowChartIcon from '@mui/icons-material/ShowChart'
 import CurrencyBitcoinIcon from '@mui/icons-material/CurrencyBitcoin'
 import PeopleAltIcon from '@mui/icons-material/PeopleAlt'
 import WarningAmberIcon from '@mui/icons-material/WarningAmber'
+import LeaderboardIcon from '@mui/icons-material/Leaderboard'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Canvas, useFrame } from '@react-three/fiber'
-import {
-  OrbitControls,
-  Float,
-  Environment,
-  Html,
-  Stars,
-} from '@react-three/drei'
+import { OrbitControls, Environment, Stars } from '@react-three/drei'
 import * as THREE from 'three'
 import {
   PieChart,
@@ -89,147 +85,85 @@ import {
   createAnalysisJob,
 } from '../http/API'
 
-// ---------- 3D фон с логотипами соцсетей ----------
-const FloatingIconsOnly = () => {
+// ---------- 3D фон с летающими фигурами ----------
+const FloatingShapes = () => {
   const groupRef = useRef<THREE.Group>(null!)
-  const elements = useMemo(
-    () => [
-      {
-        image: '/youtube-logo.png',
-        color: '#ff0000',
-        size: 1.6,
-        startX: -3.5,
-        startY: 1.5,
-        startZ: -2,
-      },
-      {
-        image: '/instagram-logo.png',
-        color: '#e4405f',
-        size: 1.6,
-        startX: 4,
-        startY: -1.5,
-        startZ: -1.5,
-      },
-      {
-        image: '/tik-tok.png',
-        color: '#00f2ea',
-        size: 1.6,
-        startX: -2,
-        startY: -2.5,
-        startZ: -3,
-      },
-      {
-        symbol: '🛡️',
-        color: '#33ffcc',
-        size: 1.5,
-        startX: 3,
-        startY: 2,
-        startZ: -2,
-      },
-      {
-        symbol: '⚠️',
-        color: '#ff3366',
-        size: 1.5,
-        startX: 0,
-        startY: -0.5,
-        startZ: -4,
-      },
-    ],
-    []
-  )
 
-  const motions = useMemo(
-    () =>
-      elements.map(() => ({
-        ampX: 2.0 + Math.random() * 1.5,
-        ampY: 1.5 + Math.random() * 1.2,
-        ampZ: 1.2 + Math.random() * 1.0,
-        freqX: 0.12 + Math.random() * 0.08,
-        freqY: 0.1 + Math.random() * 0.08,
-        freqZ: 0.09 + Math.random() * 0.07,
-        phaseX: Math.random() * Math.PI * 2,
-        phaseY: Math.random() * Math.PI * 2,
-        phaseZ: Math.random() * Math.PI * 2,
-        rotSpeed: 0.003 + Math.random() * 0.003,
-      })),
-    []
-  )
+  // Создаём 5 фигур с разными параметрами
+  const shapes = useMemo(() => {
+    const geometries = [
+      new THREE.BoxGeometry(0.8, 0.8, 0.8),
+      new THREE.SphereGeometry(0.6, 32, 32),
+      new THREE.TorusGeometry(0.5, 0.2, 16, 32),
+      new THREE.OctahedronGeometry(0.7),
+      new THREE.IcosahedronGeometry(0.6),
+    ]
+    const colors = ['#ff3366', '#33ffcc', '#ffaa44', '#aa66ff', '#44ff66']
+    const positions = [
+      [-3, 2, -5],
+      [4, -1, -7],
+      [2, 3, -10],
+      [-4, -2, -8],
+      [1, 4, -12],
+    ]
+    const speeds = [0.3, 0.2, 0.4, 0.25, 0.35]
+    return geometries.map((geo, idx) => ({
+      geometry: geo,
+      color: colors[idx % colors.length],
+      startX: positions[idx][0],
+      startY: positions[idx][1],
+      startZ: positions[idx][2],
+      speed: speeds[idx],
+      ampX: 2.0 + Math.random() * 2.0,
+      ampY: 1.5 + Math.random() * 1.5,
+      ampZ: 1.0 + Math.random() * 1.5,
+      freqX: 0.1 + Math.random() * 0.1,
+      freqY: 0.1 + Math.random() * 0.1,
+      freqZ: 0.1 + Math.random() * 0.1,
+      phaseX: Math.random() * Math.PI * 2,
+      phaseY: Math.random() * Math.PI * 2,
+      phaseZ: Math.random() * Math.PI * 2,
+      rotSpeedX: 0.003 + Math.random() * 0.005,
+      rotSpeedY: 0.003 + Math.random() * 0.005,
+      rotSpeedZ: 0.003 + Math.random() * 0.005,
+    }))
+  }, [])
 
   useFrame(({ clock }) => {
     const t = clock.getElapsedTime()
     if (groupRef.current) {
       groupRef.current.children.forEach((child, idx) => {
-        const el = elements[idx]
-        const m = motions[idx]
-        if (el && m) {
-          const x = el.startX + m.ampX * Math.sin(m.freqX * t + m.phaseX)
-          const y = el.startY + m.ampY * Math.sin(m.freqY * t + m.phaseY)
-          const z = el.startZ + m.ampZ * Math.sin(m.freqZ * t + m.phaseZ)
-          child.position.set(x, y, z)
-          child.rotation.y += m.rotSpeed
-          child.rotation.x += m.rotSpeed * 0.5
-        }
+        const shape = shapes[idx]
+        if (!shape) return
+        const x =
+          shape.startX + shape.ampX * Math.sin(shape.freqX * t + shape.phaseX)
+        const y =
+          shape.startY + shape.ampY * Math.sin(shape.freqY * t + shape.phaseY)
+        const z =
+          shape.startZ + shape.ampZ * Math.sin(shape.freqZ * t + shape.phaseZ)
+        child.position.set(x, y, z)
+        child.rotation.x += shape.rotSpeedX
+        child.rotation.y += shape.rotSpeedY
+        child.rotation.z += shape.rotSpeedZ
       })
     }
   })
 
   return (
     <group ref={groupRef}>
-      {elements.map((el, idx) => (
-        <Float
-          key={idx}
-          speed={0.4}
-          rotationIntensity={0.15}
-          floatIntensity={0.2}
-        >
-          <mesh position={[el.startX, el.startY, el.startZ]}>
-            <planeGeometry args={[el.size, el.size]} />
-            <meshStandardMaterial
-              color={el.color}
-              emissive={el.color}
-              emissiveIntensity={0.25}
-              side={THREE.DoubleSide}
-              transparent
-              opacity={0.9}
-            />
-            <Html distanceFactor={14} position={[0, 0, 0.05]} transform center>
-              {el.symbol ? (
-                <div
-                  style={{
-                    fontSize: `${el.size * 45}px`,
-                    textAlign: 'center',
-                    filter: `drop-shadow(0 0 8px ${el.color})`,
-                    pointerEvents: 'none',
-                  }}
-                >
-                  {el.symbol}
-                </div>
-              ) : el.image ? (
-                <img
-                  src={el.image}
-                  alt="social"
-                  style={{
-                    width: `${el.size * 45}px`,
-                    height: `${el.size * 45}px`,
-                    objectFit: 'contain',
-                    filter: `drop-shadow(0 0 8px ${el.color})`,
-                    pointerEvents: 'none',
-                  }}
-                  onError={(e) => {
-                    e.currentTarget.style.display = 'none'
-                    const parent = e.currentTarget.parentNode
-                    const fallback = document.createElement('div')
-                    fallback.textContent = '📱'
-                    fallback.style.fontSize = `${el.size * 45}px`
-                    fallback.style.filter = `drop-shadow(0 0 8px ${el.color})`
-                    fallback.style.pointerEvents = 'none'
-                    parent?.appendChild(fallback)
-                  }}
-                />
-              ) : null}
-            </Html>
-          </mesh>
-        </Float>
+      {shapes.map((shape, idx) => (
+        <mesh key={idx} position={[shape.startX, shape.startY, shape.startZ]}>
+          <primitive object={shape.geometry} attach="geometry" />
+          <meshStandardMaterial
+            color={shape.color}
+            emissive={shape.color}
+            emissiveIntensity={0.3}
+            metalness={0.4}
+            roughness={0.3}
+            transparent
+            opacity={0.9}
+          />
+        </mesh>
       ))}
     </group>
   )
@@ -256,7 +190,7 @@ const CyberBackground3D = () => {
         <ambientLight intensity={0.5} />
         <pointLight position={[10, 10, 10]} intensity={0.7} />
         <pointLight position={[-5, -5, 5]} color="#ff3366" intensity={0.3} />
-        <FloatingIconsOnly />
+        <FloatingShapes />
         <Stars
           radius={100}
           depth={50}
@@ -491,10 +425,8 @@ const CyberMediaWatchPro = () => {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
-  // Состояния для модального окна
   const [modalOpen, setModalOpen] = useState(false)
   const [selectedVideo, setSelectedVideo] = useState<VideoAnalysis | null>(null)
-  // Добавьте новое состояние для фильтра по риску
   const [selectedRiskFilter, setSelectedRiskFilter] = useState<string[]>([])
   const isAdmin = user?.role === 'ADMIN'
   const { i18n } = useTranslation()
@@ -507,7 +439,7 @@ const CyberMediaWatchPro = () => {
       setVideoAnalyses(response.data)
     } catch (err: any) {
       console.error('Ошибка загрузки видеоанализов:', err)
-      setError('Не удалось загрузить данные с сервера')
+      setError('Ошибка')
     } finally {
       setLoading(false)
     }
@@ -617,6 +549,53 @@ const CyberMediaWatchPro = () => {
     }
   }, [videoAnalyses])
 
+  // ---------- Лидерборд опасных авторов (по uploader) ----------
+  const authorLeaderboard = useMemo(() => {
+    const map = new Map<
+      string,
+      { total: number; dangerous: number; risks: string[] }
+    >()
+    filteredThreats.forEach((v) => {
+      const key = v.uploader || 'Аноним'
+      if (!map.has(key)) {
+        map.set(key, { total: 0, dangerous: 0, risks: [] })
+      }
+      const entry = map.get(key)!
+      entry.total += 1
+      if (v.is_dangerous) entry.dangerous += 1
+      if (v.primary_risk) entry.risks.push(v.primary_risk)
+    })
+
+    const result = Array.from(map.entries()).map(([author, data]) => {
+      const dangerPercent =
+        data.total > 0 ? (data.dangerous / data.total) * 100 : 0
+      const riskCounts: Record<string, number> = {}
+      data.risks.forEach((r) => {
+        riskCounts[r] = (riskCounts[r] || 0) + 1
+      })
+      let topRisk = ''
+      let maxCount = 0
+      Object.entries(riskCounts).forEach(([r, c]) => {
+        if (c > maxCount) {
+          maxCount = c
+          topRisk = r
+        }
+      })
+      return {
+        author,
+        total: data.total,
+        dangerous: data.dangerous,
+        dangerPercent: Math.round(dangerPercent),
+        topRisk,
+      }
+    })
+
+    result.sort(
+      (a, b) => b.dangerous - a.dangerous || b.dangerPercent - a.dangerPercent
+    )
+    return result.slice(0, 10)
+  }, [filteredThreats])
+
   const handleCheckVideo = async () => {
     if (!videoUrl.trim()) return
     setIsChecking(true)
@@ -624,15 +603,14 @@ const CyberMediaWatchPro = () => {
       const response = await $host.post('/analysis-queue', {
         url: videoUrl,
       })
-      // Ожидаемый ответ: { message: 'Видео добавлено в очередь обработки' }
       setCheckResultMessage(
-        `✅ ${response.data.message || 'Видео добавлено в очередь обработки'}`
+        `[OK] ${response.data.message || 'Видео добавлено в очередь обработки'}`
       )
     } catch (error: any) {
       console.error('Ошибка при добавлении в очередь:', error)
       const errorMsg =
         error.response?.data?.message || 'Не удалось добавить видео в очередь'
-      setCheckResultMessage(`❌ Ошибка: ${errorMsg}`)
+      setCheckResultMessage(`[Ошибка] ${errorMsg}`)
     } finally {
       setIsChecking(false)
       setVideoUrl('')
@@ -651,7 +629,6 @@ const CyberMediaWatchPro = () => {
     { v: 'kz', l: 'Қазақша', flag: '🇰🇿' },
   ]
 
-  // Функция для получения цвета вердикта
   const getVerdictChip = (verdict: string) => {
     const map = {
       safe: { label: 'Безопасно', color: '#44ff66' },
@@ -777,13 +754,15 @@ const CyberMediaWatchPro = () => {
               >
                 <Alert
                   severity={
-                    checkResultMessage.includes('✅') ? 'success' : 'warning'
+                    checkResultMessage.startsWith('[OK]')
+                      ? 'success'
+                      : 'warning'
                   }
                   sx={{
                     mb: 3,
                     borderRadius: 4,
                     bgcolor: 'rgba(0,0,0,0.7)',
-                    border: `1px solid ${checkResultMessage.includes('✅') ? '#44ff66' : '#ff3366'}`,
+                    border: `1px solid ${checkResultMessage.startsWith('[OK]') ? '#44ff66' : '#ff3366'}`,
                     color: '#fff',
                   }}
                 >
@@ -941,7 +920,6 @@ const CyberMediaWatchPro = () => {
                     </motion.div>
                   </Grid>
                 ))}
-                {/* Карточка "Платформ" с иконками */}
                 <Grid size={{ xs: 6, md: 3 }}>
                   <motion.div
                     initial={{ y: 50, opacity: 0 }}
@@ -1417,7 +1395,7 @@ const CyberMediaWatchPro = () => {
                         gap: 1,
                       }}
                     >
-                      <AnalyticsIcon /> Уровень опасности (последние 7 дней)
+                      <AnalyticsIcon /> Уровень опасности
                     </Typography>
                     <CyberSpeedometer
                       value={dangerLevel}
@@ -1505,6 +1483,181 @@ const CyberMediaWatchPro = () => {
                   </Card>
                 </Grid>
               </Grid>
+
+              {/* ========== ЛИДЕРБОРД ОПАСНЫХ АВТОРОВ (по uploader) ========== */}
+              {authorLeaderboard.length > 0 && (
+                <Box sx={{ mb: 5 }}>
+                  <Typography
+                    variant="h5"
+                    sx={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 1,
+                      mb: 2,
+                      color: '#ffaa44',
+                    }}
+                  >
+                    <LeaderboardIcon /> Лидерборд опасных каналов
+                  </Typography>
+                  <Card
+                    sx={{
+                      bgcolor: 'rgba(0,0,0,0.6)',
+                      backdropFilter: 'blur(8px)',
+                      borderRadius: 3,
+                      border: '1px solid #ffaa44',
+                      overflow: 'hidden',
+                    }}
+                  >
+                    <TableContainer>
+                      <Table size="small">
+                        <TableHead>
+                          <TableRow sx={{ bgcolor: 'rgba(255,170,68,0.1)' }}>
+                            <TableCell
+                              sx={{ color: '#ffaa44', fontWeight: 'bold' }}
+                            >
+                              #
+                            </TableCell>
+                            <TableCell
+                              sx={{ color: '#ffaa44', fontWeight: 'bold' }}
+                            >
+                              Канал
+                            </TableCell>
+                            <TableCell
+                              sx={{ color: '#ffaa44', fontWeight: 'bold' }}
+                              align="center"
+                            >
+                              Опасных
+                            </TableCell>
+                            <TableCell
+                              sx={{ color: '#ffaa44', fontWeight: 'bold' }}
+                              align="center"
+                            >
+                              Всего
+                            </TableCell>
+                            <TableCell
+                              sx={{ color: '#ffaa44', fontWeight: 'bold' }}
+                              align="center"
+                            >
+                              % опасности
+                            </TableCell>
+                            <TableCell
+                              sx={{ color: '#ffaa44', fontWeight: 'bold' }}
+                              align="center"
+                            >
+                              Основной риск
+                            </TableCell>
+                          </TableRow>
+                        </TableHead>
+                        <TableBody>
+                          {authorLeaderboard.map((item, index) => (
+                            <TableRow
+                              key={item.author}
+                              sx={{
+                                '&:hover': { bgcolor: 'rgba(255,170,68,0.05)' },
+                                borderBottom: '1px solid rgba(255,170,68,0.1)',
+                              }}
+                            >
+                              <TableCell
+                                sx={{ color: '#fff', fontWeight: 'bold' }}
+                              >
+                                {index + 1}
+                              </TableCell>
+                              <TableCell sx={{ color: '#fff' }}>
+                                <Box
+                                  sx={{
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: 1,
+                                  }}
+                                >
+                                  <Avatar
+                                    sx={{
+                                      width: 28,
+                                      height: 28,
+                                      bgcolor: '#ffaa44',
+                                    }}
+                                  >
+                                    {item.author.charAt(0).toUpperCase()}
+                                  </Avatar>
+                                  <span>{item.author}</span>
+                                </Box>
+                              </TableCell>
+                              <TableCell
+                                align="center"
+                                sx={{ color: '#ff3366', fontWeight: 'bold' }}
+                              >
+                                {item.dangerous}
+                              </TableCell>
+                              <TableCell align="center" sx={{ color: '#fff' }}>
+                                {item.total}
+                              </TableCell>
+                              <TableCell align="center">
+                                <Box
+                                  sx={{
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: 1,
+                                  }}
+                                >
+                                  <LinearProgress
+                                    variant="determinate"
+                                    value={item.dangerPercent}
+                                    sx={{
+                                      width: 60,
+                                      height: 6,
+                                      borderRadius: 3,
+                                      bgcolor: '#333',
+                                      '& .MuiLinearProgress-bar': {
+                                        bgcolor:
+                                          item.dangerPercent > 70
+                                            ? '#ff3366'
+                                            : '#ffaa44',
+                                      },
+                                    }}
+                                  />
+                                  <Typography
+                                    variant="caption"
+                                    sx={{ color: '#aaa' }}
+                                  >
+                                    {item.dangerPercent}%
+                                  </Typography>
+                                </Box>
+                              </TableCell>
+                              <TableCell align="center">
+                                {item.topRisk ? (
+                                  <Chip
+                                    label={
+                                      RISK_TYPES[
+                                        item.topRisk as keyof typeof RISK_TYPES
+                                      ]?.label || item.topRisk
+                                    }
+                                    size="small"
+                                    sx={{
+                                      bgcolor:
+                                        RISK_TYPES[
+                                          item.topRisk as keyof typeof RISK_TYPES
+                                        ]?.color || '#ffaa44',
+                                      color: '#fff',
+                                      fontSize: '0.65rem',
+                                    }}
+                                  />
+                                ) : (
+                                  <Typography
+                                    variant="caption"
+                                    sx={{ color: '#666' }}
+                                  >
+                                    —
+                                  </Typography>
+                                )}
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </TableContainer>
+                  </Card>
+                </Box>
+              )}
 
               {/* Инфографика */}
               <Grid container spacing={4} sx={{ mb: 5 }}>
@@ -1926,28 +2079,10 @@ const CyberMediaWatchPro = () => {
                           borderBottom: '1px solid rgba(0,255,255,0.1)',
                         }}
                       >
-                        {selectedVideo.is_dangerous ? '⚠️ Да' : '✅ Нет'}
+                        {selectedVideo.is_dangerous ? 'Да' : 'Нет'}
                       </TableCell>
                     </TableRow>
-                    <TableRow>
-                      <TableCell
-                        sx={{
-                          color: '#0ff',
-                          fontWeight: 'bold',
-                          borderBottom: '1px solid rgba(0,255,255,0.1)',
-                        }}
-                      >
-                        Безопасность, %
-                      </TableCell>
-                      <TableCell
-                        sx={{
-                          color: '#fff',
-                          borderBottom: '1px solid rgba(0,255,255,0.1)',
-                        }}
-                      >
-                        {selectedVideo.safety_percent}%
-                      </TableCell>
-                    </TableRow>
+                    {/* Удалены строки "Безопасность, %" и "Инициатор" */}
                     <TableRow>
                       <TableCell
                         sx={{
@@ -1984,27 +2119,6 @@ const CyberMediaWatchPro = () => {
                         }}
                       >
                         {new Date(selectedVideo.checked_at).toLocaleString()}
-                      </TableCell>
-                    </TableRow>
-                    <TableRow>
-                      <TableCell
-                        sx={{
-                          color: '#0ff',
-                          fontWeight: 'bold',
-                          borderBottom: '1px solid rgba(0,255,255,0.1)',
-                        }}
-                      >
-                        Инициатор
-                      </TableCell>
-                      <TableCell
-                        sx={{
-                          color: '#fff',
-                          borderBottom: '1px solid rgba(0,255,255,0.1)',
-                        }}
-                      >
-                        {selectedVideo.userId
-                          ? `ID: ${selectedVideo.userId}`
-                          : 'Аноним'}
                       </TableCell>
                     </TableRow>
                     {selectedVideo.tags && (

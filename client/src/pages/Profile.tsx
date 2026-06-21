@@ -31,13 +31,9 @@ import WarningIcon from '@mui/icons-material/Warning'
 import HelpIcon from '@mui/icons-material/Help'
 import HistoryIcon from '@mui/icons-material/History'
 import TrendingUpIcon from '@mui/icons-material/TrendingUp'
-import TrendingDownIcon from '@mui/icons-material/TrendingDown'
 import SecurityIcon from '@mui/icons-material/Security'
-import ShieldIcon from '@mui/icons-material/Shield'
 import PersonIcon from '@mui/icons-material/Person'
-import EmailIcon from '@mui/icons-material/Email'
 import AdminPanelSettingsIcon from '@mui/icons-material/AdminPanelSettings'
-import StarIcon from '@mui/icons-material/Star'
 import { useUser } from '../context/user/useUser'
 import { motion } from 'framer-motion'
 import { Canvas, useFrame } from '@react-three/fiber'
@@ -160,7 +156,6 @@ interface UserStats {
   totalChecks: number
   threatsFound: number
   averageRisk: number
-  reputation: number
 }
 
 interface ActivityData {
@@ -185,7 +180,6 @@ const Profile = () => {
     totalChecks: 0,
     threatsFound: 0,
     averageRisk: 0,
-    reputation: 0,
   })
 
   // Данные графиков
@@ -460,7 +454,7 @@ const Profile = () => {
                     <CircularProgress sx={{ color: '#0ff' }} />
                   ) : (
                     <Grid container spacing={2}>
-                      <Grid size={{ xs: 6, md: 3 }}>
+                      <Grid size={{ xs: 6, md: 4 }}>
                         <Typography variant="body2" sx={{ color: '#aaa' }}>
                           Всего проверок
                         </Typography>
@@ -471,7 +465,7 @@ const Profile = () => {
                           {stats.totalChecks}
                         </Typography>
                       </Grid>
-                      <Grid size={{ xs: 6, md: 3 }}>
+                      <Grid size={{ xs: 6, md: 4 }}>
                         <Typography variant="body2" sx={{ color: '#aaa' }}>
                           Найдено угроз
                         </Typography>
@@ -482,7 +476,7 @@ const Profile = () => {
                           {stats.threatsFound}
                         </Typography>
                       </Grid>
-                      <Grid size={{ xs: 6, md: 3 }}>
+                      <Grid size={{ xs: 6, md: 4 }}>
                         <Typography variant="body2" sx={{ color: '#aaa' }}>
                           Средний риск
                         </Typography>
@@ -491,17 +485,6 @@ const Profile = () => {
                           sx={{ color: '#ffaa44', fontWeight: 'bold' }}
                         >
                           {stats.averageRisk}%
-                        </Typography>
-                      </Grid>
-                      <Grid size={{ xs: 6, md: 3 }}>
-                        <Typography variant="body2" sx={{ color: '#aaa' }}>
-                          Репутация
-                        </Typography>
-                        <Typography
-                          variant="h5"
-                          sx={{ color: '#0ff', fontWeight: 'bold' }}
-                        >
-                          {stats.reputation}%
                         </Typography>
                       </Grid>
                     </Grid>

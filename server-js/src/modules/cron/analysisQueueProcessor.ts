@@ -99,7 +99,7 @@ const processQueue = async () => {
         )
 
         const controller = new AbortController()
-        const timeoutId = setTimeout(() => controller.abort(), 120000)
+        const timeoutId = setTimeout(() => controller.abort(), 600000)
 
         // Отправляем запрос в FastAPI
         const response = await fetch(analyzeUrl.toString(), {

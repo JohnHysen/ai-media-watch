@@ -112,7 +112,6 @@ const FloatingShapes = () => {
           child.rotation.x = t * shape.speed * 0.5
           child.rotation.y = t * shape.speed * 0.8
           child.rotation.z = t * shape.speed * 0.3
-          // Плавное движение
           const offsetX = Math.sin(t * shape.speed * 0.3 + idx) * 0.5
           const offsetY = Math.cos(t * shape.speed * 0.2 + idx * 1.2) * 0.5
           child.position.x = shape.pos[0] + offsetX
@@ -213,6 +212,19 @@ interface User {
   is_google: boolean
 }
 
+// ---------- Маппинг ролей для отображения ----------
+const ROLE_LABELS: Record<string, string> = {
+  USER: 'Пользователь',
+  INSPECTOR: 'Инспектор',
+  ADMIN: 'Администратор',
+}
+
+const ROLE_COLORS: Record<string, 'default' | 'warning' | 'error'> = {
+  USER: 'default',
+  INSPECTOR: 'warning',
+  ADMIN: 'error',
+}
+
 // ---------- Главный компонент ----------
 const AdminUsers = () => {
   const { user: currentUser } = useUser()
@@ -225,13 +237,14 @@ const AdminUsers = () => {
   const [selectedRole, setSelectedRole] = useState<{ [key: number]: string }>(
     {}
   )
+  const [roleFilter, setRoleFilter] = useState<string>('all')
 
   const fetchUsers = async () => {
     setLoading(true)
     setError('')
     try {
       const response = await $host.get('/auth/users')
-      console.log('📦 Ответ от сервера:', response.data)
+      console.log('Ответ от сервера:', response.data)
 
       if (response.data && response.data.users) {
         setUsers(response.data.users)
@@ -244,7 +257,7 @@ const AdminUsers = () => {
         setError('Сервер вернул некорректные данные')
       }
     } catch (err: any) {
-      console.error('❌ Ошибка загрузки пользователей:', err)
+      console.error('Ошибка загрузки пользователей:', err)
       setError(
         err.response?.data?.error || 'Не удалось загрузить пользователей'
       )
@@ -270,7 +283,7 @@ const AdminUsers = () => {
       setUsers((prev) =>
         prev.map((u) => (u.id === userId ? { ...u, role: newRole as any } : u))
       )
-      toast.success(`Роль пользователя обновлена на ${newRole}`)
+      toast.success(`Роль пользователя обновлена на ${ROLE_LABELS[newRole]}`)
     } catch (err: any) {
       toast.error(err.response?.data?.error || 'Ошибка обновления роли')
     } finally {
@@ -278,27 +291,17 @@ const AdminUsers = () => {
     }
   }
 
-  const filteredUsers = users.filter(
-    (u) =>
+  const filteredUsers = users.filter((u) => {
+    const matchesSearch =
       u.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
       (u.first_name &&
         u.first_name.toLowerCase().includes(searchTerm.toLowerCase())) ||
       (u.last_name &&
         u.last_name.toLowerCase().includes(searchTerm.toLowerCase()))
-  )
+    const matchesRole = roleFilter === 'all' || u.role === roleFilter
+    return matchesSearch && matchesRole
+  })
 
-  const getRoleChipColor = (role: string) => {
-    switch (role) {
-      case 'ADMIN':
-        return 'error'
-      case 'INSPECTOR':
-        return 'warning'
-      default:
-        return 'default'
-    }
-  }
-
-  // Если загрузка и нет пользователей, показываем спиннер
   if (loading) {
     return (
       <Box
@@ -318,22 +321,23 @@ const AdminUsers = () => {
     <Box sx={{ minHeight: '100vh', position: 'relative', overflowX: 'hidden' }}>
       <CyberBackground3D />
 
-      {/* Кнопка меню */}
-      <IconButton
-        onClick={() => setDrawerOpen(true)}
-        sx={{
-          position: 'fixed',
-          top: 20,
-          left: 20,
-          zIndex: 1300,
-          color: '#0ff',
-          bgcolor: 'rgba(0,0,0,0.6)',
-          backdropFilter: 'blur(10px)',
-          '&:hover': { bgcolor: '#0ff', color: '#000' },
-        }}
-      >
-        <MenuIcon />
-      </IconButton>
+      {!drawerOpen && (
+        <IconButton
+          onClick={() => setDrawerOpen(true)}
+          sx={{
+            position: 'fixed',
+            top: 20,
+            left: 20,
+            zIndex: 1300,
+            color: '#0ff',
+            bgcolor: 'rgba(0,0,0,0.6)',
+            backdropFilter: 'blur(10px)',
+            '&:hover': { bgcolor: '#0ff', color: '#000' },
+          }}
+        >
+          <MenuIcon />
+        </IconButton>
+      )}
 
       <CyberSidebar open={drawerOpen} onClose={() => setDrawerOpen(false)} />
 
@@ -455,13 +459,44 @@ const AdminUsers = () => {
                     Фамилия
                   </TableCell>
                   <TableCell sx={{ color: '#0ff', fontWeight: 'bold' }}>
-                    Роль
+                    <FormControl size="small" fullWidth>
+                      <Select
+                        value={roleFilter}
+                        onChange={(e) => setRoleFilter(e.target.value)}
+                        sx={{
+                          color: '#0ff',
+                          '& .MuiSelect-icon': { color: '#0ff' },
+                          '& .MuiOutlinedInput-notchedOutline': {
+                            borderColor: 'rgba(0,255,255,0.3)',
+                          },
+                          '&:hover .MuiOutlinedInput-notchedOutline': {
+                            borderColor: '#0ff',
+                          },
+                          '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+                            borderColor: '#0ff',
+                          },
+                        }}
+                      >
+                        <MenuItem value="all" sx={{ color: '#2c2c2c' }}>
+                          Все
+                        </MenuItem>
+                        <MenuItem value="USER" sx={{ color: '#000000' }}>
+                          Пользователь
+                        </MenuItem>
+                        <MenuItem value="INSPECTOR" sx={{ color: '#99bc00' }}>
+                          Инспектор
+                        </MenuItem>
+                        <MenuItem value="ADMIN" sx={{ color: '#ff0000' }}>
+                          Администратор
+                        </MenuItem>
+                      </Select>
+                    </FormControl>
                   </TableCell>
                   <TableCell sx={{ color: '#0ff', fontWeight: 'bold' }}>
                     Дата регистрации
                   </TableCell>
                   <TableCell sx={{ color: '#0ff', fontWeight: 'bold' }}>
-                    Действия
+                    Изменить роль
                   </TableCell>
                 </TableRow>
               </TableHead>
@@ -481,10 +516,10 @@ const AdminUsers = () => {
                     </TableCell>
                     <TableCell>
                       <Chip
-                        label={u.role}
-                        color={getRoleChipColor(u.role)}
+                        label={ROLE_LABELS[u.role]}
+                        color={ROLE_COLORS[u.role]}
                         size="small"
-                        sx={{ fontWeight: 'bold', minWidth: 80 }}
+                        sx={{ fontWeight: 'bold', minWidth: 80, color: '#fff' }}
                       />
                     </TableCell>
                     <TableCell sx={{ color: '#fff' }}>
@@ -511,9 +546,15 @@ const AdminUsers = () => {
                             '& .MuiSelect-icon': { color: '#0ff' },
                           }}
                         >
-                          <MenuItem value="USER">USER</MenuItem>
-                          <MenuItem value="INSPECTOR">INSPECTOR</MenuItem>
-                          <MenuItem value="ADMIN">ADMIN</MenuItem>
+                          <MenuItem value="USER" sx={{ color: '#000000' }}>
+                            Пользователь
+                          </MenuItem>
+                          <MenuItem value="INSPECTOR" sx={{ color: '#b7cf00' }}>
+                            Инспектор
+                          </MenuItem>
+                          <MenuItem value="ADMIN" sx={{ color: '#ff0000' }}>
+                            Администратор
+                          </MenuItem>
                         </Select>
                       </FormControl>
                       {updatingId === u.id && (

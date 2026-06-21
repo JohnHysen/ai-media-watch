@@ -77,4 +77,8 @@ export class VideoAnalysis extends Model {
   // ✅ В BelongsTo указываем правильное имя поля
   @BelongsTo(() => User, { foreignKey: 'userId' })
   declare initiator: User | null
+
+  @AllowNull(true)
+  @Column(DataType.STRING)
+  declare uploader: string | null
 }

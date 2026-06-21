@@ -23,6 +23,10 @@ import {
   ButtonGroup,
   Alert,
   Link,
+  Select,
+  MenuItem,
+  FormControl,
+  InputLabel,
 } from '@mui/material'
 import MenuIcon from '@mui/icons-material/Menu'
 import SearchIcon from '@mui/icons-material/Search'
@@ -50,7 +54,7 @@ import {
 } from '../http/API'
 
 // ---------- Фон с вращающимися кубами ----------
-const FloatingCube = ({ position, color, size, speed }) => {
+const FloatingCube = ({ position, color, size, speed }: any) => {
   const meshRef = React.useRef<THREE.Mesh>(null)
   useFrame(({ clock }) => {
     if (meshRef.current) {
@@ -165,6 +169,24 @@ const RISK_MAP = {
   },
 }
 
+// Варианты для фильтров
+const VERDICT_OPTIONS = [
+  { value: 'all', label: 'Все' },
+  { value: 'safe', label: 'Безопасно' },
+  { value: 'uncertain', label: 'Неопределённо' },
+  { value: 'dangerous', label: 'Опасно' },
+]
+
+const RISK_OPTIONS = [
+  { value: 'all', label: 'Все' },
+  { value: 'казино', label: 'Казино' },
+  { value: 'пирамида', label: 'Пирамида' },
+  { value: 'инвестиции', label: 'Инвестиции' },
+  { value: 'крипто', label: 'Крипто' },
+  { value: 'рефералы', label: 'Рефералы' },
+  { value: 'понци', label: 'Понци' },
+]
+
 // ---------- Главный компонент ----------
 const History = () => {
   const { user } = useUser()
@@ -179,13 +201,12 @@ const History = () => {
   const [videoAnalyses, setVideoAnalyses] = useState<VideoAnalysis[]>([])
   const [totalCount, setTotalCount] = useState(0)
 
+  // Состояния для фильтров
+  const [verdictFilter, setVerdictFilter] = useState<string>('all')
+  const [riskFilter, setRiskFilter] = useState<string>('all')
+
   const isAdmin = user?.role === 'ADMIN'
   const isAuthenticated = user && user.user_id !== -1 && user.role !== null
-
-  // Логи для отладки
-  console.log('👤 user в History:', user)
-  console.log('📌 user.user_id:', user?.user_id)
-  console.log('🔐 isAdmin:', isAdmin)
 
   const fetchData = async () => {
     if (!isAuthenticated) {
@@ -198,20 +219,16 @@ const History = () => {
       let data: VideoAnalysis[] = []
       if (mode === 'my') {
         const userId = user.user_id ?? user.id
-        console.log(`🔍 Загрузка проверок для пользователя ${userId}`)
         data = await getVideoAnalysesByUser(userId)
-        console.log(`📊 Получено ${data.length} записей`)
       } else if (mode === 'all') {
-        console.log('🌐 Загрузка всех проверок')
         const response = await getVideoAnalyses({ limit: 1000, offset: 0 })
         data = response.data
-        console.log(`📊 Получено ${data.length} записей`)
       }
       setVideoAnalyses(data)
       setTotalCount(data.length)
     } catch (err: any) {
-      console.error('❌ Ошибка загрузки истории:', err)
-      setError('Не удалось загрузить данные: ' + (err.message || ''))
+      console.error('Ошибка загрузки истории:', err)
+      setError('Не удалось загрузить данные')
     } finally {
       setLoading(false)
     }
@@ -223,6 +240,8 @@ const History = () => {
 
   const filteredAndPaginated = useMemo(() => {
     let filtered = [...videoAnalyses]
+
+    // Поиск
     if (searchTerm) {
       const term = searchTerm.toLowerCase()
       filtered = filtered.filter(
@@ -231,16 +250,37 @@ const History = () => {
           item.video_url.toLowerCase().includes(term)
       )
     }
+
+    // Фильтр по вердикту
+    if (verdictFilter !== 'all') {
+      filtered = filtered.filter((item) => item.verdict_text === verdictFilter)
+    }
+
+    // Фильтр по риску
+    if (riskFilter !== 'all') {
+      filtered = filtered.filter((item) => item.primary_risk === riskFilter)
+    }
+
+    // Сортировка по дате (не изменяем)
     filtered.sort((a, b) => {
       const dateA = new Date(a.checked_at).getTime()
       const dateB = new Date(b.checked_at).getTime()
       return sortOrder === 'newest' ? dateB - dateA : dateA - dateB
     })
+
     setTotalCount(filtered.length)
     const start = page * rowsPerPage
     const end = start + rowsPerPage
     return filtered.slice(start, end)
-  }, [videoAnalyses, searchTerm, sortOrder, page, rowsPerPage])
+  }, [
+    videoAnalyses,
+    searchTerm,
+    sortOrder,
+    page,
+    rowsPerPage,
+    verdictFilter,
+    riskFilter,
+  ])
 
   const handleChangePage = (_: unknown, newPage: number) => {
     setPage(newPage)
@@ -260,6 +300,17 @@ const History = () => {
 
   const handleModeToggle = (newMode: 'my' | 'all') => {
     setMode(newMode)
+    setPage(0)
+  }
+
+  // Обработчики изменения фильтров
+  const handleVerdictFilterChange = (value: string) => {
+    setVerdictFilter(value)
+    setPage(0)
+  }
+
+  const handleRiskFilterChange = (value: string) => {
+    setRiskFilter(value)
     setPage(0)
   }
 
@@ -323,7 +374,7 @@ const History = () => {
             </Typography>
           </motion.div>
 
-          {/* Две кнопки переключения – теперь обе активны для всех */}
+          {/* Две кнопки переключения */}
           <Box
             sx={{ display: 'flex', justifyContent: 'center', gap: 3, mb: 4 }}
           >
@@ -354,7 +405,6 @@ const History = () => {
             <Button
               variant={mode === 'all' ? 'contained' : 'outlined'}
               onClick={() => handleModeToggle('all')}
-              // ✅ Убрано disabled={!isAdmin}
               startIcon={<PeopleIcon />}
               sx={{
                 borderRadius: '50px',
@@ -369,11 +419,6 @@ const History = () => {
                 '&:hover': {
                   transform: 'scale(1.05)',
                   boxShadow: '0 0 50px rgba(255,51,102,0.8)',
-                },
-                '&.Mui-disabled': {
-                  opacity: 0.4,
-                  color: '#666',
-                  borderColor: '#666',
                 },
                 fontWeight: 'bold',
                 fontSize: '1.1rem',
@@ -504,10 +549,62 @@ const History = () => {
                     Безопасность (%)
                   </TableCell>
                   <TableCell sx={{ color: '#0ff', fontWeight: 'bold' }}>
-                    Вердикт
+                    {/* Фильтр по вердикту */}
+                    <FormControl size="small" fullWidth>
+                      <Select
+                        value={verdictFilter}
+                        onChange={(e) =>
+                          handleVerdictFilterChange(e.target.value)
+                        }
+                        sx={{
+                          color: '#0ff',
+                          '& .MuiSelect-icon': { color: '#0ff' },
+                          '& .MuiOutlinedInput-notchedOutline': {
+                            borderColor: 'rgba(0,255,255,0.3)',
+                          },
+                          '&:hover .MuiOutlinedInput-notchedOutline': {
+                            borderColor: '#0ff',
+                          },
+                          '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+                            borderColor: '#0ff',
+                          },
+                        }}
+                      >
+                        {VERDICT_OPTIONS.map((opt) => (
+                          <MenuItem key={opt.value} value={opt.value}>
+                            {opt.label}
+                          </MenuItem>
+                        ))}
+                      </Select>
+                    </FormControl>
                   </TableCell>
                   <TableCell sx={{ color: '#0ff', fontWeight: 'bold' }}>
-                    Основной риск
+                    {/* Фильтр по основному риску */}
+                    <FormControl size="small" fullWidth>
+                      <Select
+                        value={riskFilter}
+                        onChange={(e) => handleRiskFilterChange(e.target.value)}
+                        sx={{
+                          color: '#0ff',
+                          '& .MuiSelect-icon': { color: '#0ff' },
+                          '& .MuiOutlinedInput-notchedOutline': {
+                            borderColor: 'rgba(0,255,255,0.3)',
+                          },
+                          '&:hover .MuiOutlinedInput-notchedOutline': {
+                            borderColor: '#0ff',
+                          },
+                          '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+                            borderColor: '#0ff',
+                          },
+                        }}
+                      >
+                        {RISK_OPTIONS.map((opt) => (
+                          <MenuItem key={opt.value} value={opt.value}>
+                            {opt.label}
+                          </MenuItem>
+                        ))}
+                      </Select>
+                    </FormControl>
                   </TableCell>
                   <TableCell sx={{ color: '#0ff', fontWeight: 'bold' }}>
                     Дата проверки
@@ -517,14 +614,14 @@ const History = () => {
               <TableBody>
                 {loading ? (
                   <TableRow>
-                    <TableCell colSpan={5} align="center" sx={{ py: 4 }}>
+                    <TableCell colSpan={6} align="center" sx={{ py: 4 }}>
                       <CircularProgress sx={{ color: '#0ff' }} />
                     </TableCell>
                   </TableRow>
                 ) : error ? (
                   <TableRow>
                     <TableCell
-                      colSpan={5}
+                      colSpan={6}
                       align="center"
                       sx={{ py: 4, color: '#ff3366' }}
                     >
@@ -534,7 +631,7 @@ const History = () => {
                 ) : filteredAndPaginated.length === 0 ? (
                   <TableRow>
                     <TableCell
-                      colSpan={5}
+                      colSpan={6}
                       align="center"
                       sx={{ py: 4, color: '#aaa' }}
                     >

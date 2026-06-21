@@ -2,11 +2,12 @@ import { Router } from 'express'
 import authRouter from './authRouter.js'
 import userRouter from './userRouter.js'
 import videoRoutes from './videoRoutes.js'
-import proxyRoutes from './proxyRoutes.js' // <-- импорт
+import proxyRoutes from './proxyRoutes.js'
 import accessLevel from '../middleware/accessLevel.js'
 import newsRoutes from './newsRoutes.js'
 import analysisQueueRouter from './analysisQueueRouter.js'
 import settingsRouter from './settingsRouter.js'
+import fraudResourceRouter from './fraudResourceRouter.js' // ← добавляем
 
 const router = Router()
 
@@ -16,6 +17,7 @@ router.use('/video-analysis', videoRoutes)
 router.use('/news', newsRoutes)
 router.use('/analysis-queue', analysisQueueRouter)
 router.use('/settings', settingsRouter)
-router.use('/', proxyRoutes) // <-- подключаем прокси (на корневой путь)
+router.use('/fraud-resources', fraudResourceRouter) // ← добавляем
+router.use('/', proxyRoutes)
 
 export default router

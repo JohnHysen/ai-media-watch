@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useMemo } from 'react'
 import {
   Box,
   Typography,
@@ -43,7 +43,7 @@ import { Canvas, useFrame } from '@react-three/fiber'
 import { OrbitControls, Environment, Stars } from '@react-three/drei'
 import * as THREE from 'three'
 import CyberSidebar from '../components/CyberSidebar'
-import { $host } from '../http/API'
+import { $host, getVideoAnalyses, VideoAnalysis } from '../http/API'
 
 // ---------- 3D фон ----------
 const FloatingCube = ({ position, color, size, speed }: any) => {
@@ -121,87 +121,79 @@ const CubeSpaceBackground = () => {
   )
 }
 
-// ---------- Данные угроз ----------
-const threatCategories = [
+// ---------- Определения угроз (описания, иконки, цвета) ----------
+const THREAT_DEFINITIONS = [
   {
-    id: 'gambling',
+    id: 'казино',
     title: 'Нелегальные онлайн-казино',
     icon: <CasinoIcon sx={{ fontSize: 40 }} />,
     color: '#ff3366',
-    riskLevel: 'Критично',
-    riskValue: 97,
     description:
       'Реклама и призывы к регистрации в онлайн-казино через видео в TikTok, Instagram, YouTube.',
-    spread:
+    detection:
       'Видео с «успешными игроками», демонстрацией выигрышей, ссылками в описании. AI распознаёт визуальные маркеры (рулетка, карты, фишки), а также ключевые фразы в аудиодорожке.',
-    whatToDo:
+    advice:
       'Не переходите по ссылкам в описании. Наш AI Media Watch автоматически помечает такие видео и отправляет в приоритетный список для модерации.',
-    stats:
-      'За последний месяц система выявила 1 247 подозрительных видео, 89% из них содержали скрытую рекламу казино. АФМ пресекла схему вывода 600 млрд тенге через соцсети.',
   },
   {
-    id: 'pyramid',
+    id: 'пирамида',
     title: 'Финансовые пирамиды и хайпы',
     icon: <TrendingUpIcon sx={{ fontSize: 40 }} />,
     color: '#ff8844',
-    riskLevel: 'Высокий риск',
-    riskValue: 89,
     description:
       'Видео, обещающие «гарантированный доход», «пассивный заработок», «инвестиции под 50% в месяц».',
-    spread:
+    detection:
       'Короткие ролики с агрессивными инвест-призывами, скриншотами «заработка», приглашениями в Telegram-каналы. AI анализирует текст, субтитры и аудио на наличие фраз-маркеров пирамид.',
-    whatToDo:
+    advice:
       'Помните: высокий доход без риска невозможен. Наш AI вычисляет такие видео по паттернам речи и визуальной стилистике. Сообщайте о подозрительных роликах.',
-    stats:
-      'Еженедельно AI находит более 500 новых пирамидных схем. Только за прошлый месяц заблокировано 78 Telegram-каналов, продвигавших псевдоинвестиции.',
   },
   {
-    id: 'referral',
-    title: 'Реферальные схемы',
-    icon: <LinkIcon sx={{ fontSize: 40 }} />,
-    color: '#ff9966',
-    riskLevel: 'Средний риск',
-    riskValue: 72,
-    description:
-      'Видео с призывами регистрироваться по реферальным ссылкам в казино, бинарных опционах, криптопроектах.',
-    spread:
-      'Блогеры скрыто рекламируют реферальные программы, маскируя их под «личный опыт». AI анализирует ссылки в описании, комментариях, а также распознаёт упоминания «партнёрской программы».',
-    whatToDo:
-      'Не переходите по подозрительным реферальным ссылкам. Наша система автоматически проверяет все ссылки из видео и помечает мошеннические.',
-    stats:
-      'За 2025 год AI выявил более 8 000 реферальных ссылок на нелегальные казино и финансовые пирамиды в видео из Казахстана.',
-  },
-  {
-    id: 'fraud',
-    title: 'Обман и «легкие деньги»',
+    id: 'инвестиции',
+    title: 'Мошеннические инвестиции',
     icon: <PaymentsIcon sx={{ fontSize: 40 }} />,
-    color: '#ff6666',
-    riskLevel: 'Высокий риск',
-    riskValue: 93,
+    color: '#ff9966',
     description:
       'Видео, обещающие быстрый заработок на инвестициях, криптовалюте, форексе, «секретных схемах».',
-    spread:
+    detection:
       'Ролики с нарезкой «богатой жизни», психологические триггеры («успешный успех»), призывы вступить в закрытый клуб. AI анализирует аудио на агрессивные интонации и запрещённые фразы.',
-    whatToDo:
+    advice:
       'Не верьте обещаниям лёгких денег. Наш AI распознаёт эти паттерны и блокирует видео ещё до того, как оно наберёт популярность.',
-    stats:
-      'Среднесуточный объём такого контента на казахстанском сегменте TikTok — около 200 новых видео. AI обрабатывает их за 2-3 минуты.',
   },
   {
-    id: 'visual',
-    title: 'Визуальные маркеры (рулетка, карты, автоматы)',
-    icon: <SecurityIcon sx={{ fontSize: 40 }} />,
+    id: 'крипто',
+    title: 'Крипто-мошенничество',
+    icon: <PaymentsIcon sx={{ fontSize: 40 }} />,
     color: '#ffaa44',
-    riskLevel: 'Средний риск',
-    riskValue: 68,
     description:
-      'Видео, где мелькают игровые автоматы, рулетка, покерные столы – явные признаки нелегального казино.',
-    spread:
-      'Скрытая реклама через обзоры «игровых стратегий», демонстрацию «выигрышей», но без прямой ссылки. AI-модель YOLOv8 обучена распознавать такие объекты.',
-    whatToDo:
-      'AI Media Watch автоматически фиксирует эти кадры и добавляет их в отчёт с временными метками. Модератору остаётся только подтвердить.',
-    stats:
-      'Точность детекции визуальных маркеров — 94,2%. За месяц обработано более 50 000 кадров с разметкой.',
+      'Видео, рекламирующие скам-токены, ICO, «быстрые заработки» на криптовалютах. Используют технический жаргон для создания иллюзии профессионализма.',
+    detection:
+      'AI анализирует упоминания криптовалют, токенов, а также проверяет ссылки на сомнительные обменники и кошельки.',
+    advice:
+      'Не доверяйте проектам, обещающим гарантированную доходность. Изучайте whitepaper и репутацию команды.',
+  },
+  {
+    id: 'рефералы',
+    title: 'Реферальные схемы',
+    icon: <LinkIcon sx={{ fontSize: 40 }} />,
+    color: '#ffaa44',
+    description:
+      'Видео с призывами регистрироваться по реферальным ссылкам в казино, бинарных опционах, криптопроектах.',
+    detection:
+      'Блогеры скрыто рекламируют реферальные программы, маскируя их под «личный опыт». AI анализирует ссылки в описании, комментариях, а также распознаёт упоминания «партнёрской программы».',
+    advice:
+      'Не переходите по подозрительным реферальным ссылкам. Наша система автоматически проверяет все ссылки из видео и помечает мошеннические.',
+  },
+  {
+    id: 'понци',
+    title: 'Схема Понци',
+    icon: <SecurityIcon sx={{ fontSize: 40 }} />,
+    color: '#ff6666',
+    description:
+      'Классическая схема Понци – выплаты старым инвесторам за счёт новых. Видео маскируются под «успешный инвестиционный фонд» с обещанием высоких процентов.',
+    detection:
+      'AI выявляет паттерны: обещание стабильного высокого дохода, акцент на срочность вступления, агрессивная реклама в соцсетях.',
+    advice:
+      'Если доход слишком высок и не зависит от рынка – это мошенничество. Проверяйте отзывы и репутацию.',
   },
 ]
 
@@ -228,14 +220,32 @@ const Analytics = () => {
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null)
   const [updating, setUpdating] = useState(false)
 
-  // Функция загрузки новостей
+  // Состояния для видеоанализов
+  const [videoAnalyses, setVideoAnalyses] = useState<VideoAnalysis[]>([])
+  const [loadingAnalyses, setLoadingAnalyses] = useState(true)
+  const [analysesError, setAnalysesError] = useState<string | null>(null)
+
+  // Загрузка видеоанализов
+  const fetchAnalyses = async () => {
+    setLoadingAnalyses(true)
+    setAnalysesError(null)
+    try {
+      const response = await getVideoAnalyses({ limit: 1000, offset: 0 })
+      setVideoAnalyses(response.data)
+    } catch (err) {
+      console.error('Ошибка загрузки видеоанализов:', err)
+      setAnalysesError('Ошибка')
+    } finally {
+      setLoadingAnalyses(false)
+    }
+  }
+
+  // Загрузка новостей
   const fetchNews = async (showLoading = true) => {
     if (showLoading) setLoadingNews(true)
     setUpdating(true)
     try {
-      const res = await $host.get('/news', {
-        params: { limit: 50 },
-      })
+      const res = await $host.get('/news', { params: { limit: 50 } })
       setNews(res.data.articles || [])
       setLastUpdated(new Date())
       setNewsError('')
@@ -248,8 +258,8 @@ const Analytics = () => {
     }
   }
 
-  // Первоначальная загрузка и автообновление каждый час
   useEffect(() => {
+    fetchAnalyses()
     fetchNews(true)
     const interval = setInterval(() => {
       fetchNews(false)
@@ -263,19 +273,66 @@ const Analytics = () => {
     if (source.includes('instagram')) return false
     if (newsFilter === 'all') return true
     if (newsFilter === 'telegram') return source.includes('telegram')
-    if (newsFilter === 'media') {
-      return !source.includes('telegram')
-    }
+    if (newsFilter === 'media') return !source.includes('telegram')
     return true
   })
 
-  // Определяем иконку для источника (без Instagram)
   const getSourceIcon = (source: string) => {
     const s = source?.toLowerCase() || ''
     if (s.includes('telegram'))
       return <TelegramIcon sx={{ color: '#0ff', fontSize: 18 }} />
     return <AnnouncementIcon sx={{ color: '#ffaa44', fontSize: 18 }} />
   }
+
+  // Статистика по типам угроз из БД (только количество)
+  const threatStats = useMemo(() => {
+    const map: Record<string, number> = {}
+    videoAnalyses.forEach((v) => {
+      if (v.primary_risk) {
+        const key = v.primary_risk
+        map[key] = (map[key] || 0) + 1
+      }
+    })
+    return map
+  }, [videoAnalyses])
+
+  // Подготовка данных для отображения с динамическим уровнем риска
+  const threatData = useMemo(() => {
+    const data = THREAT_DEFINITIONS.map((def) => ({
+      ...def,
+      count: threatStats[def.id] || 0,
+    }))
+    const maxCount = Math.max(...data.map((d) => d.count), 1)
+    // Сортируем для вычисления квартилей
+    const sortedCounts = data.map((d) => d.count).sort((a, b) => a - b)
+    const median = sortedCounts[Math.floor(sortedCounts.length / 2)] || 0
+    const q3 = sortedCounts[Math.floor(sortedCounts.length * 0.75)] || 0
+
+    return data.map((item) => {
+      let riskLevel = 'Низкий'
+      let riskColor = '#33ffcc'
+      if (maxCount === 0) {
+        riskLevel = 'Низкий'
+        riskColor = '#33ffcc'
+      } else if (item.count > q3) {
+        riskLevel = 'Высокий'
+        riskColor = '#ff3366'
+      } else if (item.count > median) {
+        riskLevel = 'Средний'
+        riskColor = '#ffaa44'
+      } else {
+        riskLevel = 'Низкий'
+        riskColor = '#33ffcc'
+      }
+      const percent = (item.count / maxCount) * 100
+      return {
+        ...item,
+        riskLevel,
+        riskColor,
+        percent,
+      }
+    })
+  }, [threatStats])
 
   return (
     <>
@@ -327,7 +384,6 @@ const Analytics = () => {
             </Typography>
           </motion.div>
 
-          {/* Рейтинг угроз */}
           <Typography
             variant="h5"
             sx={{
@@ -338,118 +394,132 @@ const Analytics = () => {
               gap: 1,
             }}
           >
-            <AnalyticsIcon /> Рейтинг угроз по уровню риска (по данным AI)
+            <AnalyticsIcon /> Рейтинг угроз по количеству выявленных случаев
           </Typography>
-          <Grid container spacing={3} sx={{ mb: 6 }}>
-            {threatCategories.map((threat, idx) => (
-              <Grid size={{ xs: 12, md: 6, lg: 4 }} key={idx}>
-                <motion.div
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: idx * 0.05 }}
-                >
-                  <Card
-                    sx={{
-                      bgcolor: 'rgba(10,10,30,0.7)',
-                      backdropFilter: 'blur(8px)',
-                      borderRadius: 4,
-                      border: `1px solid ${threat.color}`,
-                      height: '100%',
-                      transition: '0.2s',
-                      '&:hover': {
-                        transform: 'translateY(-6px)',
-                        boxShadow: `0 0 20px ${threat.color}`,
-                      },
-                    }}
+
+          {loadingAnalyses ? (
+            <Box sx={{ display: 'flex', justifyContent: 'center', my: 4 }}>
+              <CircularProgress sx={{ color: '#0ff' }} />
+            </Box>
+          ) : analysesError ? (
+            <Alert severity="error" sx={{ mb: 3 }}>
+              {analysesError}
+            </Alert>
+          ) : (
+            <Grid container spacing={3} sx={{ mb: 6 }}>
+              {threatData.map((threat, idx) => (
+                <Grid size={{ xs: 12, md: 6, lg: 4 }} key={threat.id}>
+                  <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: idx * 0.05 }}
                   >
-                    <CardContent>
-                      <Box
-                        sx={{
-                          display: 'flex',
-                          justifyContent: 'space-between',
-                          alignItems: 'center',
-                          mb: 2,
-                        }}
-                      >
-                        <Avatar
-                          sx={{ bgcolor: threat.color, width: 56, height: 56 }}
-                        >
-                          {threat.icon}
-                        </Avatar>
-                        <Chip
-                          label={threat.riskLevel}
+                    <Card
+                      sx={{
+                        bgcolor: 'rgba(10,10,30,0.7)',
+                        backdropFilter: 'blur(8px)',
+                        borderRadius: 4,
+                        border: `1px solid ${threat.color}`,
+                        height: '100%',
+                        transition: '0.2s',
+                        '&:hover': {
+                          transform: 'translateY(-6px)',
+                          boxShadow: `0 0 20px ${threat.color}`,
+                        },
+                      }}
+                    >
+                      <CardContent>
+                        <Box
                           sx={{
-                            bgcolor: threat.color,
-                            color: '#fff',
-                            fontWeight: 'bold',
+                            display: 'flex',
+                            justifyContent: 'space-between',
+                            alignItems: 'center',
+                            mb: 2,
                           }}
-                        />
-                      </Box>
-                      <Typography
-                        variant="h6"
-                        sx={{ fontWeight: 'bold', color: '#fff', mb: 1 }}
-                      >
-                        {threat.title}
-                      </Typography>
-                      <Box
-                        sx={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: 1,
-                          mb: 1,
-                        }}
-                      >
-                        <Typography variant="body2" sx={{ color: '#aaa' }}>
-                          Уровень риска:
+                        >
+                          <Avatar
+                            sx={{
+                              bgcolor: threat.color,
+                              width: 56,
+                              height: 56,
+                            }}
+                          >
+                            {threat.icon}
+                          </Avatar>
+                          <Chip
+                            label={threat.riskLevel}
+                            sx={{
+                              bgcolor: threat.riskColor,
+                              color: '#fff',
+                              fontWeight: 'bold',
+                            }}
+                          />
+                        </Box>
+                        <Typography
+                          variant="h6"
+                          sx={{ fontWeight: 'bold', color: '#fff', mb: 1 }}
+                        >
+                          {threat.title}
                         </Typography>
+                        <Box
+                          sx={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: 1,
+                            mb: 1,
+                          }}
+                        >
+                          <Typography variant="body2" sx={{ color: '#aaa' }}>
+                            Количество угроз:
+                          </Typography>
+                          <Typography
+                            variant="body2"
+                            sx={{ color: '#fff', fontWeight: 'bold' }}
+                          >
+                            {threat.count}
+                          </Typography>
+                        </Box>
                         <LinearProgress
                           variant="determinate"
-                          value={threat.riskValue}
+                          value={threat.percent}
                           sx={{
-                            flexGrow: 1,
                             height: 8,
                             borderRadius: 4,
                             bgcolor: '#333',
+                            mb: 1,
                             '& .MuiLinearProgress-bar': {
-                              bgcolor: threat.color,
+                              bgcolor: threat.riskColor,
                             },
                           }}
                         />
                         <Typography
                           variant="body2"
-                          sx={{ color: threat.color, fontWeight: 'bold' }}
+                          sx={{ color: '#ddd', mb: 1 }}
                         >
-                          {threat.riskValue}%
+                          <strong>Описание:</strong> {threat.description}
                         </Typography>
-                      </Box>
-                      <Typography variant="body2" sx={{ color: '#ddd', mb: 1 }}>
-                        <strong>Описание:</strong> {threat.description}
-                      </Typography>
-                      <Typography variant="body2" sx={{ color: '#ddd', mb: 1 }}>
-                        <strong>Как AI распознаёт:</strong> {threat.spread}
-                      </Typography>
-                      <Typography
-                        variant="body2"
-                        sx={{ color: '#ffaa66', mb: 1 }}
-                      >
-                        <strong>Что делать:</strong> {threat.whatToDo}
-                      </Typography>
-                      <Typography
-                        variant="caption"
-                        sx={{ color: '#aaa', display: 'block', mt: 1 }}
-                      >
-                        <strong>Статистика AI:</strong> {threat.stats}
-                      </Typography>
-                    </CardContent>
-                  </Card>
-                </motion.div>
-              </Grid>
-            ))}
-          </Grid>
+                        <Typography
+                          variant="body2"
+                          sx={{ color: '#ddd', mb: 1 }}
+                        >
+                          <strong>Как AI распознаёт:</strong> {threat.detection}
+                        </Typography>
+                        <Typography
+                          variant="body2"
+                          sx={{ color: '#ffaa66', mb: 1 }}
+                        >
+                          <strong>Что делать:</strong> {threat.advice}
+                        </Typography>
+                      </CardContent>
+                    </Card>
+                  </motion.div>
+                </Grid>
+              ))}
+            </Grid>
+          )}
 
           {/* Блок новостей и официальные источники */}
           <Grid container spacing={4} sx={{ mb: 6 }}>
-            {/* Левая часть: Новости */}
             <Grid size={{ xs: 12, md: 6 }}>
               <Card
                 sx={{
@@ -505,7 +575,6 @@ const Analytics = () => {
                   </Box>
                 </Box>
 
-                {/* Фильтры (без Instagram) */}
                 <Box sx={{ display: 'flex', gap: 1, mb: 2, flexWrap: 'wrap' }}>
                   <Chip
                     label="Все"
@@ -677,7 +746,6 @@ const Analytics = () => {
               </Card>
             </Grid>
 
-            {/* Правая часть: Официальные источники и соцсети */}
             <Grid size={{ xs: 12, md: 6 }}>
               <Card
                 sx={{

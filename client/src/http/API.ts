@@ -151,6 +151,7 @@ export interface VideoAnalysis {
   updatedAt: string
   primary_risk: string | null
   reason: string | null
+  uploader: string | null
   initiator?: {
     id: number
     email: string
@@ -330,6 +331,117 @@ export const getScrapeStatus = async (): Promise<ScrapeStatus> => {
   try {
     const res = await $host.get<ScrapeStatus>('/settings/status')
     return res.data
+  } catch (e: any) {
+    if (e.response?.data?.error) toast.error(e.response.data.error)
+    console.log(e)
+    throw e
+  }
+}
+// ========== Fraud Resources (Реестр мошеннических ресурсов) ==========
+export interface FraudResource {
+  id: number
+  platform: 'youtube' | 'tiktok' | 'instagram' | 'telegram' | 'unknown'
+  username: string
+  channel_url: string | null
+  display_name: string | null
+  status: 'pending' | 'confirmed' | 'dismissed' | 'blocked'
+  dangerous_videos_count: number
+  description: string | null
+  moderator_comment: string | null
+  added_by: number | null
+  verified_by: number | null
+  verified_at: string | null
+  tags: string | null
+  createdAt: string
+  updatedAt: string
+  addedByUser?: {
+    id: number
+    email: string
+    first_name: string
+    last_name: string
+  }
+  verifiedByUser?: {
+    id: number
+    email: string
+    first_name: string
+    last_name: string
+  }
+}
+
+// Получить список ресурсов (с фильтрацией и пагинацией)
+export const getFraudResources = async (params?: {
+  status?: string
+  platform?: string
+  search?: string
+  limit?: number
+  offset?: number
+}): Promise<{ total: number; data: FraudResource[] }> => {
+  try {
+    const res = await $host.get<{ total: number; data: FraudResource[] }>(
+      '/fraud-resources',
+      { params }
+    )
+    return res.data
+  } catch (e: any) {
+    if (e.response?.data?.error) toast.error(e.response.data.error)
+    console.log(e)
+    throw e
+  }
+}
+
+// Получить один ресурс по ID
+export const getFraudResourceById = async (
+  id: number
+): Promise<FraudResource> => {
+  try {
+    const res = await $host.get<FraudResource>(`/fraud-resources/${id}`)
+    return res.data
+  } catch (e: any) {
+    if (e.response?.data?.error) toast.error(e.response.data.error)
+    console.log(e)
+    throw e
+  }
+}
+
+// Создать ресурс (только для INSPECTOR/ADMIN)
+export const createFraudResource = async (
+  data: Omit<
+    FraudResource,
+    'id' | 'createdAt' | 'updatedAt' | 'addedByUser' | 'verifiedByUser'
+  >
+): Promise<FraudResource> => {
+  try {
+    const res = await $host.post<FraudResource>('/fraud-resources', data)
+    toast.success('Ресурс добавлен в реестр')
+    return res.data
+  } catch (e: any) {
+    if (e.response?.data?.error) toast.error(e.response.data.error)
+    console.log(e)
+    throw e
+  }
+}
+
+// Обновить ресурс (только для INSPECTOR/ADMIN)
+export const updateFraudResource = async (
+  id: number,
+  data: Partial<FraudResource>
+): Promise<FraudResource> => {
+  try {
+    const res = await $host.put<FraudResource>(`/fraud-resources/${id}`, data)
+    toast.success('Ресурс обновлён')
+    return res.data
+  } catch (e: any) {
+    if (e.response?.data?.error) toast.error(e.response.data.error)
+    console.log(e)
+    throw e
+  }
+}
+
+// Удалить ресурс (только для ADMIN)
+export const deleteFraudResource = async (id: number): Promise<void> => {
+  try {
+    await $host.delete(`/fraud-resources/${id}`)
+    toast.success('Ресурс удалён')
   } catch (e: any) {
     if (e.response?.data?.error) toast.error(e.response.data.error)
     console.log(e)

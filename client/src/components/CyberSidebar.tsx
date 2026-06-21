@@ -32,6 +32,7 @@ import LogoutIcon from '@mui/icons-material/Logout'
 import QueueIcon from '@mui/icons-material/Queue'
 import AdminPanelSettingsIcon from '@mui/icons-material/AdminPanelSettings'
 import SettingsIcon from '@mui/icons-material/Settings'
+import WarningIcon from '@mui/icons-material/Warning'
 import Visibility from '@mui/icons-material/Visibility'
 import VisibilityOff from '@mui/icons-material/VisibilityOff'
 import { useNavigate } from 'react-router-dom'
@@ -198,6 +199,15 @@ export default function CyberSidebar({ open, onClose }: Props) {
       text: 'Управление очередью',
       icon: <QueueIcon />,
       path: '/queue',
+    })
+  }
+
+  // ✅ Реестр мошеннических ресурсов (для инспектора и админа)
+  if (isAdmin || isInspector) {
+    roleMenuItems.push({
+      text: 'Реестр мош. ресурсов',
+      icon: <WarningIcon />,
+      path: '/admin/fraud-resources',
     })
   }
 
@@ -442,7 +452,7 @@ export default function CyberSidebar({ open, onClose }: Props) {
         </DialogActions>
       </Dialog>
 
-      {/* Диалог авторизации (без изменений) */}
+      {/* Диалог авторизации */}
       <Dialog
         open={authDialogOpen}
         onClose={() => setAuthDialogOpen(false)}

@@ -38,7 +38,138 @@ import SearchIcon from '@mui/icons-material/Search'
 import SortIcon from '@mui/icons-material/Sort'
 import QueueIcon from '@mui/icons-material/Queue'
 import CyberSidebar from '../components/CyberSidebar'
+import { Canvas, useFrame } from '@react-three/fiber'
+import { OrbitControls, Environment, Stars } from '@react-three/drei'
+import * as THREE from 'three'
 
+// ---------- 3D фон с парящими фигурами ----------
+const FloatingShapes = () => {
+  const groupRef = React.useRef<THREE.Group>(null!)
+
+  const shapes = useMemo(() => {
+    const geometries = [
+      new THREE.BoxGeometry(0.8, 0.8, 0.8),
+      new THREE.SphereGeometry(0.6, 32, 32),
+      new THREE.TorusGeometry(0.5, 0.2, 16, 32),
+      new THREE.OctahedronGeometry(0.7),
+      new THREE.IcosahedronGeometry(0.6),
+    ]
+    const colors = ['#ff3366', '#33ffcc', '#ffaa44', '#aa66ff', '#44ff66']
+    const positions = [
+      [-3, 2, -5],
+      [4, -1, -7],
+      [2, 3, -10],
+      [-4, -2, -8],
+      [1, 4, -12],
+    ]
+    const speeds = [0.3, 0.2, 0.4, 0.25, 0.35]
+    return geometries.map((geo, idx) => ({
+      geometry: geo,
+      color: colors[idx % colors.length],
+      startX: positions[idx][0],
+      startY: positions[idx][1],
+      startZ: positions[idx][2],
+      speed: speeds[idx],
+      ampX: 2.0 + Math.random() * 2.0,
+      ampY: 1.5 + Math.random() * 1.5,
+      ampZ: 1.0 + Math.random() * 1.5,
+      freqX: 0.1 + Math.random() * 0.1,
+      freqY: 0.1 + Math.random() * 0.1,
+      freqZ: 0.1 + Math.random() * 0.1,
+      phaseX: Math.random() * Math.PI * 2,
+      phaseY: Math.random() * Math.PI * 2,
+      phaseZ: Math.random() * Math.PI * 2,
+      rotSpeedX: 0.003 + Math.random() * 0.005,
+      rotSpeedY: 0.003 + Math.random() * 0.005,
+      rotSpeedZ: 0.003 + Math.random() * 0.005,
+    }))
+  }, [])
+
+  useFrame(({ clock }) => {
+    const t = clock.getElapsedTime()
+    if (groupRef.current) {
+      groupRef.current.children.forEach((child, idx) => {
+        const shape = shapes[idx]
+        if (!shape) return
+        const x =
+          shape.startX + shape.ampX * Math.sin(shape.freqX * t + shape.phaseX)
+        const y =
+          shape.startY + shape.ampY * Math.sin(shape.freqY * t + shape.phaseY)
+        const z =
+          shape.startZ + shape.ampZ * Math.sin(shape.freqZ * t + shape.phaseZ)
+        child.position.set(x, y, z)
+        child.rotation.x += shape.rotSpeedX
+        child.rotation.y += shape.rotSpeedY
+        child.rotation.z += shape.rotSpeedZ
+      })
+    }
+  })
+
+  return (
+    <group ref={groupRef}>
+      {shapes.map((shape, idx) => (
+        <mesh key={idx} position={[shape.startX, shape.startY, shape.startZ]}>
+          <primitive object={shape.geometry} attach="geometry" />
+          <meshStandardMaterial
+            color={shape.color}
+            emissive={shape.color}
+            emissiveIntensity={0.3}
+            metalness={0.4}
+            roughness={0.3}
+            transparent
+            opacity={0.9}
+          />
+        </mesh>
+      ))}
+    </group>
+  )
+}
+
+const SpaceBackground = () => {
+  return (
+    <Box
+      sx={{
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        width: '100%',
+        height: '100%',
+        zIndex: -1,
+        backgroundColor: '#03030f',
+      }}
+    >
+      <Canvas
+        camera={{ position: [0, 1, 14], fov: 50 }}
+        dpr={[1, 2]}
+        performance={{ min: 0.5 }}
+      >
+        <ambientLight intensity={0.5} />
+        <pointLight position={[10, 10, 10]} intensity={0.7} />
+        <pointLight position={[-5, -5, 5]} color="#ff3366" intensity={0.3} />
+        <FloatingShapes />
+        <Stars
+          radius={100}
+          depth={50}
+          count={1200}
+          factor={4}
+          saturation={0}
+          fade
+          speed={0.2}
+        />
+        <Environment preset="night" />
+        <OrbitControls
+          enableZoom={false}
+          enablePan={false}
+          autoRotate
+          autoRotateSpeed={0.15}
+          target={[0, 0, 0]}
+        />
+      </Canvas>
+    </Box>
+  )
+}
+
+// ---------- Интерфейсы ----------
 interface QueueItem {
   id: number
   url: string
@@ -54,6 +185,7 @@ interface QueueItem {
   }
 }
 
+// ---------- Главный компонент ----------
 const QueueManager = () => {
   const { user } = useUser()
   const [drawerOpen, setDrawerOpen] = useState(false)
@@ -66,6 +198,7 @@ const QueueManager = () => {
 
   // Фильтры и сортировка
   const [searchTerm, setSearchTerm] = useState('')
+  const [statusFilter, setStatusFilter] = useState<string>('all')
   const [priorityFilter, setPriorityFilter] = useState<number | 'all'>('all')
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc') // по дате
 
@@ -133,6 +266,11 @@ const QueueManager = () => {
       result = result.filter((item) => item.url.toLowerCase().includes(term))
     }
 
+    // Фильтр по статусу
+    if (statusFilter !== 'all') {
+      result = result.filter((item) => item.status === statusFilter)
+    }
+
     // Фильтр по приоритету
     if (priorityFilter !== 'all') {
       result = result.filter((item) => item.priority === priorityFilter)
@@ -146,7 +284,7 @@ const QueueManager = () => {
     })
 
     return result
-  }, [items, searchTerm, priorityFilter, sortOrder])
+  }, [items, searchTerm, statusFilter, priorityFilter, sortOrder])
 
   const toggleSort = () => {
     setSortOrder((prev) => (prev === 'desc' ? 'asc' : 'desc'))
@@ -191,8 +329,10 @@ const QueueManager = () => {
           alignItems: 'center',
           justifyContent: 'center',
           color: '#fff',
+          position: 'relative',
         }}
       >
+        <SpaceBackground />
         <Typography variant="h5">Доступ запрещён</Typography>
       </Box>
     )
@@ -204,24 +344,39 @@ const QueueManager = () => {
         minHeight: '100vh',
         position: 'relative',
         p: 3,
-        bgcolor: '#0a0a1a',
+        color: '#fff',
       }}
     >
-      <IconButton
-        onClick={() => setDrawerOpen(true)}
-        sx={{
-          position: 'fixed',
-          top: 20,
-          left: 20,
-          zIndex: 1300,
-          color: '#0ff',
-        }}
-      >
-        <MenuIcon />
-      </IconButton>
+      <SpaceBackground />
+
+      {!drawerOpen && (
+        <IconButton
+          onClick={() => setDrawerOpen(true)}
+          sx={{
+            position: 'fixed',
+            top: 20,
+            left: 20,
+            zIndex: 1300,
+            color: '#0ff',
+            bgcolor: 'rgba(0,0,0,0.6)',
+            backdropFilter: 'blur(10px)',
+            '&:hover': { bgcolor: '#0ff', color: '#000' },
+          }}
+        >
+          <MenuIcon />
+        </IconButton>
+      )}
       <CyberSidebar open={drawerOpen} onClose={() => setDrawerOpen(false)} />
 
-      <Box sx={{ maxWidth: 1400, mx: 'auto', pt: 6 }}>
+      <Box
+        sx={{
+          maxWidth: 1400,
+          mx: 'auto',
+          pt: 6,
+          position: 'relative',
+          zIndex: 2,
+        }}
+      >
         <Box
           sx={{
             display: 'flex',
@@ -230,8 +385,16 @@ const QueueManager = () => {
             mb: 3,
           }}
         >
-          <Typography variant="h4" sx={{ color: '#0ff' }}>
-            <QueueIcon sx={{ mr: 1 }} /> Управление очередью
+          <Typography
+            variant="h4"
+            sx={{
+              color: '#0ff',
+              display: 'flex',
+              alignItems: 'center',
+              gap: 1,
+            }}
+          >
+            <QueueIcon /> Управление очередью
           </Typography>
           <Button
             startIcon={<RefreshIcon />}
@@ -347,7 +510,31 @@ const QueueManager = () => {
                     URL
                   </TableCell>
                   <TableCell sx={{ color: '#0ff', fontWeight: 'bold' }}>
-                    Статус
+                    {/* Фильтр по статусу в заголовке */}
+                    <FormControl size="small" fullWidth>
+                      <Select
+                        value={statusFilter}
+                        onChange={(e) => setStatusFilter(e.target.value)}
+                        sx={{
+                          color: '#0ff',
+                          '& .MuiSelect-icon': { color: '#0ff' },
+                          '& .MuiOutlinedInput-notchedOutline': {
+                            borderColor: 'rgba(0,255,255,0.3)',
+                          },
+                          '&:hover .MuiOutlinedInput-notchedOutline': {
+                            borderColor: '#0ff',
+                          },
+                          '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+                            borderColor: '#0ff',
+                          },
+                        }}
+                      >
+                        <MenuItem value="all">Все</MenuItem>
+                        <MenuItem value="pending">В очереди</MenuItem>
+                        <MenuItem value="processing">Обрабатывается</MenuItem>
+                        <MenuItem value="failed">Ошибка</MenuItem>
+                      </Select>
+                    </FormControl>
                   </TableCell>
                   <TableCell sx={{ color: '#0ff', fontWeight: 'bold' }}>
                     Приоритет

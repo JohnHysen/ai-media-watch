@@ -24,6 +24,7 @@ import Analytics from './pages/Analytics'
 import AdminUsers from './pages/AdminUsers'
 import AdminSettings from './pages/AdminSettings.tsx'
 import QueueManager from './pages/QueueManager'
+import FraudResources from './pages/FraudResources.tsx'
 
 const font = 'teletext, "Roboto", "Arial", sans-serif'
 
@@ -106,6 +107,12 @@ const router = createBrowserRouter([
         path: '/queue',
         element: (
           <WithAuth c={<QueueManager />} roles={['INSPECTOR', 'ADMIN']} />
+        ),
+      },
+      {
+        path: '/admin/fraud-resources',
+        element: (
+          <WithAuth c={<FraudResources />} roles={['INSPECTOR', 'ADMIN']} />
         ),
       },
     ],

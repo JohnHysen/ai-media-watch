@@ -101,6 +101,8 @@ async def analyze(
         logger.info(f"РЕЗУЛЬТАТ: {verdict_text.upper()} ({confidence:.0%})")
         logger.info(f"ОСНОВНОЙ РИСК: {primary_risk}")
 
+        uploader = metadata.get('uploader', 'Неизвестный автор')
+
         return {
             "video_url": url,
             "title": metadata.get("title", ""),
@@ -111,7 +113,8 @@ async def analyze(
             "duration_seconds": duration_seconds,
             "preview_image_url": preview_image,
             "checked_at": datetime.now().isoformat(),
-            "primary_risk": primary_risk
+            "primary_risk": primary_risk,
+            "uploader": uploader
         }
 
     except Exception as e:

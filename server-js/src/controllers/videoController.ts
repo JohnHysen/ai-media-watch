@@ -54,6 +54,7 @@ export const createVideoAnalysis = async (req: Request, res: Response) => {
       checked_at,
       reason,
       primary_risk,
+      uploader,
     } = req.body
 
     if (
@@ -75,7 +76,7 @@ export const createVideoAnalysis = async (req: Request, res: Response) => {
       })
     }
 
-    console.log('📨 Создание записи для userId:', userId)
+    console.log('Создание записи для userId:', userId)
 
     const analysis = await VideoAnalysis.create({
       video_url,
@@ -90,6 +91,7 @@ export const createVideoAnalysis = async (req: Request, res: Response) => {
       userId,
       reason: reason || null,
       primary_risk: primary_risk || null,
+      uploader: uploader || null,
     })
 
     res.status(201).json(analysis)
@@ -130,6 +132,7 @@ export const createVideoAnalysisInternal = async (
       checked_at,
       primary_risk,
       userId,
+      uploader,
     } = req.body
 
     if (
@@ -146,7 +149,7 @@ export const createVideoAnalysisInternal = async (
       return res.status(400).json({ error: 'Invalid verdict_text' })
     }
 
-    console.log('📨 Внутреннее создание записи для userId:', userId)
+    console.log('Внутреннее создание записи для userId:', userId)
 
     const analysis = await VideoAnalysis.create({
       video_url,
@@ -160,6 +163,7 @@ export const createVideoAnalysisInternal = async (
       checked_at: checked_at ? new Date(checked_at) : new Date(),
       primary_risk: primary_risk || null,
       userId: userId || null,
+      uploader: uploader || null,
     })
 
     res.status(201).json(analysis)
@@ -259,10 +263,9 @@ export const getAnalysesByUser = async (req: Request, res: Response) => {
 export const scrapVideo = async (req: Request, res: Response) => {
   const run = await client.actor('clockworks/tiktok-scraper').call(input)
 
-  // Fetch and print Actor results from the run's dataset (if any)
   console.log('Results from dataset')
   console.log(
-    `💾 Check your data here: https://console.apify.com/storage/datasets/${run.defaultDatasetId}`
+    `Check your data here: https://console.apify.com/storage/datasets/${run.defaultDatasetId}`
   )
   const { items } = await client.dataset(run.defaultDatasetId).listItems()
   items.forEach((item) => {
