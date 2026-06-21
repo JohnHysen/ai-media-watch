@@ -89,7 +89,6 @@ import {
 const FloatingShapes = () => {
   const groupRef = useRef<THREE.Group>(null!)
 
-  // Создаём 5 фигур с разными параметрами
   const shapes = useMemo(() => {
     const geometries = [
       new THREE.BoxGeometry(0.8, 0.8, 0.8),
@@ -417,7 +416,9 @@ const CyberMediaWatchPro = () => {
   const [checkResultMessage, setCheckResultMessage] = useState<string | null>(
     null
   )
-  const [timeframe, setTimeframe] = useState<'day' | 'week' | 'month'>('week')
+  const [timeframe, setTimeframe] = useState<'day' | 'week' | 'month' | 'all'>(
+    'week'
+  )
   const [selectedVerdictFilter, setSelectedVerdictFilter] = useState<string[]>(
     []
   )
@@ -465,6 +466,7 @@ const CyberMediaWatchPro = () => {
         (t) => new Date(t.checked_at) > new Date(now.getTime() - 30 * 86400000)
       )
     }
+    // timeframe === 'all' – не фильтруем по времени
     if (selectedVerdictFilter.length > 0) {
       threats = threats.filter((t) =>
         selectedVerdictFilter.includes(t.verdict_text)
@@ -526,13 +528,15 @@ const CyberMediaWatchPro = () => {
   }, [filteredThreats])
 
   const stats = useMemo(() => {
-    const totalVideos = videoAnalyses.length
-    const dangerousCount = videoAnalyses.filter((v) => v.is_dangerous).length
-    const uniqueUsers = new Set(
-      videoAnalyses.filter((v) => v.userId).map((v) => v.userId)
-    ).size
+    const totalVideos = filteredThreats.length
+    const dangerousCount = filteredThreats.filter((v) => v.is_dangerous).length
+    const dangerousAuthors = new Set(
+      filteredThreats
+        .filter((v) => v.is_dangerous && v.uploader)
+        .map((v) => v.uploader)
+    )
     const platforms = new Set(
-      videoAnalyses.map((v) => {
+      filteredThreats.map((v) => {
         try {
           const url = new URL(v.video_url)
           return url.hostname.replace('www.', '').split('.')[0]
@@ -544,12 +548,11 @@ const CyberMediaWatchPro = () => {
     return {
       totalVideos,
       dangerousCount,
-      uniqueUsers,
+      dangerousAuthorsCount: dangerousAuthors.size,
       platformsCount: platforms.size,
     }
-  }, [videoAnalyses])
+  }, [filteredThreats])
 
-  // ---------- Лидерборд опасных авторов (по uploader) ----------
   const authorLeaderboard = useMemo(() => {
     const map = new Map<
       string,
@@ -566,34 +569,36 @@ const CyberMediaWatchPro = () => {
       if (v.primary_risk) entry.risks.push(v.primary_risk)
     })
 
-    const result = Array.from(map.entries()).map(([author, data]) => {
-      const dangerPercent =
-        data.total > 0 ? (data.dangerous / data.total) * 100 : 0
-      const riskCounts: Record<string, number> = {}
-      data.risks.forEach((r) => {
-        riskCounts[r] = (riskCounts[r] || 0) + 1
-      })
-      let topRisk = ''
-      let maxCount = 0
-      Object.entries(riskCounts).forEach(([r, c]) => {
-        if (c > maxCount) {
-          maxCount = c
-          topRisk = r
+    const result = Array.from(map.entries())
+      .filter(([_, data]) => data.dangerous > 0)
+      .map(([author, data]) => {
+        const dangerPercent =
+          data.total > 0 ? (data.dangerous / data.total) * 100 : 0
+        const riskCounts: Record<string, number> = {}
+        data.risks.forEach((r) => {
+          riskCounts[r] = (riskCounts[r] || 0) + 1
+        })
+        let topRisk = ''
+        let maxCount = 0
+        Object.entries(riskCounts).forEach(([r, c]) => {
+          if (c > maxCount) {
+            maxCount = c
+            topRisk = r
+          }
+        })
+        return {
+          author,
+          total: data.total,
+          dangerous: data.dangerous,
+          dangerPercent: Math.round(dangerPercent),
+          topRisk,
         }
       })
-      return {
-        author,
-        total: data.total,
-        dangerous: data.dangerous,
-        dangerPercent: Math.round(dangerPercent),
-        topRisk,
-      }
-    })
 
     result.sort(
       (a, b) => b.dangerous - a.dangerous || b.dangerPercent - a.dangerPercent
     )
-    return result.slice(0, 10)
+    return result.slice(0, 5)
   }, [filteredThreats])
 
   const handleCheckVideo = async () => {
@@ -872,8 +877,8 @@ const CyberMediaWatchPro = () => {
                   },
                   {
                     icon: <TrendingUpIcon />,
-                    label: 'Авторов в топе',
-                    value: stats.uniqueUsers,
+                    label: 'Опасных авторов',
+                    value: stats.dangerousAuthorsCount,
                     color: '#ffaa44',
                   },
                 ].map((item, idx) => (
@@ -998,6 +1003,7 @@ const CyberMediaWatchPro = () => {
                   <ToggleButton value="day">День</ToggleButton>
                   <ToggleButton value="week">Неделя</ToggleButton>
                   <ToggleButton value="month">Месяц</ToggleButton>
+                  <ToggleButton value="all">Всё время</ToggleButton>
                 </ToggleButtonGroup>
                 <FormControl
                   size="small"

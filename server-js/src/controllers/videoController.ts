@@ -2,6 +2,7 @@ import { Request, Response } from 'express'
 import { VideoAnalysis, DangerStatus } from '../db/models/VideoAnalysis'
 import { User } from '../db/models/user'
 import { ApifyClient } from 'apify-client'
+import { autoAddResourceFromAnalysis } from './fraudResourceController' // импортируем функцию из соседнего файла
 
 const client = new ApifyClient({
   token: process.env.APIFY_TOKEN,
@@ -78,6 +79,7 @@ export const createVideoAnalysis = async (req: Request, res: Response) => {
 
     console.log('Создание записи для userId:', userId)
 
+    // 1. Создаём запись о видеоанализе
     const analysis = await VideoAnalysis.create({
       video_url,
       title: title || null,
@@ -93,6 +95,15 @@ export const createVideoAnalysis = async (req: Request, res: Response) => {
       primary_risk: primary_risk || null,
       uploader: uploader || null,
     })
+
+    // 2. Автоматическое добавление в реестр мошеннических ресурсов
+    if (analysis.is_dangerous && analysis.uploader) {
+      try {
+        await autoAddResourceFromAnalysis(analysis)
+      } catch (err) {
+        console.error('Ошибка при авто-добавлении в реестр:', err)
+      }
+    }
 
     res.status(201).json(analysis)
   } catch (error: any) {
@@ -151,6 +162,7 @@ export const createVideoAnalysisInternal = async (
 
     console.log('Внутреннее создание записи для userId:', userId)
 
+    // 1. Создаём запись о видеоанализе
     const analysis = await VideoAnalysis.create({
       video_url,
       title: title || null,
@@ -165,6 +177,15 @@ export const createVideoAnalysisInternal = async (
       userId: userId || null,
       uploader: uploader || null,
     })
+
+    // 2. Автоматическое добавление в реестр мошеннических ресурсов
+    if (analysis.is_dangerous && analysis.uploader) {
+      try {
+        await autoAddResourceFromAnalysis(analysis)
+      } catch (err) {
+        console.error('Ошибка при авто-добавлении в реестр:', err)
+      }
+    }
 
     res.status(201).json(analysis)
   } catch (error: any) {
@@ -260,6 +281,9 @@ export const getAnalysesByUser = async (req: Request, res: Response) => {
   }
 }
 
+// ============================================================
+// 6. ЭНДПОИНТ ДЛЯ СКРАПИНГА (оставлен без изменений)
+// ============================================================
 export const scrapVideo = async (req: Request, res: Response) => {
   const run = await client.actor('clockworks/tiktok-scraper').call(input)
 

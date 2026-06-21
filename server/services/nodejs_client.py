@@ -14,12 +14,13 @@ async def send_video_analysis_to_nodejs(
     verdict_text: str,
     is_dangerous: bool,
     duration_seconds: int,
+    uploader: str,
     title: Optional[str] = None,
     tags: Optional[str] = None,
     preview_image_url: Optional[str] = None,
     checked_at: Optional[datetime] = None,
     userId: Optional[int] = None,
-    primary_risk: Optional[str] = None
+    primary_risk: Optional[str] = None,
 ):
     """
     Отправляет результат анализа видео в Node.js сервер для сохранения в БД.
@@ -71,6 +72,7 @@ async def send_video_analysis_to_nodejs(
         "checked_at": (checked_at or datetime.utcnow()).isoformat() if checked_at else None,
         "userId": userId if userId else None,
         "primary_risk": primary_risk if primary_risk else None,
+        "uploader": uploader,
     }
     
     # Удаляем None значения

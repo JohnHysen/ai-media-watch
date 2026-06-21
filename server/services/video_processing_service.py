@@ -42,7 +42,7 @@ def extract_frames(analyze_id: str):
 
     (
         ffmpeg.input(str(input_path))
-        .output(str(output_path), vf="fps=1")
+        .output(str(output_path), vf="fps=0.2")
         .run(overwrite_output=True, quiet=True)
     )
     print(f"✅ Кадры сохранены")
