@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef, useMemo } from 'react'
 import {
   Box,
   Typography,
@@ -18,24 +18,19 @@ import {
   MenuItem,
   FormControl,
   InputLabel,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
   CircularProgress,
   Alert,
   Tooltip,
+  Switch,
+  FormControlLabel,
 } from '@mui/material'
 import RefreshIcon from '@mui/icons-material/Refresh'
-import AddIcon from '@mui/icons-material/Add'
-import EditIcon from '@mui/icons-material/Edit'
-import DeleteIcon from '@mui/icons-material/Delete'
 import MenuIcon from '@mui/icons-material/Menu'
 import YouTubeIcon from '@mui/icons-material/YouTube'
 import MusicNoteIcon from '@mui/icons-material/MusicNote'
 import InstagramIcon from '@mui/icons-material/Instagram'
 import { motion } from 'framer-motion'
-import { $host } from '../http/API'
+import { $host, getVideoAnalyses, VideoAnalysis } from '../http/API'
 import { useUser } from '../context/user/useUser'
 import { toast } from 'react-toastify'
 import CyberSidebar from '../components/CyberSidebar'
@@ -168,145 +163,129 @@ const SpaceBackground = () => {
   )
 }
 
-// ---------- Интерфейс ресурса ----------
-interface FraudResource {
-  id: number
+// ---------- Интерфейс для отображения ----------
+interface Author {
+  id: string
   platform: 'youtube' | 'tiktok' | 'instagram' | 'unknown'
   username: string
   channel_url: string | null
-  display_name: string | null
-  status: 'pending' | 'confirmed' | 'dismissed' | 'blocked'
   dangerous_videos_count: number
-  description: string | null
-  moderator_comment: string | null
-  addedByUser?: { first_name: string; last_name: string; email: string }
-  verifiedByUser?: { first_name: string; last_name: string; email: string }
-  createdAt: string
-  verified_at: string | null
-  tags: string | null
+  total_videos_count: number
 }
 
 // ---------- Главный компонент ----------
 const FraudResources = () => {
   const { user } = useUser()
   const [drawerOpen, setDrawerOpen] = useState(false)
-  const [resources, setResources] = useState<FraudResource[]>([])
+  const [authors, setAuthors] = useState<Author[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [search, setSearch] = useState('')
-  const [statusFilter, setStatusFilter] = useState<string>('all')
   const [platformFilter, setPlatformFilter] = useState('')
-  const [modalOpen, setModalOpen] = useState(false)
-  const [editingId, setEditingId] = useState<number | null>(null)
-  const [formData, setFormData] = useState({
-    platform: 'youtube',
-    channel_name: '',
-    channel_url: '',
-    description: '',
-    status: 'pending' as any,
-  })
-  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
-  const [deleteId, setDeleteId] = useState<number | null>(null)
+  const [showOnlyDangerous, setShowOnlyDangerous] = useState(true)
+  const intervalRef = useRef<NodeJS.Timeout | null>(null)
 
   const isAdmin = user?.role === 'ADMIN'
   const isInspector = user?.role === 'INSPECTOR'
   const canManage = isAdmin || isInspector
 
-  // ---------- Загрузка данных ----------
-  const fetchResources = async () => {
+  // ---------- Загрузка данных из VideoAnalysis ----------
+  const fetchAuthors = async () => {
     setLoading(true)
     setError('')
     try {
-      const params = new URLSearchParams()
-      if (search) params.append('search', search)
-      if (statusFilter !== 'all') params.append('status', statusFilter)
-      if (platformFilter) params.append('platform', platformFilter)
-      const res = await $host.get(`/fraud-resources?${params.toString()}`)
-      setResources(res.data.data || [])
+      const response = await getVideoAnalyses({ limit: 1000, offset: 0 })
+      const allAnalyses = response.data
+
+      const map = new Map<
+        string,
+        {
+          dangerous: number
+          total: number
+          platform: string
+          channel_url: string | null
+        }
+      >()
+      allAnalyses.forEach((v) => {
+        const uploader = v.uploader || 'Аноним'
+        if (!map.has(uploader)) {
+          map.set(uploader, {
+            dangerous: 0,
+            total: 0,
+            platform: 'unknown',
+            channel_url: null,
+          })
+        }
+        const entry = map.get(uploader)!
+        entry.total += 1
+        if (v.is_dangerous) entry.dangerous += 1
+        // Определяем платформу по URL
+        if (v.video_url) {
+          try {
+            const url = new URL(v.video_url)
+            const host = url.hostname
+            if (host.includes('youtube') || host.includes('youtu.be'))
+              entry.platform = 'youtube'
+            else if (host.includes('tiktok')) entry.platform = 'tiktok'
+            else if (host.includes('instagram')) entry.platform = 'instagram'
+            else entry.platform = 'unknown'
+            if (!entry.channel_url) entry.channel_url = v.video_url
+          } catch {}
+        }
+      })
+
+      const authorsList = Array.from(map.entries()).map(([username, data]) => ({
+        id: username,
+        username,
+        platform: data.platform as any,
+        channel_url: data.channel_url,
+        dangerous_videos_count: data.dangerous,
+        total_videos_count: data.total,
+      }))
+
+      setAuthors(authorsList)
     } catch (err: any) {
-      console.error('Ошибка загрузки реестра:', err)
-      setError(err.response?.data?.error || 'Не удалось загрузить реестр')
+      console.error('Ошибка загрузки авторов:', err)
+      setError('Не удалось загрузить авторов')
     } finally {
       setLoading(false)
     }
   }
 
   useEffect(() => {
-    if (canManage) fetchResources()
-  }, [search, statusFilter, platformFilter, canManage])
+    if (canManage) fetchAuthors()
+  }, [canManage])
 
-  // ---------- Модальное окно ----------
-  const handleOpenModal = (resource?: FraudResource) => {
-    if (resource) {
-      setEditingId(resource.id)
-      setFormData({
-        platform: resource.platform,
-        channel_name: resource.display_name || resource.username || '',
-        channel_url: resource.channel_url || '',
-        description: resource.description || '',
-        status: resource.status,
-      })
-    } else {
-      setEditingId(null)
-      setFormData({
-        platform: 'youtube',
-        channel_name: '',
-        channel_url: '',
-        description: '',
-        status: 'pending',
-      })
+  // ---------- Фильтрация ----------
+  const filteredAuthors = useMemo(() => {
+    let result = authors
+    if (showOnlyDangerous) {
+      result = result.filter((a) => a.dangerous_videos_count > 0)
     }
-    setModalOpen(true)
-  }
+    if (search.trim()) {
+      const term = search.toLowerCase()
+      result = result.filter(
+        (a) =>
+          a.username.toLowerCase().includes(term) ||
+          (a.channel_url && a.channel_url.toLowerCase().includes(term))
+      )
+    }
+    if (platformFilter) {
+      result = result.filter((a) => a.platform === platformFilter)
+    }
+    // Сортируем по количеству опасных видео
+    result.sort((a, b) => b.dangerous_videos_count - a.dangerous_videos_count)
+    return result
+  }, [authors, showOnlyDangerous, search, platformFilter])
 
-  const handleSave = async () => {
-    try {
-      const payload = {
-        platform: formData.platform,
-        username: formData.channel_name, // дублируем в username
-        display_name: formData.channel_name,
-        channel_url: formData.channel_url,
-        description: formData.description,
-        status: formData.status,
-      }
-      if (editingId) {
-        await $host.put(`/fraud-resources/${editingId}`, payload)
-        toast.success('Автор обновлён')
-      } else {
-        await $host.post('/fraud-resources', payload)
-        toast.success('Автор добавлен')
-      }
-      setModalOpen(false)
-      fetchResources()
-    } catch (err: any) {
-      toast.error(err.response?.data?.error || 'Ошибка сохранения')
+  // ---------- Авто-обновление каждые 30 секунд ----------
+  useEffect(() => {
+    if (!canManage) return
+    intervalRef.current = setInterval(fetchAuthors, 30000)
+    return () => {
+      if (intervalRef.current) clearInterval(intervalRef.current)
     }
-  }
-
-  const handleDelete = async () => {
-    if (!deleteId) return
-    try {
-      await $host.delete(`/fraud-resources/${deleteId}`)
-      toast.success('Автор удалён')
-      setDeleteDialogOpen(false)
-      setDeleteId(null)
-      fetchResources()
-    } catch (err: any) {
-      toast.error(err.response?.data?.error || 'Ошибка удаления')
-    }
-  }
-
-  // ---------- Вспомогательные функции ----------
-  const getStatusChip = (status: string) => {
-    const map: Record<string, { label: string; color: any }> = {
-      pending: { label: 'Ожидает', color: 'warning' },
-      confirmed: { label: 'Подтверждён', color: 'error' },
-      dismissed: { label: 'Отклонён', color: 'default' },
-      blocked: { label: 'Заблокирован', color: 'error' },
-    }
-    const info = map[status] || map.pending
-    return <Chip label={info.label} color={info.color} size="small" />
-  }
+  }, [canManage])
 
   const getPlatformIcon = (platform: string) => {
     switch (platform) {
@@ -319,10 +298,6 @@ const FraudResources = () => {
       default:
         return null
     }
-  }
-
-  const getChannelName = (resource: FraudResource) => {
-    return resource.display_name || resource.username || '—'
   }
 
   if (!canManage) {
@@ -394,7 +369,7 @@ const FraudResources = () => {
               color: 'transparent',
             }}
           >
-            Реестр мошеннических каналов
+            Авторы опасных видео
           </Typography>
         </motion.div>
 
@@ -418,26 +393,40 @@ const FraudResources = () => {
               gap: 2,
             }}
           >
-            <Button
-              startIcon={<AddIcon />}
-              variant="contained"
-              onClick={() => handleOpenModal()}
-              sx={{
-                bgcolor: '#0ff',
-                color: '#000',
-                '&:hover': { bgcolor: '#33ffcc' },
-              }}
-            >
-              Добавить автора
-            </Button>
-            <Button
-              startIcon={<RefreshIcon />}
-              onClick={fetchResources}
-              variant="outlined"
-              sx={{ borderColor: '#0ff', color: '#0ff' }}
-            >
-              Обновить
-            </Button>
+            <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
+              <Button
+                startIcon={<RefreshIcon />}
+                onClick={fetchAuthors}
+                variant="outlined"
+                disabled={loading}
+                sx={{ borderColor: '#0ff', color: '#0ff' }}
+              >
+                {loading ? (
+                  <CircularProgress size={20} sx={{ color: '#0ff' }} />
+                ) : (
+                  'Обновить'
+                )}
+              </Button>
+              <FormControlLabel
+                control={
+                  <Switch
+                    checked={showOnlyDangerous}
+                    onChange={(e) => setShowOnlyDangerous(e.target.checked)}
+                    sx={{
+                      '& .MuiSwitch-switchBase.Mui-checked': {
+                        color: '#ff3366',
+                      },
+                      '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track':
+                        {
+                          backgroundColor: '#ff3366',
+                        },
+                    }}
+                  />
+                }
+                label="Только опасные"
+                sx={{ color: '#aaa', ml: 1 }}
+              />
+            </Box>
           </Box>
 
           <Box sx={{ display: 'flex', gap: 2, mb: 3, flexWrap: 'wrap' }}>
@@ -486,6 +475,19 @@ const FraudResources = () => {
             >
               {error}
             </Alert>
+          ) : filteredAuthors.length === 0 ? (
+            <Alert
+              severity="info"
+              sx={{
+                bgcolor: 'rgba(0,255,255,0.1)',
+                color: '#0ff',
+                border: '1px solid #0ff',
+              }}
+            >
+              {showOnlyDangerous
+                ? 'Нет опасных авторов. Отключите фильтр "Только опасные", чтобы увидеть всех.'
+                : 'Авторы не найдены'}
+            </Alert>
           ) : (
             <TableContainer
               component={Paper}
@@ -498,281 +500,62 @@ const FraudResources = () => {
                       Платформа
                     </TableCell>
                     <TableCell sx={{ color: '#0ff', fontWeight: 'bold' }}>
-                      Имя канала
-                    </TableCell>
-                    <TableCell sx={{ color: '#0ff', fontWeight: 'bold' }}>
-                      <FormControl size="small" fullWidth>
-                        <Select
-                          value={statusFilter}
-                          onChange={(e) => setStatusFilter(e.target.value)}
-                          sx={{
-                            color: '#0ff',
-                            '& .MuiSelect-icon': { color: '#0ff' },
-                            '& .MuiOutlinedInput-notchedOutline': {
-                              borderColor: 'rgba(0,255,255,0.3)',
-                            },
-                            '&:hover .MuiOutlinedInput-notchedOutline': {
-                              borderColor: '#0ff',
-                            },
-                            '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
-                              borderColor: '#0ff',
-                            },
-                          }}
-                        >
-                          <MenuItem value="all">Все</MenuItem>
-                          <MenuItem value="pending">Ожидает</MenuItem>
-                          <MenuItem value="confirmed">Подтверждён</MenuItem>
-                          <MenuItem value="dismissed">Отклонён</MenuItem>
-                          <MenuItem value="blocked">Заблокирован</MenuItem>
-                        </Select>
-                      </FormControl>
+                      Имя автора
                     </TableCell>
                     <TableCell sx={{ color: '#0ff', fontWeight: 'bold' }}>
                       Опасных видео
                     </TableCell>
                     <TableCell sx={{ color: '#0ff', fontWeight: 'bold' }}>
-                      Добавил
+                      Всего видео
                     </TableCell>
                     <TableCell sx={{ color: '#0ff', fontWeight: 'bold' }}>
-                      Действия
+                      Ссылка
                     </TableCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>
-                  {resources.length === 0 ? (
-                    <TableRow>
-                      <TableCell
-                        colSpan={6}
-                        sx={{ textAlign: 'center', color: '#aaa' }}
-                      >
-                        Каналы не найдены
+                  {filteredAuthors.map((a) => (
+                    <TableRow
+                      key={a.id}
+                      sx={{ '&:hover': { bgcolor: 'rgba(0,255,255,0.05)' } }}
+                    >
+                      <TableCell sx={{ color: '#fff' }}>
+                        <Box
+                          sx={{ display: 'flex', alignItems: 'center', gap: 1 }}
+                        >
+                          {getPlatformIcon(a.platform)}
+                          {a.platform}
+                        </Box>
+                      </TableCell>
+                      <TableCell sx={{ color: '#fff' }}>{a.username}</TableCell>
+                      <TableCell sx={{ color: '#ffaa44', fontWeight: 'bold' }}>
+                        {a.dangerous_videos_count}
+                      </TableCell>
+                      <TableCell sx={{ color: '#fff' }}>
+                        {a.total_videos_count}
+                      </TableCell>
+                      <TableCell>
+                        {a.channel_url ? (
+                          <a
+                            href={a.channel_url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            style={{ color: '#0ff', textDecoration: 'none' }}
+                          >
+                            Ссылка
+                          </a>
+                        ) : (
+                          '—'
+                        )}
                       </TableCell>
                     </TableRow>
-                  ) : (
-                    resources.map((r) => (
-                      <TableRow
-                        key={r.id}
-                        sx={{ '&:hover': { bgcolor: 'rgba(0,255,255,0.05)' } }}
-                      >
-                        <TableCell sx={{ color: '#fff' }}>
-                          <Box
-                            sx={{
-                              display: 'flex',
-                              alignItems: 'center',
-                              gap: 1,
-                            }}
-                          >
-                            {getPlatformIcon(r.platform)}
-                            {r.platform}
-                          </Box>
-                        </TableCell>
-                        <TableCell sx={{ color: '#fff' }}>
-                          {getChannelName(r)}
-                        </TableCell>
-                        <TableCell>{getStatusChip(r.status)}</TableCell>
-                        <TableCell
-                          sx={{ color: '#ffaa44', fontWeight: 'bold' }}
-                        >
-                          {r.dangerous_videos_count}
-                        </TableCell>
-                        <TableCell sx={{ color: '#aaa' }}>
-                          {r.addedByUser
-                            ? `${r.addedByUser.first_name || ''} ${r.addedByUser.last_name || ''}`.trim() ||
-                              r.addedByUser.email
-                            : '—'}
-                        </TableCell>
-                        <TableCell>
-                          <Tooltip title="Редактировать">
-                            <IconButton
-                              size="small"
-                              onClick={() => handleOpenModal(r)}
-                              sx={{ color: '#0ff' }}
-                            >
-                              <EditIcon />
-                            </IconButton>
-                          </Tooltip>
-                          {isAdmin && (
-                            <Tooltip title="Удалить">
-                              <IconButton
-                                size="small"
-                                onClick={() => {
-                                  setDeleteId(r.id)
-                                  setDeleteDialogOpen(true)
-                                }}
-                                sx={{ color: '#ff3366' }}
-                              >
-                                <DeleteIcon />
-                              </IconButton>
-                            </Tooltip>
-                          )}
-                        </TableCell>
-                      </TableRow>
-                    ))
-                  )}
+                  ))}
                 </TableBody>
               </Table>
             </TableContainer>
           )}
         </Card>
       </Box>
-
-      {/* Модальное окно добавления/редактирования с прокруткой */}
-      <Dialog
-        open={modalOpen}
-        onClose={() => setModalOpen(false)}
-        maxWidth="sm"
-        fullWidth
-        PaperProps={{
-          sx: {
-            bgcolor: 'rgba(5,5,20,0.95)',
-            backdropFilter: 'blur(16px)',
-            border: '1px solid rgba(0,255,255,0.3)',
-            color: '#fff',
-          },
-        }}
-      >
-        <DialogTitle
-          sx={{ borderBottom: '1px solid rgba(0,255,255,0.2)', color: '#0ff' }}
-        >
-          {editingId ? 'Редактировать автора' : 'Добавить автора'}
-        </DialogTitle>
-        <DialogContent sx={{ maxHeight: '70vh', overflow: 'auto', mt: 2 }}>
-          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-            <FormControl fullWidth>
-              <Select
-                value={formData.platform}
-                onChange={(e) =>
-                  setFormData({ ...formData, platform: e.target.value })
-                }
-                sx={{
-                  color: '#fff',
-                  '& .MuiOutlinedInput-notchedOutline': { borderColor: '#0ff' },
-                }}
-              >
-                <MenuItem value="youtube">YouTube</MenuItem>
-                <MenuItem value="tiktok">TikTok</MenuItem>
-                <MenuItem value="instagram">Instagram</MenuItem>
-              </Select>
-            </FormControl>
-            <TextField
-              label="Имя канала"
-              value={formData.channel_name}
-              onChange={(e) =>
-                setFormData({ ...formData, channel_name: e.target.value })
-              }
-              fullWidth
-              required
-              sx={{
-                '& .MuiOutlinedInput-root': {
-                  '& fieldset': { borderColor: '#0ff' },
-                },
-                input: { color: '#fff' },
-                label: { color: '#aaa' },
-              }}
-            />
-            <TextField
-              label="URL канала/профиля"
-              value={formData.channel_url}
-              onChange={(e) =>
-                setFormData({ ...formData, channel_url: e.target.value })
-              }
-              fullWidth
-              sx={{
-                '& .MuiOutlinedInput-root': {
-                  '& fieldset': { borderColor: '#0ff' },
-                },
-                input: { color: '#fff' },
-                label: { color: '#aaa' },
-              }}
-            />
-            <TextField
-              label="Описание"
-              value={formData.description}
-              onChange={(e) =>
-                setFormData({ ...formData, description: e.target.value })
-              }
-              fullWidth
-              multiline
-              rows={2}
-              sx={{
-                '& .MuiOutlinedInput-root': {
-                  '& fieldset': { borderColor: '#0ff' },
-                },
-                input: { color: '#fff' },
-                label: { color: '#aaa' },
-              }}
-            />
-            <FormControl fullWidth>
-              <InputLabel sx={{ color: '#aaa' }}>Статус</InputLabel>
-              <Select
-                value={formData.status}
-                onChange={(e) =>
-                  setFormData({ ...formData, status: e.target.value })
-                }
-                label="Статус"
-                sx={{
-                  color: '#fff',
-                  '& .MuiOutlinedInput-notchedOutline': { borderColor: '#0ff' },
-                }}
-              >
-                <MenuItem value="pending">Ожидает</MenuItem>
-                <MenuItem value="confirmed">Подтверждён</MenuItem>
-                <MenuItem value="dismissed">Отклонён</MenuItem>
-                <MenuItem value="blocked">Заблокирован</MenuItem>
-              </Select>
-            </FormControl>
-          </Box>
-        </DialogContent>
-        <DialogActions
-          sx={{ borderTop: '1px solid rgba(0,255,255,0.2)', p: 2 }}
-        >
-          <Button onClick={() => setModalOpen(false)} sx={{ color: '#aaa' }}>
-            Отмена
-          </Button>
-          <Button
-            onClick={handleSave}
-            variant="contained"
-            sx={{
-              bgcolor: '#0ff',
-              color: '#000',
-              '&:hover': { bgcolor: '#33ffcc' },
-            }}
-          >
-            {editingId ? 'Сохранить' : 'Добавить'}
-          </Button>
-        </DialogActions>
-      </Dialog>
-
-      {/* Диалог подтверждения удаления */}
-      <Dialog
-        open={deleteDialogOpen}
-        onClose={() => setDeleteDialogOpen(false)}
-        PaperProps={{
-          sx: {
-            bgcolor: 'rgba(5,5,20,0.95)',
-            border: '1px solid #ff3366',
-            color: '#fff',
-          },
-        }}
-      >
-        <DialogTitle sx={{ color: '#ff3366' }}>
-          Подтверждение удаления
-        </DialogTitle>
-        <DialogContent>
-          Вы уверены, что хотите удалить этого автора из реестра?
-        </DialogContent>
-        <DialogActions>
-          <Button
-            onClick={() => setDeleteDialogOpen(false)}
-            sx={{ color: '#aaa' }}
-          >
-            Отмена
-          </Button>
-          <Button onClick={handleDelete} sx={{ color: '#ff3366' }}>
-            Удалить
-          </Button>
-        </DialogActions>
-      </Dialog>
     </Box>
   )
 }

@@ -6,7 +6,6 @@ import { User } from './models/user.js'
 import { VideoAnalysis } from './models/VideoAnalysis.js'
 import { AnalysisQueue } from './models/AnalysisQueue.js'
 import { SystemSettings } from './models/SystemSettings.js'
-import { FraudResource } from './models/FraudResource.js' // ✅ добавлена
 
 // Создаём подключение к PostgreSQL
 const sequelize = new Sequelize({
@@ -16,10 +15,10 @@ const sequelize = new Sequelize({
   host: cfg.DB_HOST,
   port: cfg.DB_PORT,
   dialect: 'postgres',
-  models: [User, VideoAnalysis, AnalysisQueue, SystemSettings, FraudResource], // ✅ добавлена
+  models: [User, VideoAnalysis, AnalysisQueue, SystemSettings], // ✅ добавлена
   logging: console.log,
 })
 
 // Экспортируем всё необходимое
-export { User, VideoAnalysis, AnalysisQueue, SystemSettings, FraudResource }
+export { User, VideoAnalysis, AnalysisQueue, SystemSettings }
 export default sequelize

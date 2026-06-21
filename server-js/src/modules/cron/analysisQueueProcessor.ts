@@ -5,7 +5,6 @@ import {
   VideoAnalysis,
   SystemSettings,
 } from '../../db'
-import { autoAddResourceFromAnalysis } from '../../controllers/fraudResourceController' // 👈 добавлен импорт
 
 let isRunning = false
 let lastRunTime: Date | null = null
@@ -133,29 +132,13 @@ const processQueue = async () => {
           checked_at: data.checked_at ? new Date(data.checked_at) : new Date(),
           userId: job.userId,
           primary_risk: data.primary_risk || null,
-          uploader: data.uploader || null, // 👈 убедимся, что передаётся
+          uploader: data.uploader,
         }
 
         // ✅ Меняем статус на PROCESSING непосредственно перед сохранением
         await job.update({ status: QueueStatus.PROCESSING })
 
         await VideoAnalysis.create(videoData)
-
-        // ✅ Добавляем автора в реестр, если видео опасное и есть uploader
-        if (videoData.is_dangerous && videoData.uploader) {
-          try {
-            await autoAddResourceFromAnalysis({
-              video_url: videoData.video_url,
-              uploader: videoData.uploader,
-            })
-            console.log(
-              `✅ Автор ${videoData.uploader} добавлен/обновлён в реестре`
-            )
-          } catch (err) {
-            console.error('Ошибка при авто-добавлении в реестр:', err)
-          }
-        }
-
         await job.destroy()
         console.log(
           `✅ Видео ${job.url} успешно обработано и удалено из очереди`

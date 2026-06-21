@@ -2,7 +2,6 @@ import { Request, Response } from 'express'
 import { VideoAnalysis, DangerStatus } from '../db/models/VideoAnalysis'
 import { User } from '../db/models/user'
 import { ApifyClient } from 'apify-client'
-import { autoAddResourceFromAnalysis } from './fraudResourceController' // импортируем функцию из соседнего файла
 
 const client = new ApifyClient({
   token: process.env.APIFY_TOKEN,

@@ -7,7 +7,6 @@ import accessLevel from '../middleware/accessLevel.js'
 import newsRoutes from './newsRoutes.js'
 import analysisQueueRouter from './analysisQueueRouter.js'
 import settingsRouter from './settingsRouter.js'
-import fraudResourceRouter from './fraudResourceRouter.js' // ← добавляем
 
 const router = Router()
 
@@ -17,7 +16,6 @@ router.use('/video-analysis', videoRoutes)
 router.use('/news', newsRoutes)
 router.use('/analysis-queue', analysisQueueRouter)
 router.use('/settings', settingsRouter)
-router.use('/fraud-resources', fraudResourceRouter) // ← добавляем
 router.use('/', proxyRoutes)
 
 export default router

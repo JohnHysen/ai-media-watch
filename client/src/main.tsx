@@ -111,9 +111,7 @@ const router = createBrowserRouter([
       },
       {
         path: '/admin/fraud-resources',
-        element: (
-          <WithAuth c={<FraudResources />} roles={['INSPECTOR', 'ADMIN']} />
-        ),
+        element: <FraudResources />,
       },
     ],
   },
