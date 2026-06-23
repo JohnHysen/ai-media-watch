@@ -1,63 +1,44 @@
 # import asyncio
-# import os
-# import re
-# import instaloader
+# from playwright.async_api import async_playwright
 # from queue_client import add_video_to_queue
 
-# INSTAGRAM_USERNAME = "ваш_логин"  # должен совпадать с тем, для которого создана сессия
-
-# DEFAULT_KEYWORDS = [
-#     "казино", "онлайн казино", "игровые автоматы",
-#     "финансовые пирамиды", "инвестиции",
-#     "заработок в интернете", "пассивный доход",
-#     "криптовалюта", "трейдинг", "бинарные опционы"
-# ]
-
-# def phrase_to_hashtag(phrase: str) -> str:
-#     cleaned = re.sub(r'[^\w\s]', '', phrase)
-#     cleaned = cleaned.replace(' ', '')
-#     return cleaned.lower()
-
-# async def parse_instagram(keywords: list, limit_per_keyword: int = 5):
+# async def parse_instagram(keywords, limit_per_keyword=5):
 #     added = 0
+#     async with async_playwright() as p:
+#         browser = await p.chromium.launch(headless=True)
+#         context = await browser.new_context(
+#             user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+#         )
+#         page = await context.new_page()
 
-#     L = instaloader.Instaloader()
+#         for keyword in keywords:
+#             # Instagram search by hashtag
+#             hashtag = keyword.replace(" ", "").lower()
+#             url = f"https://www.instagram.com/explore/tags/{hashtag}/"
+#             try:
+#                 await page.goto(url, wait_until="domcontentloaded", timeout=30000)
+#                 # Ждём появления постов
+#                 await page.wait_for_selector('article a[href*="/p/"]', timeout=15000)
+#                 # Собираем ссылки
+#                 links = await page.eval_on_selector_all(
+#                     'article a[href*="/p/"]',
+#                     'els => els.map(el => el.href)'
+#                 )
+#                 unique = list(dict.fromkeys(links))[:limit_per_keyword]
+#                 print(f"Instagram #{hashtag}: найдено {len(unique)} видео")
 
-#     # Загружаем сессию из файла (не логинимся заново!)
-#     try:
-#         L.load_session_from_file(INSTAGRAM_USERNAME)
-#         print(f"✅ Сессия загружена для {INSTAGRAM_USERNAME}")
-#     except FileNotFoundError:
-#         print("❌ Файл сессии не найден. Сначала выполните 'instaloader --login=ваш_логин' в терминале.")
-#         return 0
-#     except Exception as e:
-#         print(f"❌ Ошибка загрузки сессии: {e}")
-#         return 0
-
-#     for keyword in keywords:
-#         hashtag = phrase_to_hashtag(keyword)
-#         print(f"🔍 Instagram: поиск по хештегу #{hashtag} (исходный: '{keyword}')")
-#         try:
-#             count = 0
-#             posts = L.get_hashtag_posts(hashtag)
-#             for post in posts:
-#                 if count >= limit_per_keyword:
-#                     break
-#                 if post.is_video:
-#                     video_url = f"https://www.instagram.com/p/{post.shortcode}/"
+#                 for link in unique:
+#                     # Instagram требует, чтобы ссылка была с shortcode
+#                     # links уже содержат полный URL, например https://www.instagram.com/p/xyz/
 #                     try:
-#                         result = await add_video_to_queue(video_url)
-#                         print(f"  ✅ Добавлено: {video_url} – {result.get('message', 'OK')}")
+#                         await add_video_to_queue(link)
 #                         added += 1
-#                         count += 1
 #                     except Exception as e:
-#                         print(f"  ❌ Ошибка добавления {video_url}: {e}")
-#                 await asyncio.sleep(1.5)
-#         except Exception as e:
-#             print(f"  ❌ Ошибка при поиске по хештегу #{hashtag}: {e}")
+#                         print(f"Ошибка добавления {link}: {e}")
+#                     await asyncio.sleep(1)
+#             except Exception as e:
+#                 print(f"Ошибка при поиске #{hashtag}: {e}")
+#                 continue
 
-#     return added
-
-# if __name__ == "__main__":
-#     count = asyncio.run(parse_instagram(DEFAULT_KEYWORDS, 5))
-#     print(f"\n📊 Итоговое количество добавленных видео: {count}")
+#         await browser.close()
+#         return added
