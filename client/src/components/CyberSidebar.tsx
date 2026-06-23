@@ -39,9 +39,10 @@ import { useNavigate } from 'react-router-dom'
 import { useUser } from '../context/user/useUser'
 import { useTranslation } from 'react-i18next'
 import { signIn, signUp } from '../http/API'
-
-// Импортируем тип UserData из UserProvider
 import { UserData } from '../context/user/UserProvider'
+
+// Импорт framer-motion для анимации
+import { motion, AnimatePresence } from 'framer-motion'
 
 interface Props {
   open: boolean
@@ -52,6 +53,8 @@ export default function CyberSidebar({ open, onClose }: Props) {
   const { user, login, logout } = useUser()
   const navigate = useNavigate()
   const { t } = useTranslation()
+
+  // Состояния для диалога выхода
   const [logoutConfirmOpen, setLogoutConfirmOpen] = useState(false)
 
   // Состояния для диалога авторизации
@@ -72,7 +75,6 @@ export default function CyberSidebar({ open, onClose }: Props) {
   const [showRegPassword, setShowRegPassword] = useState(false)
   const [showRegConfirmPassword, setShowRegConfirmPassword] = useState(false)
 
-  // Состояние загрузки и ошибок
   const [authError, setAuthError] = useState('')
   const [loading, setLoading] = useState(false)
 
@@ -80,18 +82,21 @@ export default function CyberSidebar({ open, onClose }: Props) {
   const isAdmin = user?.role === 'ADMIN'
   const isInspector = user?.role === 'INSPECTOR'
 
+  // Навигация по пунктам меню
   const handleNavigation = (path: string) => {
     navigate(path)
     onClose()
   }
 
+  // Выход из системы — закрываем диалог и выходим
   const handleLogout = () => {
+    setLogoutConfirmOpen(false) // закрываем диалог
     logout()
     onClose()
     navigate('/')
   }
 
-  // ✅ Реальный вход через API с преобразованием id → user_id
+  // === Вход через API ===
   const handleLogin = async () => {
     setAuthError('')
     if (!loginEmail.trim() || !loginPassword.trim()) {
@@ -126,7 +131,7 @@ export default function CyberSidebar({ open, onClose }: Props) {
     }
   }
 
-  // ✅ Реальная регистрация через API
+  // === Регистрация через API ===
   const handleRegister = async () => {
     setAuthError('')
     if (
@@ -183,35 +188,26 @@ export default function CyberSidebar({ open, onClose }: Props) {
     setAuthError('')
   }
 
-  // ✅ Базовое меню для всех
+  // === Пункты меню ===
   const baseMenuItems = [
     { text: 'Главная', icon: <DashboardIcon />, path: '/' },
     { text: 'История проверок', icon: <HistoryIcon />, path: '/history' },
     { text: 'Аналитика угроз', icon: <AnalyticsIcon />, path: '/analytics' },
   ]
 
-  // ✅ Ролевые пункты
   const roleMenuItems = []
-
-  // Для инспектора и админа – очередь
   if (isAdmin || isInspector) {
     roleMenuItems.push({
       text: 'Управление очередью',
       icon: <QueueIcon />,
       path: '/queue',
     })
-  }
-
-  // ✅ Реестр мошеннических ресурсов (для инспектора и админа)
-  if (isAdmin || isInspector) {
     roleMenuItems.push({
       text: 'Реестр мош. ресурсов',
       icon: <WarningIcon />,
       path: '/admin/fraud-resources',
     })
   }
-
-  // Для админа – управление пользователями и настройки
   if (isAdmin) {
     roleMenuItems.push({
       text: 'Управление пользователями',
@@ -224,12 +220,11 @@ export default function CyberSidebar({ open, onClose }: Props) {
       path: '/settings',
     })
   }
-
-  // Объединяем меню
   const menuItems = [...baseMenuItems, ...roleMenuItems]
 
   return (
     <>
+      {/* ====== БОКОВОЕ МЕНЮ (Drawer) ====== */}
       <Drawer
         anchor="left"
         open={open}
@@ -260,7 +255,7 @@ export default function CyberSidebar({ open, onClose }: Props) {
             color: '#fff',
           }}
         >
-          {/* Заголовок с логотипом */}
+          {/* Заголовок */}
           <Box
             sx={{
               display: 'flex',
@@ -301,7 +296,7 @@ export default function CyberSidebar({ open, onClose }: Props) {
             </IconButton>
           </Box>
 
-          {/* Профиль пользователя – кликабельный */}
+          {/* Профиль пользователя */}
           {isAuthenticated ? (
             <Box
               sx={{
@@ -363,7 +358,7 @@ export default function CyberSidebar({ open, onClose }: Props) {
             </Box>
           )}
 
-          {/* Список навигации */}
+          {/* Навигация */}
           <List sx={{ flex: 1, px: 1 }}>
             {menuItems.map((item) => (
               <ListItem
@@ -408,7 +403,7 @@ export default function CyberSidebar({ open, onClose }: Props) {
 
           <Divider sx={{ borderColor: 'rgba(0,255,255,0.2)', my: 1 }} />
 
-          {/* Кнопка выхода */}
+          {/* Кнопка выхода (только для авторизованных) */}
           {isAuthenticated && (
             <Box sx={{ p: 2 }}>
               <Button
@@ -434,25 +429,197 @@ export default function CyberSidebar({ open, onClose }: Props) {
         </Box>
       </Drawer>
 
-      {/* Диалог подтверждения выхода */}
+      {/* ====== НОВЫЙ КИБЕР-ДИАЛОГ ВЫХОДА ====== */}
       <Dialog
         open={logoutConfirmOpen}
         onClose={() => setLogoutConfirmOpen(false)}
+        maxWidth="xs"
+        fullWidth
         PaperProps={{
-          sx: { bgcolor: '#111', color: '#fff', border: '1px solid #ff3366' },
+          sx: {
+            bgcolor: 'transparent',
+            boxShadow: 'none',
+            overflow: 'visible',
+          },
         }}
       >
-        <DialogTitle>Выход из системы</DialogTitle>
-        <DialogContent>Вы уверены, что хотите выйти?</DialogContent>
-        <DialogActions>
-          <Button onClick={() => setLogoutConfirmOpen(false)}>Отмена</Button>
-          <Button onClick={handleLogout} sx={{ color: '#ff3366' }}>
-            Выйти
-          </Button>
-        </DialogActions>
+        <AnimatePresence>
+          {logoutConfirmOpen && (
+            <motion.div
+              initial={{ scale: 0.8, opacity: 0, rotateX: 20 }}
+              animate={{ scale: 1, opacity: 1, rotateX: 0 }}
+              exit={{ scale: 0.8, opacity: 0, rotateX: 20 }}
+              transition={{ type: 'spring', damping: 25, stiffness: 300 }}
+              style={{
+                background: 'rgba(10, 10, 30, 0.96)',
+                backdropFilter: 'blur(20px)',
+                borderRadius: '24px',
+                border: '2px solid rgba(255, 51, 102, 0.7)',
+                boxShadow:
+                  '0 0 60px rgba(255, 51, 102, 0.4), inset 0 0 30px rgba(255, 51, 102, 0.1)',
+                padding: '24px 20px 20px',
+                color: '#fff',
+                position: 'relative',
+                overflow: 'hidden',
+              }}
+            >
+              {/* Декоративные фоновые круги */}
+              <Box
+                sx={{
+                  position: 'absolute',
+                  top: -50,
+                  right: -50,
+                  width: 200,
+                  height: 200,
+                  background:
+                    'radial-gradient(circle, rgba(255,51,102,0.15) 0%, transparent 70%)',
+                  borderRadius: '50%',
+                  pointerEvents: 'none',
+                }}
+              />
+              <Box
+                sx={{
+                  position: 'absolute',
+                  bottom: -80,
+                  left: -80,
+                  width: 250,
+                  height: 250,
+                  background:
+                    'radial-gradient(circle, rgba(0,255,255,0.1) 0%, transparent 70%)',
+                  borderRadius: '50%',
+                  pointerEvents: 'none',
+                }}
+              />
+
+              <DialogTitle
+                sx={{
+                  textAlign: 'center',
+                  fontWeight: 900,
+                  fontSize: '1.8rem',
+                  letterSpacing: 2,
+                  background: 'linear-gradient(135deg, #ff3366, #ff6633)',
+                  backgroundClip: 'text',
+                  WebkitBackgroundClip: 'text',
+                  color: 'transparent',
+                  textShadow: '0 0 30px rgba(255,51,102,0.5)',
+                  pb: 1,
+                  position: 'relative',
+                }}
+              >
+                ⚠️ ВЫХОД
+              </DialogTitle>
+
+              <DialogContent
+                sx={{
+                  textAlign: 'center',
+                  py: 2,
+                  position: 'relative',
+                }}
+              >
+                <motion.div
+                  animate={{ scale: [1, 1.1, 1] }}
+                  transition={{
+                    repeat: Infinity,
+                    duration: 2,
+                    ease: 'easeInOut',
+                  }}
+                  style={{ display: 'inline-block' }}
+                >
+                  <Box
+                    component="span"
+                    sx={{
+                      fontSize: 64,
+                      display: 'block',
+                      mb: 1,
+                      filter: 'drop-shadow(0 0 20px #ff3366)',
+                    }}
+                  >
+                    🔐
+                  </Box>
+                </motion.div>
+                <Typography
+                  variant="h6"
+                  sx={{
+                    fontWeight: 600,
+                    color: '#fff',
+                    textShadow: '0 0 20px rgba(255,51,102,0.3)',
+                    mb: 1,
+                  }}
+                >
+                  Вы уверены, что хотите выйти?
+                </Typography>
+                <Typography
+                  variant="body2"
+                  sx={{
+                    color: 'rgba(255,255,255,0.6)',
+                    maxWidth: 280,
+                    mx: 'auto',
+                  }}
+                >
+                  Все несохранённые данные будут потеряны.
+                </Typography>
+              </DialogContent>
+
+              <DialogActions
+                sx={{
+                  justifyContent: 'center',
+                  gap: 2,
+                  pt: 1,
+                  pb: 0,
+                  position: 'relative',
+                }}
+              >
+                <Button
+                  onClick={() => setLogoutConfirmOpen(false)}
+                  variant="outlined"
+                  sx={{
+                    borderColor: '#0ff',
+                    color: '#0ff',
+                    px: 4,
+                    py: 1,
+                    borderRadius: 30,
+                    fontWeight: 600,
+                    letterSpacing: 1,
+                    transition: 'all 0.3s',
+                    '&:hover': {
+                      bgcolor: 'rgba(0,255,255,0.15)',
+                      borderColor: '#33ffcc',
+                      boxShadow: '0 0 30px rgba(0,255,255,0.4)',
+                      transform: 'scale(1.05)',
+                    },
+                  }}
+                >
+                  Отмена
+                </Button>
+                <Button
+                  onClick={handleLogout}
+                  variant="contained"
+                  sx={{
+                    background: 'linear-gradient(135deg, #ff3366, #ff0055)',
+                    color: '#fff',
+                    px: 4,
+                    py: 1,
+                    borderRadius: 30,
+                    fontWeight: 600,
+                    letterSpacing: 1,
+                    boxShadow: '0 0 20px rgba(255,51,102,0.5)',
+                    transition: 'all 0.3s',
+                    '&:hover': {
+                      background: 'linear-gradient(135deg, #ff0055, #cc0044)',
+                      boxShadow: '0 0 40px rgba(255,51,102,0.8)',
+                      transform: 'scale(1.05)',
+                    },
+                  }}
+                >
+                  Выйти
+                </Button>
+              </DialogActions>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </Dialog>
 
-      {/* Диалог авторизации */}
+      {/* ====== ДИАЛОГ АВТОРИЗАЦИИ (без изменений, но стилизован под кибер) ====== */}
       <Dialog
         open={authDialogOpen}
         onClose={() => setAuthDialogOpen(false)}
@@ -460,10 +627,12 @@ export default function CyberSidebar({ open, onClose }: Props) {
         fullWidth
         PaperProps={{
           sx: {
-            bgcolor: '#111',
+            bgcolor: 'rgba(10,10,30,0.96)',
+            backdropFilter: 'blur(16px)',
             color: '#fff',
-            border: '1px solid #0ff',
-            borderRadius: 3,
+            border: '1px solid rgba(0, 255, 255, 0.3)',
+            borderRadius: 4,
+            boxShadow: '0 0 40px rgba(0, 255, 255, 0.2)',
           },
         }}
       >
