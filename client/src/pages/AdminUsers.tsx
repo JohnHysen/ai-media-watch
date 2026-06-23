@@ -25,6 +25,7 @@ import RefreshIcon from '@mui/icons-material/Refresh'
 import MenuIcon from '@mui/icons-material/Menu'
 import PeopleIcon from '@mui/icons-material/People'
 import { $host } from '../http/API'
+import { useTranslation } from 'react-i18next'
 import { useUser } from '../context/user/useUser'
 import { toast } from 'react-toastify'
 import CyberSidebar from '../components/CyberSidebar'
@@ -212,21 +213,24 @@ interface User {
   is_google: boolean
 }
 
-// ---------- Маппинг ролей для отображения ----------
-const ROLE_LABELS: Record<string, string> = {
-  USER: 'Пользователь',
-  INSPECTOR: 'Инспектор',
-  ADMIN: 'Администратор',
-}
-
-const ROLE_COLORS: Record<string, 'default' | 'warning' | 'error'> = {
-  USER: 'default',
-  INSPECTOR: 'warning',
-  ADMIN: 'error',
-}
-
 // ---------- Главный компонент ----------
 const AdminUsers = () => {
+  const { t, ready } = useTranslation()
+
+  const ROLE_LABELS = useMemo(
+    () => ({
+      USER: t('polzovatel'),
+      INSPECTOR: t('inspektor'),
+      ADMIN: t('administra'),
+    }),
+    [t]
+  )
+
+  const ROLE_COLORS: Record<string, 'default' | 'warning' | 'error'> = {
+    USER: 'default',
+    INSPECTOR: 'warning',
+    ADMIN: 'error',
+  }
   const { user: currentUser } = useUser()
   const [drawerOpen, setDrawerOpen] = useState(false)
   const [users, setUsers] = useState<User[]>([])
@@ -254,13 +258,11 @@ const AdminUsers = () => {
         })
         setSelectedRole(roles)
       } else {
-        setError('Сервер вернул некорректные данные')
+        setError(t('server-ver'))
       }
     } catch (err: any) {
       console.error('Ошибка загрузки пользователей:', err)
-      setError(
-        err.response?.data?.error || 'Не удалось загрузить пользователей'
-      )
+      setError(err.response?.data?.error || t('ne-udalos--2'))
     } finally {
       setLoading(false)
     }
@@ -273,7 +275,7 @@ const AdminUsers = () => {
   const handleRoleChange = async (userId: number, newRole: string) => {
     if (newRole === selectedRole[userId]) return
     if (userId === currentUser?.user_id && newRole !== 'ADMIN') {
-      toast.error('Вы не можете понизить свою собственную роль')
+      toast.error(t('vy-ne-mozh'))
       return
     }
     setUpdatingId(userId)
@@ -283,9 +285,9 @@ const AdminUsers = () => {
       setUsers((prev) =>
         prev.map((u) => (u.id === userId ? { ...u, role: newRole as any } : u))
       )
-      toast.success(`Роль пользователя обновлена на ${ROLE_LABELS[newRole]}`)
+      toast.success(`${t('rol-polzov')} ${ROLE_LABELS[newRole]}`)
     } catch (err: any) {
-      toast.error(err.response?.data?.error || 'Ошибка обновления роли')
+      toast.error(err.response?.data?.error || t('oshibka-ob-1'))
     } finally {
       setUpdatingId(null)
     }
@@ -316,6 +318,8 @@ const AdminUsers = () => {
       </Box>
     )
   }
+
+  if (!ready) return null
 
   return (
     <Box sx={{ minHeight: '100vh', position: 'relative', overflowX: 'hidden' }}>
@@ -370,7 +374,7 @@ const AdminUsers = () => {
               color: 'transparent',
             }}
           >
-            <PeopleIcon sx={{ mr: 1 }} /> Управление пользователями
+            <PeopleIcon sx={{ mr: 1 }} /> {t('upravlenie-0')}
           </Typography>
           <Button
             startIcon={<RefreshIcon />}
@@ -382,13 +386,13 @@ const AdminUsers = () => {
               '&:hover': { bgcolor: 'rgba(0,255,255,0.1)' },
             }}
           >
-            Обновить
+            {t('obnovit')}
           </Button>
         </Box>
 
         <TextField
           fullWidth
-          placeholder="Поиск по email или имени..."
+          placeholder={t('poisk-po-e')}
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
           sx={{
@@ -429,7 +433,7 @@ const AdminUsers = () => {
               border: '1px solid #0ff',
             }}
           >
-            Пользователи не найдены
+            {t('polzovatel-0')}
           </Alert>
         ) : (
           <TableContainer
@@ -453,10 +457,10 @@ const AdminUsers = () => {
                     Email
                   </TableCell>
                   <TableCell sx={{ color: '#0ff', fontWeight: 'bold' }}>
-                    Имя
+                    {t('imya')}
                   </TableCell>
                   <TableCell sx={{ color: '#0ff', fontWeight: 'bold' }}>
-                    Фамилия
+                    {t('familiya')}
                   </TableCell>
                   <TableCell sx={{ color: '#0ff', fontWeight: 'bold' }}>
                     <FormControl size="small" fullWidth>
@@ -478,25 +482,25 @@ const AdminUsers = () => {
                         }}
                       >
                         <MenuItem value="all" sx={{ color: '#2c2c2c' }}>
-                          Все
+                          {t('vse')}
                         </MenuItem>
                         <MenuItem value="USER" sx={{ color: '#000000' }}>
-                          Пользователь
+                          {t('polzovatel')}
                         </MenuItem>
                         <MenuItem value="INSPECTOR" sx={{ color: '#99bc00' }}>
-                          Инспектор
+                          {t('inspektor')}
                         </MenuItem>
                         <MenuItem value="ADMIN" sx={{ color: '#ff0000' }}>
-                          Администратор
+                          {t('administra')}
                         </MenuItem>
                       </Select>
                     </FormControl>
                   </TableCell>
                   <TableCell sx={{ color: '#0ff', fontWeight: 'bold' }}>
-                    Дата регистрации
+                    {t('data-regis')}
                   </TableCell>
                   <TableCell sx={{ color: '#0ff', fontWeight: 'bold' }}>
-                    Изменить роль
+                    {t('izmenit-ro')}
                   </TableCell>
                 </TableRow>
               </TableHead>
@@ -547,13 +551,13 @@ const AdminUsers = () => {
                           }}
                         >
                           <MenuItem value="USER" sx={{ color: '#000000' }}>
-                            Пользователь
+                            {t('polzovatel')}
                           </MenuItem>
                           <MenuItem value="INSPECTOR" sx={{ color: '#b7cf00' }}>
-                            Инспектор
+                            {t('inspektor')}
                           </MenuItem>
                           <MenuItem value="ADMIN" sx={{ color: '#ff0000' }}>
-                            Администратор
+                            {t('administra')}
                           </MenuItem>
                         </Select>
                       </FormControl>

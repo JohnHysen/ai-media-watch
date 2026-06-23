@@ -41,6 +41,7 @@ import ShowChartIcon from '@mui/icons-material/ShowChart'
 import CurrencyBitcoinIcon from '@mui/icons-material/CurrencyBitcoin'
 import PeopleAltIcon from '@mui/icons-material/PeopleAlt'
 import WarningAmberIcon from '@mui/icons-material/WarningAmber'
+import { useTranslation } from 'react-i18next'
 import { useUser } from '../context/user/useUser'
 import { motion } from 'framer-motion'
 import { Canvas, useFrame } from '@react-three/fiber'
@@ -129,67 +130,10 @@ const CubeSpaceBackground = () => {
   )
 }
 
-// Маппинг вердиктов для цветовой индикации
-const VERDICT_MAP = {
-  safe: { label: 'Безопасно', color: '#44ff66' },
-  dangerous: { label: 'Опасно', color: '#ff3366' },
-  uncertain: { label: 'Неопределённо', color: '#ffaa44' },
-}
-
-const RISK_MAP = {
-  казино: {
-    label: 'Казино',
-    color: '#ff3366',
-    icon: <CasinoIcon sx={{ fontSize: 14 }} />,
-  },
-  пирамида: {
-    label: 'Пирамида',
-    color: '#ffaa44',
-    icon: <AccountTreeIcon sx={{ fontSize: 14 }} />,
-  },
-  инвестиции: {
-    label: 'Инвестиции',
-    color: '#ffaa44',
-    icon: <ShowChartIcon sx={{ fontSize: 14 }} />,
-  },
-  крипто: {
-    label: 'Крипто',
-    color: '#ffaa44',
-    icon: <CurrencyBitcoinIcon sx={{ fontSize: 14 }} />,
-  },
-  рефералы: {
-    label: 'Рефералы',
-    color: '#ffaa44',
-    icon: <PeopleAltIcon sx={{ fontSize: 14 }} />,
-  },
-  понци: {
-    label: 'Понци',
-    color: '#ffaa44',
-    icon: <WarningAmberIcon sx={{ fontSize: 14 }} />,
-  },
-}
-
-// Варианты для фильтров
-const VERDICT_OPTIONS = [
-  { value: 'all', label: 'Все' },
-  { value: 'safe', label: 'Безопасно' },
-  { value: 'uncertain', label: 'Неопределённо' },
-  { value: 'dangerous', label: 'Опасно' },
-]
-
-const RISK_OPTIONS = [
-  { value: 'all', label: 'Все' },
-  { value: 'казино', label: 'Казино' },
-  { value: 'пирамида', label: 'Пирамида' },
-  { value: 'инвестиции', label: 'Инвестиции' },
-  { value: 'крипто', label: 'Крипто' },
-  { value: 'рефералы', label: 'Рефералы' },
-  { value: 'понци', label: 'Понци' },
-]
-
 // ---------- Главный компонент ----------
 const History = () => {
   const { user } = useUser()
+  const { t, ready } = useTranslation()
   const [drawerOpen, setDrawerOpen] = useState(false)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -207,6 +151,64 @@ const History = () => {
 
   const isAdmin = user?.role === 'ADMIN'
   const isAuthenticated = user && user.user_id !== -1 && user.role !== null
+
+  // Маппинг вердиктов для цветовой индикации
+  const VERDICT_MAP = {
+    safe: { label: t('bezopasno'), color: '#44ff66' },
+    dangerous: { label: t('opasno'), color: '#ff3366' },
+    uncertain: { label: t('neopredely'), color: '#ffaa44' },
+  }
+
+  const RISK_MAP = {
+    казино: {
+      label: t('kazino'),
+      color: '#ff3366',
+      icon: <CasinoIcon sx={{ fontSize: 14 }} />,
+    },
+    пирамида: {
+      label: t('piramida'),
+      color: '#ffaa44',
+      icon: <AccountTreeIcon sx={{ fontSize: 14 }} />,
+    },
+    инвестиции: {
+      label: t('investicii'),
+      color: '#ffaa44',
+      icon: <ShowChartIcon sx={{ fontSize: 14 }} />,
+    },
+    крипто: {
+      label: t('kripto'),
+      color: '#ffaa44',
+      icon: <CurrencyBitcoinIcon sx={{ fontSize: 14 }} />,
+    },
+    рефералы: {
+      label: t('referaly'),
+      color: '#ffaa44',
+      icon: <PeopleAltIcon sx={{ fontSize: 14 }} />,
+    },
+    понци: {
+      label: t('ponci'),
+      color: '#ffaa44',
+      icon: <WarningAmberIcon sx={{ fontSize: 14 }} />,
+    },
+  }
+
+  // Варианты для фильтров
+  const VERDICT_OPTIONS = [
+    { value: 'all', label: t('vse') },
+    { value: 'safe', label: t('bezopasno') },
+    { value: 'uncertain', label: t('neopredely') },
+    { value: 'dangerous', label: t('opasno') },
+  ]
+
+  const RISK_OPTIONS = [
+    { value: 'all', label: t('vse') },
+    { value: 'казино', label: t('kazino') },
+    { value: 'пирамида', label: t('piramida') },
+    { value: 'инвестиции', label: t('investicii') },
+    { value: 'крипто', label: t('kripto') },
+    { value: 'рефералы', label: t('referaly') },
+    { value: 'понци', label: t('ponci') },
+  ]
 
   const fetchData = async () => {
     if (!isAuthenticated) {
@@ -228,7 +230,7 @@ const History = () => {
       setTotalCount(data.length)
     } catch (err: any) {
       console.error('Ошибка загрузки истории:', err)
-      setError('Не удалось загрузить данные')
+      setError(t('ne-udalos-'))
     } finally {
       setLoading(false)
     }
@@ -250,6 +252,8 @@ const History = () => {
           item.video_url.toLowerCase().includes(term)
       )
     }
+
+    if (!ready) return null
 
     // Фильтр по вердикту
     if (verdictFilter !== 'all') {
@@ -326,7 +330,7 @@ const History = () => {
           justifyContent: 'center',
         }}
       >
-        <Typography>Пожалуйста, войдите в систему</Typography>
+        <Typography>{t('pozhaluist')}</Typography>
       </Box>
     )
   }
@@ -370,7 +374,7 @@ const History = () => {
                 textAlign: 'center',
               }}
             >
-              {mode === 'my' ? 'Мои проверки' : 'Все проверки'}
+              {mode === 'my' ? t('moi-prover') : t('vse-prover')}
             </Typography>
           </motion.div>
 
@@ -400,7 +404,7 @@ const History = () => {
                 fontSize: '1.1rem',
               }}
             >
-              Мои проверки
+              {t('moi-prover')}
             </Button>
             <Button
               variant={mode === 'all' ? 'contained' : 'outlined'}
@@ -424,7 +428,7 @@ const History = () => {
                 fontSize: '1.1rem',
               }}
             >
-              Все проверки
+              {t('vse-prover')}
             </Button>
           </Box>
 
@@ -445,7 +449,7 @@ const History = () => {
                   <HistoryIcon sx={{ fontSize: 48, color: '#0ff' }} />
                   <Box>
                     <Typography variant="body2" sx={{ color: '#aaa' }}>
-                      Всего записей
+                      {t('vsego-zapi')}
                     </Typography>
                     <Typography
                       variant="h4"
@@ -466,7 +470,7 @@ const History = () => {
                   }}
                 >
                   <Typography variant="body2" sx={{ color: '#aaa' }}>
-                    Сортировка:
+                    {t('sortirovka')}
                   </Typography>
                   <ButtonGroup variant="outlined" size="small">
                     <Button
@@ -488,8 +492,8 @@ const History = () => {
                       }}
                     >
                       {sortOrder === 'newest'
-                        ? 'Сначала новые'
-                        : 'Сначала старые'}
+                        ? t('snachala-n')
+                        : t('snachala-s')}
                     </Button>
                   </ButtonGroup>
                 </Box>
@@ -499,7 +503,7 @@ const History = () => {
 
           {/* Поле поиска */}
           <TextField
-            placeholder="Поиск по названию или ссылке..."
+            placeholder={t('poisk-po-n')}
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             fullWidth
@@ -537,16 +541,16 @@ const History = () => {
               <TableHead>
                 <TableRow>
                   <TableCell sx={{ color: '#0ff', fontWeight: 'bold' }}>
-                    Название
+                    {t('nazvanie')}
                   </TableCell>
                   <TableCell sx={{ color: '#0ff', fontWeight: 'bold' }}>
-                    Ссылка
+                    {t('ssylka')}
                   </TableCell>
                   <TableCell
                     sx={{ color: '#0ff', fontWeight: 'bold' }}
                     align="center"
                   >
-                    Безопасность (%)
+                    {t('bezopasnos')} (%)
                   </TableCell>
                   <TableCell sx={{ color: '#0ff', fontWeight: 'bold' }}>
                     {/* Фильтр по вердикту */}
@@ -607,7 +611,7 @@ const History = () => {
                     </FormControl>
                   </TableCell>
                   <TableCell sx={{ color: '#0ff', fontWeight: 'bold' }}>
-                    Дата проверки
+                    {t('data-prove')}
                   </TableCell>
                 </TableRow>
               </TableHead>
@@ -635,9 +639,7 @@ const History = () => {
                       align="center"
                       sx={{ py: 4, color: '#aaa' }}
                     >
-                      {searchTerm
-                        ? 'Ничего не найдено'
-                        : 'Нет данных о проверках'}
+                      {searchTerm ? t('nichego-ne') : t('net-dannyk')}
                     </TableCell>
                   </TableRow>
                 ) : (
@@ -654,7 +656,7 @@ const History = () => {
                         sx={{ '&:hover': { bgcolor: 'rgba(0,255,255,0.05)' } }}
                       >
                         <TableCell sx={{ color: '#fff' }}>
-                          {item.title || 'Без названия'}
+                          {item.title || t('bez-nazvan')}
                         </TableCell>
                         <TableCell sx={{ color: '#88f' }}>
                           <Link
@@ -717,7 +719,7 @@ const History = () => {
                               variant="caption"
                               sx={{ color: '#666' }}
                             >
-                              Не определен
+                              {t('ne-opredel')}
                             </Typography>
                           )}
                         </TableCell>

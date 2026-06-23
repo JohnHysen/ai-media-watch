@@ -44,6 +44,7 @@ import { OrbitControls, Environment, Stars } from '@react-three/drei'
 import * as THREE from 'three'
 import CyberSidebar from '../components/CyberSidebar'
 import { $host, getVideoAnalyses, VideoAnalysis } from '../http/API'
+import { useTranslation } from 'react-i18next'
 
 // ---------- 3D фон ----------
 const FloatingCube = ({ position, color, size, speed }: any) => {
@@ -121,82 +122,6 @@ const CubeSpaceBackground = () => {
   )
 }
 
-// ---------- Определения угроз (описания, иконки, цвета) ----------
-const THREAT_DEFINITIONS = [
-  {
-    id: 'казино',
-    title: 'Нелегальные онлайн-казино',
-    icon: <CasinoIcon sx={{ fontSize: 40 }} />,
-    color: '#ff3366',
-    description:
-      'Реклама и призывы к регистрации в онлайн-казино через видео в TikTok, Instagram, YouTube.',
-    detection:
-      'Видео с «успешными игроками», демонстрацией выигрышей, ссылками в описании. AI распознаёт визуальные маркеры (рулетка, карты, фишки), а также ключевые фразы в аудиодорожке.',
-    advice:
-      'Не переходите по ссылкам в описании. Наш AI Media Watch автоматически помечает такие видео и отправляет в приоритетный список для модерации.',
-  },
-  {
-    id: 'пирамида',
-    title: 'Финансовые пирамиды и хайпы',
-    icon: <TrendingUpIcon sx={{ fontSize: 40 }} />,
-    color: '#ff8844',
-    description:
-      'Видео, обещающие «гарантированный доход», «пассивный заработок», «инвестиции под 50% в месяц».',
-    detection:
-      'Короткие ролики с агрессивными инвест-призывами, скриншотами «заработка», приглашениями в Telegram-каналы. AI анализирует текст, субтитры и аудио на наличие фраз-маркеров пирамид.',
-    advice:
-      'Помните: высокий доход без риска невозможен. Наш AI вычисляет такие видео по паттернам речи и визуальной стилистике. Сообщайте о подозрительных роликах.',
-  },
-  {
-    id: 'инвестиции',
-    title: 'Мошеннические инвестиции',
-    icon: <PaymentsIcon sx={{ fontSize: 40 }} />,
-    color: '#ff9966',
-    description:
-      'Видео, обещающие быстрый заработок на инвестициях, криптовалюте, форексе, «секретных схемах».',
-    detection:
-      'Ролики с нарезкой «богатой жизни», психологические триггеры («успешный успех»), призывы вступить в закрытый клуб. AI анализирует аудио на агрессивные интонации и запрещённые фразы.',
-    advice:
-      'Не верьте обещаниям лёгких денег. Наш AI распознаёт эти паттерны и блокирует видео ещё до того, как оно наберёт популярность.',
-  },
-  {
-    id: 'крипто',
-    title: 'Крипто-мошенничество',
-    icon: <PaymentsIcon sx={{ fontSize: 40 }} />,
-    color: '#ffaa44',
-    description:
-      'Видео, рекламирующие скам-токены, ICO, «быстрые заработки» на криптовалютах. Используют технический жаргон для создания иллюзии профессионализма.',
-    detection:
-      'AI анализирует упоминания криптовалют, токенов, а также проверяет ссылки на сомнительные обменники и кошельки.',
-    advice:
-      'Не доверяйте проектам, обещающим гарантированную доходность. Изучайте whitepaper и репутацию команды.',
-  },
-  {
-    id: 'рефералы',
-    title: 'Реферальные схемы',
-    icon: <LinkIcon sx={{ fontSize: 40 }} />,
-    color: '#ffaa44',
-    description:
-      'Видео с призывами регистрироваться по реферальным ссылкам в казино, бинарных опционах, криптопроектах.',
-    detection:
-      'Блогеры скрыто рекламируют реферальные программы, маскируя их под «личный опыт». AI анализирует ссылки в описании, комментариях, а также распознаёт упоминания «партнёрской программы».',
-    advice:
-      'Не переходите по подозрительным реферальным ссылкам. Наша система автоматически проверяет все ссылки из видео и помечает мошеннические.',
-  },
-  {
-    id: 'понци',
-    title: 'Схема Понци',
-    icon: <SecurityIcon sx={{ fontSize: 40 }} />,
-    color: '#ff6666',
-    description:
-      'Классическая схема Понци – выплаты старым инвесторам за счёт новых. Видео маскируются под «успешный инвестиционный фонд» с обещанием высоких процентов.',
-    detection:
-      'AI выявляет паттерны: обещание стабильного высокого дохода, акцент на срочность вступления, агрессивная реклама в соцсетях.',
-    advice:
-      'Если доход слишком высок и не зависит от рынка – это мошенничество. Проверяйте отзывы и репутацию.',
-  },
-]
-
 // ---------- Вспомогательная функция обрезки описания до 5 предложений ----------
 const truncateToSentences = (text: string, maxSentences = 5): string => {
   if (!text) return ''
@@ -210,6 +135,64 @@ const truncateToSentences = (text: string, maxSentences = 5): string => {
 
 // ---------- Главный компонент Analytics ----------
 const Analytics = () => {
+  const { t, ready } = useTranslation()
+  const THREAT_DEFINITIONS = [
+    {
+      id: 'казино',
+      title: t('nelegalnye-0'),
+      icon: <CasinoIcon sx={{ fontSize: 40 }} />,
+      color: '#ff3366',
+      description: t('reklama-i-'),
+      detection: t('video-s-us'),
+      advice: t('ne-perekho'),
+    },
+    {
+      id: 'пирамида',
+      title: t('finansovye-0'),
+      icon: <TrendingUpIcon sx={{ fontSize: 40 }} />,
+      color: '#ff8844',
+      description: t('video-obes'),
+      detection: t('korotkie-r'),
+      advice: t('pomnite-vy'),
+    },
+    {
+      id: 'инвестиции',
+      title: t('moshennich'),
+      icon: <PaymentsIcon sx={{ fontSize: 40 }} />,
+      color: '#ff9966',
+      description: t('video-obes-0'),
+      detection: t('roliki-s-n'),
+      advice: t('ne-verte-o'),
+    },
+    {
+      id: 'крипто',
+      title: t('kripto-mos'),
+      icon: <PaymentsIcon sx={{ fontSize: 40 }} />,
+      color: '#ffaa44',
+      description: t('video-rekl'),
+      detection: t('ai-analizi'),
+      advice: t('ne-doverya'),
+    },
+    {
+      id: 'рефералы',
+      title: t('referalnye'),
+      icon: <LinkIcon sx={{ fontSize: 40 }} />,
+      color: '#ffaa44',
+      description: t('video-s-pr'),
+      detection: t('blogery-sk'),
+      advice: t('ne-perekho-0'),
+    },
+    {
+      id: 'понци',
+      title: t('skhema-pon'),
+      icon: <SecurityIcon sx={{ fontSize: 40 }} />,
+      color: '#ff6666',
+      description: t('klassiches'),
+      detection: t('ai-vyyavly'),
+      advice: t('esli-dokho'),
+    },
+  ]
+
   const [drawerOpen, setDrawerOpen] = useState(false)
   const [news, setNews] = useState<any[]>([])
   const [loadingNews, setLoadingNews] = useState(true)
@@ -251,7 +234,7 @@ const Analytics = () => {
       setNewsError('')
     } catch (err) {
       console.error('Ошибка загрузки новостей:', err)
-      setNewsError('Не удалось загрузить новости')
+      setNewsError(t('ne-udalos--0'))
     } finally {
       setLoadingNews(false)
       setUpdating(false)
@@ -267,6 +250,7 @@ const Analytics = () => {
     return () => clearInterval(interval)
   }, [])
 
+  if (!ready) return null
   // Фильтрация новостей – исключаем Instagram
   const filteredNews = news.filter((item) => {
     const source = item.source?.toLowerCase() || ''
@@ -309,19 +293,19 @@ const Analytics = () => {
     const q3 = sortedCounts[Math.floor(sortedCounts.length * 0.75)] || 0
 
     return data.map((item) => {
-      let riskLevel = 'Низкий'
+      let riskLevel = t('nizkii')
       let riskColor = '#33ffcc'
       if (maxCount === 0) {
-        riskLevel = 'Низкий'
+        riskLevel = t('nizkii')
         riskColor = '#33ffcc'
       } else if (item.count > q3) {
-        riskLevel = 'Высокий'
+        riskLevel = t('vysokii')
         riskColor = '#ff3366'
       } else if (item.count > median) {
-        riskLevel = 'Средний'
+        riskLevel = t('srednii')
         riskColor = '#ffaa44'
       } else {
-        riskLevel = 'Низкий'
+        riskLevel = t('nizkii')
         riskColor = '#33ffcc'
       }
       const percent = (item.count / maxCount) * 100
@@ -373,14 +357,13 @@ const Analytics = () => {
                 color: 'transparent',
               }}
             >
-              Аналитика угроз в видео
+              {t('analitika-')}
             </Typography>
             <Typography
               variant="subtitle1"
               sx={{ color: '#aaa', mb: 4, textAlign: 'center' }}
             >
-              Как AI Media Watch выявляет мошенничество, казино и пирамиды в
-              TikTok, Instagram и YouTube
+              {t('kak-ai-med')}
             </Typography>
           </motion.div>
 
@@ -394,7 +377,7 @@ const Analytics = () => {
               gap: 1,
             }}
           >
-            <AnalyticsIcon /> Рейтинг угроз по количеству выявленных случаев
+            <AnalyticsIcon /> {t('reiting-ug')}
           </Typography>
 
           {loadingAnalyses ? (
@@ -470,7 +453,7 @@ const Analytics = () => {
                           }}
                         >
                           <Typography variant="body2" sx={{ color: '#aaa' }}>
-                            Количество угроз:
+                            {t('kolichestv')}
                           </Typography>
                           <Typography
                             variant="body2"
@@ -496,19 +479,19 @@ const Analytics = () => {
                           variant="body2"
                           sx={{ color: '#ddd', mb: 1 }}
                         >
-                          <strong>Описание:</strong> {threat.description}
+                          <strong>{t('opisanie')}</strong> {threat.description}
                         </Typography>
                         <Typography
                           variant="body2"
                           sx={{ color: '#ddd', mb: 1 }}
                         >
-                          <strong>Как AI распознаёт:</strong> {threat.detection}
+                          <strong>{t('kak-ai-ras')}</strong> {threat.detection}
                         </Typography>
                         <Typography
                           variant="body2"
                           sx={{ color: '#ffaa66', mb: 1 }}
                         >
-                          <strong>Что делать:</strong> {threat.advice}
+                          <strong>{t('chto-delat')}</strong> {threat.advice}
                         </Typography>
                       </CardContent>
                     </Card>
@@ -550,12 +533,13 @@ const Analytics = () => {
                       gap: 1,
                     }}
                   >
-                    <AnnouncementIcon /> Актуальные новости
+                    <AnnouncementIcon /> {t('aktualnye-')}
                   </Typography>
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                     {lastUpdated && (
                       <Typography variant="caption" sx={{ color: '#aaa' }}>
-                        Обновлено: {lastUpdated.toLocaleTimeString('ru-RU')}
+                        {t('obnovleno')}{' '}
+                        {lastUpdated.toLocaleTimeString('ru-RU')}
                       </Typography>
                     )}
                     <IconButton
@@ -577,7 +561,7 @@ const Analytics = () => {
 
                 <Box sx={{ display: 'flex', gap: 1, mb: 2, flexWrap: 'wrap' }}>
                   <Chip
-                    label="Все"
+                    label={t('vse')}
                     onClick={() => setNewsFilter('all')}
                     color={newsFilter === 'all' ? 'primary' : 'default'}
                     sx={{ color: newsFilter === 'all' ? '#000' : '#fff' }}
@@ -590,7 +574,7 @@ const Analytics = () => {
                     sx={{ color: newsFilter === 'telegram' ? '#000' : '#fff' }}
                   />
                   <Chip
-                    label="СМИ"
+                    label={t('smi')}
                     icon={<AnnouncementIcon />}
                     onClick={() => setNewsFilter('media')}
                     color={newsFilter === 'media' ? 'primary' : 'default'}
@@ -626,7 +610,7 @@ const Analytics = () => {
                       justifyContent: 'center',
                     }}
                   >
-                    Нет новостей по выбранному фильтру
+                    {t('net-novost')}
                   </Typography>
                 ) : (
                   <Box
@@ -736,7 +720,7 @@ const Analytics = () => {
                               },
                             }}
                           >
-                            Читать дальше →
+                            {t('chitat-dal')}
                           </Button>
                         </Box>
                       )
@@ -767,7 +751,7 @@ const Analytics = () => {
                     gap: 1,
                   }}
                 >
-                  <VerifiedIcon /> Официальные источники
+                  <VerifiedIcon /> {t('oficialnye')}
                 </Typography>
                 <TableContainer
                   component={Paper}
@@ -777,7 +761,7 @@ const Analytics = () => {
                     <TableBody>
                       <TableRow>
                         <TableCell sx={{ color: '#fff' }}>
-                          Агентство по финансовому мониторингу (АФМ)
+                          {t('agentstvo-')}
                         </TableCell>
                         <TableCell>
                           <Link
@@ -785,7 +769,7 @@ const Analytics = () => {
                             target="_blank"
                             sx={{ color: '#0ff' }}
                           >
-                            Telegram-канал
+                            Telegram-{t('kanal-0')}
                           </Link>
                         </TableCell>
                       </TableRow>
@@ -805,7 +789,7 @@ const Analytics = () => {
                       </TableRow>
                       <TableRow>
                         <TableCell sx={{ color: '#fff' }}>
-                          Министерство цифрового развития РК
+                          {t('ministerst')}
                         </TableCell>
                         <TableCell>
                           <Link
@@ -813,13 +797,13 @@ const Analytics = () => {
                             target="_blank"
                             sx={{ color: '#0ff' }}
                           >
-                            Официальный сайт
+                            {t('oficialnyi')}
                           </Link>
                         </TableCell>
                       </TableRow>
                       <TableRow>
                         <TableCell sx={{ color: '#fff' }}>
-                          АРРФР (финрынок)
+                          {t('arrfr-finr')}
                         </TableCell>
                         <TableCell>
                           <Link
@@ -827,7 +811,7 @@ const Analytics = () => {
                             target="_blank"
                             sx={{ color: '#0ff' }}
                           >
-                            Официальный сайт
+                            {t('oficialnyi')}
                           </Link>
                         </TableCell>
                       </TableRow>
@@ -840,7 +824,7 @@ const Analytics = () => {
                   variant="subtitle2"
                   sx={{ color: '#33ffcc', mb: 1 }}
                 >
-                  Социальные сети АФМ
+                  {t('socialnye-')}
                 </Typography>
                 <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
                   <Link
@@ -909,7 +893,7 @@ const Analytics = () => {
                 gap: 1,
               }}
             >
-              <SecurityIcon /> Как AI Media Watch защищает вас?
+              <SecurityIcon /> {t('kak-ai-med-0')}
             </Typography>
             <Grid container spacing={2}>
               <Grid size={{ xs: 12, sm: 6, md: 3 }}>
@@ -923,7 +907,7 @@ const Analytics = () => {
                 >
                   <BlockIcon sx={{ color: '#ff3366', fontSize: 30 }} />
                   <Typography variant="body2" sx={{ color: '#ddd' }}>
-                    Автоматический анализ видео
+                    {t('avtomatich')}
                   </Typography>
                 </Box>
               </Grid>
@@ -938,7 +922,7 @@ const Analytics = () => {
                 >
                   <ChatIcon sx={{ color: '#33ffcc', fontSize: 30 }} />
                   <Typography variant="body2" sx={{ color: '#ddd' }}>
-                    Распознавание аудио и субтитров
+                    {t('raspoznava')}
                   </Typography>
                 </Box>
               </Grid>
@@ -953,7 +937,7 @@ const Analytics = () => {
                 >
                   <SecurityIcon sx={{ color: '#ffaa44', fontSize: 30 }} />
                   <Typography variant="body2" sx={{ color: '#ddd' }}>
-                    Обнаружение визуальных маркеров
+                    {t('obnaruzhen')}
                   </Typography>
                 </Box>
               </Grid>
@@ -968,7 +952,7 @@ const Analytics = () => {
                 >
                   <LinkIcon sx={{ color: '#ff6666', fontSize: 30 }} />
                   <Typography variant="body2" sx={{ color: '#ddd' }}>
-                    Проверка ссылок на мошенничество
+                    {t('proverka-s')}
                   </Typography>
                 </Box>
               </Grid>

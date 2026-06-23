@@ -31,6 +31,7 @@ import MusicNoteIcon from '@mui/icons-material/MusicNote'
 import InstagramIcon from '@mui/icons-material/Instagram'
 import { motion } from 'framer-motion'
 import { $host, getVideoAnalyses, VideoAnalysis } from '../http/API'
+import { useTranslation } from 'react-i18next'
 import { useUser } from '../context/user/useUser'
 import { toast } from 'react-toastify'
 import CyberSidebar from '../components/CyberSidebar'
@@ -175,6 +176,7 @@ interface Author {
 
 // ---------- Главный компонент ----------
 const FraudResources = () => {
+  const { t, ready } = useTranslation()
   const { user } = useUser()
   const [drawerOpen, setDrawerOpen] = useState(false)
   const [authors, setAuthors] = useState<Author[]>([])
@@ -207,7 +209,7 @@ const FraudResources = () => {
         }
       >()
       allAnalyses.forEach((v) => {
-        const uploader = v.uploader || 'Аноним'
+        const uploader = v.uploader || t('anonim')
         if (!map.has(uploader)) {
           map.set(uploader, {
             dangerous: 0,
@@ -219,7 +221,6 @@ const FraudResources = () => {
         const entry = map.get(uploader)!
         entry.total += 1
         if (v.is_dangerous) entry.dangerous += 1
-        // Определяем платформу по URL
         if (v.video_url) {
           try {
             const url = new URL(v.video_url)
@@ -246,7 +247,7 @@ const FraudResources = () => {
       setAuthors(authorsList)
     } catch (err: any) {
       console.error('Ошибка загрузки авторов:', err)
-      setError('Не удалось загрузить авторов')
+      setError(t('ne-udalos--1'))
     } finally {
       setLoading(false)
     }
@@ -314,11 +315,13 @@ const FraudResources = () => {
       >
         <SpaceBackground />
         <Typography variant="h5" sx={{ position: 'relative', zIndex: 2 }}>
-          Доступ запрещён
+          {t('dostup-zap')}
         </Typography>
       </Box>
     )
   }
+
+  if (!ready) return null
 
   return (
     <Box sx={{ minHeight: '100vh', position: 'relative', color: '#fff' }}>
@@ -369,7 +372,7 @@ const FraudResources = () => {
               color: 'transparent',
             }}
           >
-            Авторы опасных видео
+            {t('avtory-opa')}
           </Typography>
         </motion.div>
 
@@ -404,7 +407,7 @@ const FraudResources = () => {
                 {loading ? (
                   <CircularProgress size={20} sx={{ color: '#0ff' }} />
                 ) : (
-                  'Обновить'
+                  t('obnovit')
                 )}
               </Button>
               <FormControlLabel
@@ -423,7 +426,7 @@ const FraudResources = () => {
                     }}
                   />
                 }
-                label="Только опасные"
+                label={t('tolko-opas')}
                 sx={{ color: '#aaa', ml: 1 }}
               />
             </Box>
@@ -431,7 +434,7 @@ const FraudResources = () => {
 
           <Box sx={{ display: 'flex', gap: 2, mb: 3, flexWrap: 'wrap' }}>
             <TextField
-              placeholder="Поиск по имени или URL"
+              placeholder={t('poisk-po-i')}
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               sx={{
@@ -445,18 +448,18 @@ const FraudResources = () => {
               }}
             />
             <FormControl sx={{ minWidth: 150 }}>
-              <InputLabel sx={{ color: '#aaa' }}>Платформа</InputLabel>
+              <InputLabel sx={{ color: '#aaa' }}>{t('platforma')}</InputLabel>
               <Select
                 value={platformFilter}
                 onChange={(e) => setPlatformFilter(e.target.value)}
-                label="Платформа"
+                label={t('platforma')}
                 sx={{
                   color: '#fff',
                   bgcolor: 'rgba(0,0,0,0.4)',
                   '& .MuiOutlinedInput-notchedOutline': { borderColor: '#0ff' },
                 }}
               >
-                <MenuItem value="">Все</MenuItem>
+                <MenuItem value="">{t('vse')}</MenuItem>
                 <MenuItem value="youtube">YouTube</MenuItem>
                 <MenuItem value="tiktok">TikTok</MenuItem>
                 <MenuItem value="instagram">Instagram</MenuItem>
@@ -484,9 +487,7 @@ const FraudResources = () => {
                 border: '1px solid #0ff',
               }}
             >
-              {showOnlyDangerous
-                ? 'Нет опасных авторов. Отключите фильтр "Только опасные", чтобы увидеть всех.'
-                : 'Авторы не найдены'}
+              {showOnlyDangerous ? t('net-opasny') : t('avtory-ne-')}
             </Alert>
           ) : (
             <TableContainer
@@ -497,19 +498,19 @@ const FraudResources = () => {
                 <TableHead>
                   <TableRow>
                     <TableCell sx={{ color: '#0ff', fontWeight: 'bold' }}>
-                      Платформа
+                      {t('platforma')}
                     </TableCell>
                     <TableCell sx={{ color: '#0ff', fontWeight: 'bold' }}>
-                      Имя автора
+                      {t('imya-avtor')}
                     </TableCell>
                     <TableCell sx={{ color: '#0ff', fontWeight: 'bold' }}>
-                      Опасных видео
+                      {t('opasnykh-v')}
                     </TableCell>
                     <TableCell sx={{ color: '#0ff', fontWeight: 'bold' }}>
-                      Всего видео
+                      {t('vsego-vide')}
                     </TableCell>
                     <TableCell sx={{ color: '#0ff', fontWeight: 'bold' }}>
-                      Ссылка
+                      {t('ssylka')}
                     </TableCell>
                   </TableRow>
                 </TableHead>
@@ -542,7 +543,7 @@ const FraudResources = () => {
                             rel="noopener noreferrer"
                             style={{ color: '#0ff', textDecoration: 'none' }}
                           >
-                            Ссылка
+                            {t('ssylka')}
                           </a>
                         ) : (
                           '—'

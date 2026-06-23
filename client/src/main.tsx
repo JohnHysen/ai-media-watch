@@ -5,19 +5,13 @@ import { createBrowserRouter, RouterProvider } from 'react-router-dom'
 import { ToastContainer } from 'react-toastify'
 import RootLayout from './components/RootLayout.tsx'
 
-import Map from './pages/Map.tsx'
 import Menu from './pages/Menu.tsx'
-import NotFound from './pages/NotFound.tsx'
-import QR from './pages/QR.tsx'
-import Telegram from './pages/Telegram.tsx'
-import Translations from './pages/Translations.tsx'
 
 import 'leaflet/dist/leaflet.css'
 import './index.css'
 
 import './i18n'
 import WithAuth from './components/WithAuth.tsx'
-import Email from './pages/Email.tsx'
 import Profile from './pages/Profile.tsx'
 import History from './pages/History'
 import Analytics from './pages/Analytics'
@@ -63,26 +57,6 @@ const router = createBrowserRouter([
     children: [
       { path: '/', element: <Menu /> },
       {
-        path: '/1-telegram',
-        element: <WithAuth c={<Telegram />} roles={['USER', 'ADMIN']} />,
-      },
-      {
-        path: '/2-email',
-        element: <WithAuth c={<Email />} roles={['USER', 'ADMIN']} />,
-      },
-      {
-        path: '/4-leaflet',
-        element: <WithAuth c={<Map />} roles={['USER', 'ADMIN']} />,
-      },
-      {
-        path: '/5-i18n',
-        element: <WithAuth c={<Translations />} roles={['USER', 'ADMIN']} />,
-      },
-      {
-        path: '/8-qr',
-        element: <WithAuth c={<QR />} roles={['USER', 'ADMIN']} />,
-      },
-      {
         path: '/profile',
         element: <Profile />,
       },
@@ -94,7 +68,6 @@ const router = createBrowserRouter([
         path: '/analytics',
         element: <Analytics />,
       },
-      // ✅ Новый маршрут для администратора
       {
         path: '/users',
         element: <WithAuth c={<AdminUsers />} roles={['ADMIN']} />,

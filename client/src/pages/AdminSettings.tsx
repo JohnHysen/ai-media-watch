@@ -31,6 +31,7 @@ import CloudDownloadIcon from '@mui/icons-material/CloudDownload'
 import WarningIcon from '@mui/icons-material/Warning'
 import { motion } from 'framer-motion'
 import CyberSidebar from '../components/CyberSidebar'
+import { useTranslation } from 'react-i18next'
 import { useUser } from '../context/user/useUser'
 import { $host } from '../http/API'
 import { toast } from 'react-toastify'
@@ -124,6 +125,7 @@ const GeometricBackground = () => (
 
 // ---------- Главный компонент ----------
 const AdminSettings = () => {
+  const { t, ready } = useTranslation()
   const { user } = useUser()
   const [drawerOpen, setDrawerOpen] = useState(false)
   const [settings, setSettings] = useState<Settings>({
@@ -190,8 +192,8 @@ const AdminSettings = () => {
       await fetchStatus()
     } catch (err: any) {
       console.error('Ошибка загрузки настроек:', err)
-      setError('Не удалось загрузить настройки')
-      toast.error('Ошибка загрузки настроек')
+      setError(t('ne-udalos--3'))
+      toast.error(t('oshibka-za-1'))
     } finally {
       setLoading(false)
     }
@@ -218,12 +220,12 @@ const AdminSettings = () => {
     setError('')
     try {
       await $host.put('/settings', settings)
-      toast.success('Настройки сохранены')
+      toast.success(t('nastroiki-'))
       await fetchStatus()
     } catch (err: any) {
       console.error('Ошибка сохранения:', err)
-      setError('Не удалось сохранить настройки')
-      toast.error('Ошибка сохранения')
+      setError(t('ne-udalos--4'))
+      toast.error(t('oshibka-so'))
     } finally {
       setSaving(false)
     }
@@ -233,7 +235,7 @@ const AdminSettings = () => {
     const url = newSource.trim()
     if (!url) return
     if (settings.newsSources.includes(url)) {
-      toast.warning('Такой источник уже есть')
+      toast.warning(t('takoi-isto'))
       return
     }
     setSettings((prev) => ({
@@ -265,7 +267,7 @@ const AdminSettings = () => {
       await fetchStatus()
     } catch (err: any) {
       console.error('Ошибка переключения парсинга:', err)
-      toast.error(err.response?.data?.error || 'Ошибка переключения парсинга')
+      toast.error(err.response?.data?.error || t('oshibka-pe'))
     } finally {
       setToggling(false)
     }
@@ -275,11 +277,11 @@ const AdminSettings = () => {
     setScrapingManually(true)
     try {
       const res = await $host.post('/settings/scrape-video')
-      toast.success(res.data.message || 'Сбор видео запущен')
+      toast.success(res.data.message || t('sbor-video'))
       await fetchStatus()
     } catch (err: any) {
       console.error('Ошибка ручного запуска:', err)
-      toast.error(err.response?.data?.error || 'Ошибка запуска сбора')
+      toast.error(err.response?.data?.error || t('oshibka-za-2'))
     } finally {
       setScrapingManually(false)
     }
@@ -300,12 +302,12 @@ const AdminSettings = () => {
           backgroundColor: '#03030f',
         }}
       >
-        <Typography variant="h5">
-          Доступ запрещён. Только для администраторов.
-        </Typography>
+        <Typography variant="h5">{t('dostup-zap-0')}</Typography>
       </Box>
     )
   }
+
+  if (!ready) return null
 
   if (loading) {
     return (
@@ -374,7 +376,7 @@ const AdminSettings = () => {
               color: 'transparent',
             }}
           >
-            <SettingsIcon sx={{ mr: 1 }} /> Настройки системы
+            <SettingsIcon sx={{ mr: 1 }} /> {t('nastroiki--0')}
           </Typography>
         </motion.div>
 
@@ -410,7 +412,7 @@ const AdminSettings = () => {
               gap: 1,
             }}
           >
-            <CloudDownloadIcon /> Управление парсингом
+            <CloudDownloadIcon /> {t('upravlenie-1')}
           </Typography>
 
           <Grid container spacing={3}>
@@ -441,19 +443,17 @@ const AdminSettings = () => {
                     },
                   }}
                 >
-                  {settings.scrapingEnabled
-                    ? 'Остановить парсинг'
-                    : 'Запустить парсинг'}
+                  {settings.scrapingEnabled ? t('ostanovit-') : t('zapustit-p')}
                 </Button>
                 <Typography sx={{ color: '#aaa' }}>
-                  {settings.scrapingEnabled ? 'Активен' : 'Остановлен'}
+                  {settings.scrapingEnabled ? t('aktiven') : t('ostanovlen')}
                 </Typography>
               </Box>
 
               {/* Остальные настройки парсинга */}
               <Box sx={{ mb: 2 }}>
                 <Typography sx={{ color: '#fff', mb: 1 }}>
-                  Интервал между циклами: {settings.videoScrapeInterval} мин.
+                  {t('interval-m')} {settings.videoScrapeInterval} {t('minut')}
                 </Typography>
                 <Slider
                   value={settings.videoScrapeInterval}
@@ -473,14 +473,13 @@ const AdminSettings = () => {
                   }}
                 />
                 <Typography variant="caption" sx={{ color: '#aaa' }}>
-                  Как часто запускать сбор видео (10–1440 мин.)
+                  {t('kak-chasto')}
                 </Typography>
               </Box>
 
               <Box sx={{ mb: 2 }}>
                 <Typography sx={{ color: '#fff', mb: 1 }}>
-                  Количество видео с платформы:{' '}
-                  {settings.scrapeLimitPerPlatform}
+                  {t('kolichestv-0')} {settings.scrapeLimitPerPlatform}
                 </Typography>
                 <Slider
                   value={settings.scrapeLimitPerPlatform}
@@ -500,15 +499,14 @@ const AdminSettings = () => {
                   }}
                 />
                 <Typography variant="caption" sx={{ color: '#aaa' }}>
-                  Сколько видео собирать с каждой активной платформы за один
-                  запуск
+                  {t('skolko-vid')}
                 </Typography>
               </Box>
 
               <Box sx={{ mb: 2 }}>
                 <Typography sx={{ color: '#fff', mb: 1 }}>
-                  Таймаут между платформами: {settings.scrapeTimeoutSeconds}{' '}
-                  сек.
+                  {t('taimaut-me')} {settings.scrapeTimeoutSeconds}{' '}
+                  {t('sekund')}
                 </Typography>
                 <Slider
                   value={settings.scrapeTimeoutSeconds}
@@ -528,12 +526,12 @@ const AdminSettings = () => {
                   }}
                 />
                 <Typography variant="caption" sx={{ color: '#aaa' }}>
-                  Задержка между запросами к разным платформам
+                  {t('zaderzhka-')}
                 </Typography>
               </Box>
 
               <Typography sx={{ color: '#fff', mb: 1 }}>
-                Активные платформы:
+                {t('aktivnye-p')}
               </Typography>
               <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
                 <FormControlLabel
@@ -618,7 +616,7 @@ const AdminSettings = () => {
                 disabled={scrapingManually}
                 sx={{ mt: 2, borderColor: '#0ff', color: '#0ff' }}
               >
-                {scrapingManually ? 'Сбор...' : 'Запустить сбор сейчас'}
+                {scrapingManually ? t('sbor') : t('zapustit-s')}
               </Button>
             </Grid>
 
@@ -641,7 +639,7 @@ const AdminSettings = () => {
                   }}
                 >
                   <Typography variant="subtitle1" sx={{ color: '#0ff' }}>
-                    Статус парсинга
+                    {t('status-par')}
                   </Typography>
                   <IconButton
                     size="small"
@@ -670,10 +668,12 @@ const AdminSettings = () => {
                           fontSize: '1.2rem',
                         }}
                       >
-                        {status.scrapingEnabled ? 'Активен' : 'Остановлен'}
+                        {status.scrapingEnabled
+                          ? t('aktiven')
+                          : t('ostanovlen')}
                       </Typography>
                       <Typography variant="caption" sx={{ color: '#aaa' }}>
-                        Статус
+                        {t('status')}
                       </Typography>
                     </Paper>
                   </Grid>
@@ -696,7 +696,7 @@ const AdminSettings = () => {
                         {status.queueCount}
                       </Typography>
                       <Typography variant="caption" sx={{ color: '#aaa' }}>
-                        В очереди
+                        {t('v-ocheredi')}
                       </Typography>
                     </Paper>
                   </Grid>
@@ -719,7 +719,7 @@ const AdminSettings = () => {
                         {status.totalAnalyzed}
                       </Typography>
                       <Typography variant="caption" sx={{ color: '#aaa' }}>
-                        Обработано
+                        {t('obrabotano')}
                       </Typography>
                     </Paper>
                   </Grid>
@@ -744,7 +744,7 @@ const AdminSettings = () => {
                           : '—'}
                       </Typography>
                       <Typography variant="caption" sx={{ color: '#aaa' }}>
-                        Последний запуск
+                        {t('poslednii-')}
                       </Typography>
                     </Paper>
                   </Grid>
@@ -769,8 +769,8 @@ const AdminSettings = () => {
                     variant="caption"
                     sx={{ display: 'block', mt: 2, color: '#aaa' }}
                   >
-                    Последний сбор: добавлено {status.addedCount} из{' '}
-                    {status.totalFound} найденных видео
+                    {t('poslednii--0')} {status.addedCount} {t('iz')}{' '}
+                    {status.totalFound} {t('naidennykh')}
                   </Typography>
                 )}
               </Box>
@@ -801,13 +801,12 @@ const AdminSettings = () => {
               gap: 1,
             }}
           >
-            <AnalyticsIcon /> Управление анализом видео
+            <AnalyticsIcon /> {t('upravlenie-2')}
           </Typography>
 
           <Box sx={{ mb: 2 }}>
             <Typography sx={{ color: '#fff', mb: 1 }}>
-              Интервал автоматической проверки видео: {settings.scanInterval}{' '}
-              мин.
+              {t('interval-a')} {settings.scanInterval} {t('minut')}
             </Typography>
             <Slider
               value={settings.scanInterval}
@@ -828,7 +827,7 @@ const AdminSettings = () => {
               }}
             />
             <Typography variant="caption" sx={{ color: '#aaa' }}>
-              Как часто очередь проверяет новые видео (1–60 мин.)
+              {t('kak-chasto-0')}
             </Typography>
           </Box>
         </Card>
@@ -856,7 +855,7 @@ const AdminSettings = () => {
               gap: 1,
             }}
           >
-            <NewsIcon /> Управление новостями
+            <NewsIcon /> {t('upravlenie-3')}
           </Typography>
 
           <Box sx={{ mb: 2 }}>
@@ -879,9 +878,7 @@ const AdminSettings = () => {
                 />
               }
               label={
-                settings.autoRefreshNews
-                  ? 'Автообновление включено'
-                  : 'Автообновление выключено'
+                settings.autoRefreshNews ? t('avtoobnovl') : t('avtoobnovl-0')
               }
               sx={{ color: '#fff' }}
             />
@@ -889,7 +886,7 @@ const AdminSettings = () => {
 
           <Box sx={{ mb: 2 }}>
             <Typography sx={{ color: '#fff', mb: 1 }}>
-              Интервал парсинга новостей: {settings.newsParseInterval} мин.
+              {t('interval-p')} {settings.newsParseInterval} {t('minut')}
             </Typography>
             <Slider
               value={settings.newsParseInterval}
@@ -910,17 +907,17 @@ const AdminSettings = () => {
               }}
             />
             <Typography variant="caption" sx={{ color: '#aaa' }}>
-              Как часто обновлять новости (10–1440 мин.)
+              {t('kak-chasto-1')}
             </Typography>
           </Box>
 
           <Box sx={{ mt: 2 }}>
             <Typography sx={{ color: '#fff', mb: 1 }}>
-              Источники новостей (RSS):
+              {t('istochniki')}
             </Typography>
             <Box sx={{ display: 'flex', gap: 1, mb: 2 }}>
               <TextField
-                placeholder="Введите URL RSS-ленты..."
+                placeholder={t('vvedite-ur')}
                 value={newSource}
                 onChange={(e) => setNewSource(e.target.value)}
                 onKeyPress={(e) => e.key === 'Enter' && handleAddSource()}
@@ -948,7 +945,7 @@ const AdminSettings = () => {
             <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
               {settings.newsSources.length === 0 ? (
                 <Typography sx={{ color: '#aaa' }}>
-                  Нет добавленных источников
+                  {t('net-dobavl')}
                 </Typography>
               ) : (
                 settings.newsSources.map((url, idx) => (
@@ -990,7 +987,7 @@ const AdminSettings = () => {
             '&:hover': { bgcolor: '#33ffcc' },
           }}
         >
-          {saving ? 'Сохранение...' : 'Сохранить все настройки'}
+          {saving ? t('sokhraneni') : t('sokhranit-')}
         </Button>
       </Box>
     </Box>

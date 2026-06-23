@@ -34,6 +34,7 @@ import TrendingUpIcon from '@mui/icons-material/TrendingUp'
 import SecurityIcon from '@mui/icons-material/Security'
 import PersonIcon from '@mui/icons-material/Person'
 import AdminPanelSettingsIcon from '@mui/icons-material/AdminPanelSettings'
+import { useTranslation } from 'react-i18next'
 import { useUser } from '../context/user/useUser'
 import { motion } from 'framer-motion'
 import { Canvas, useFrame } from '@react-three/fiber'
@@ -172,6 +173,7 @@ interface VerdictDistribution {
 // ---------- Главный компонент Profile ----------
 const Profile = () => {
   const { user, login } = useUser()
+  const { t, ready } = useTranslation()
   const navigate = useNavigate()
   const [drawerOpen, setDrawerOpen] = useState(false)
 
@@ -231,10 +233,10 @@ const Profile = () => {
       setVerdictDist(verdictRes.data)
       setRecentChecks(recentRes.data)
     } catch (error) {
-      console.error('Ошибка загрузки данных профиля:', error)
+      console.error(t('oshibka-za'), error)
       setSnackbar({
         open: true,
-        message: 'Не удалось загрузить данные',
+        message: t('ne-udalos-'),
         severity: 'error',
       })
     } finally {
@@ -245,7 +247,7 @@ const Profile = () => {
   const handleSaveAvatarUrl = async () => {
     let trimmed = avatarUrlInput.trim()
     if (!trimmed) {
-      setSnackbar({ open: true, message: 'Введите ссылку', severity: 'error' })
+      setSnackbar({ open: true, message: t('vvedite-ss'), severity: 'error' })
       return
     }
     if (!trimmed.startsWith('http://') && !trimmed.startsWith('https://')) {
@@ -261,7 +263,7 @@ const Profile = () => {
       }
       setSnackbar({
         open: true,
-        message: 'Аватар обновлён',
+        message: t('avatar-obn'),
         severity: 'success',
       })
       setAvatarDialogOpen(false)
@@ -270,7 +272,7 @@ const Profile = () => {
       console.error(error)
       setSnackbar({
         open: true,
-        message: 'Ошибка обновления',
+        message: t('oshibka-ob'),
         severity: 'error',
       })
     } finally {
@@ -294,6 +296,8 @@ const Profile = () => {
       </Box>
     )
   }
+
+  if (!ready) return null
 
   const verdictColors = {
     safe: '#44ff66',
@@ -345,7 +349,7 @@ const Profile = () => {
                 color: 'transparent',
               }}
             >
-              Профиль пользователя
+              {t('profil-pol')}
             </Typography>
           </motion.div>
 
@@ -411,7 +415,7 @@ const Profile = () => {
                       )
                     }
                     label={
-                      user.role === 'ADMIN' ? 'Администратор' : 'Пользователь'
+                      user.role === 'ADMIN' ? t('administra') : t('polzovatel')
                     }
                     size="small"
                     sx={{ mt: 2, bgcolor: '#ff3366', color: '#fff' }}
@@ -448,7 +452,7 @@ const Profile = () => {
                       gap: 1,
                     }}
                   >
-                    <HistoryIcon /> Ваша активность
+                    <HistoryIcon /> {t('vasha-akti')}
                   </Typography>
                   {loading ? (
                     <CircularProgress sx={{ color: '#0ff' }} />
@@ -456,7 +460,7 @@ const Profile = () => {
                     <Grid container spacing={2}>
                       <Grid size={{ xs: 6, md: 4 }}>
                         <Typography variant="body2" sx={{ color: '#aaa' }}>
-                          Всего проверок
+                          {t('vsego-prov')}
                         </Typography>
                         <Typography
                           variant="h5"
@@ -467,7 +471,7 @@ const Profile = () => {
                       </Grid>
                       <Grid size={{ xs: 6, md: 4 }}>
                         <Typography variant="body2" sx={{ color: '#aaa' }}>
-                          Найдено угроз
+                          {t('naideno-ug')}
                         </Typography>
                         <Typography
                           variant="h5"
@@ -478,7 +482,7 @@ const Profile = () => {
                       </Grid>
                       <Grid size={{ xs: 6, md: 4 }}>
                         <Typography variant="body2" sx={{ color: '#aaa' }}>
-                          Средний риск
+                          {t('srednii-ri')}
                         </Typography>
                         <Typography
                           variant="h5"
@@ -509,8 +513,7 @@ const Profile = () => {
                   }}
                 >
                   <Typography variant="h6" sx={{ color: '#0ff', mb: 2 }}>
-                    <TrendingUpIcon sx={{ mr: 1 }} /> Активность за последние 7
-                    дней
+                    <TrendingUpIcon sx={{ mr: 1 }} /> {t('aktivnost-')}
                   </Typography>
                   {loading ? (
                     <CircularProgress sx={{ color: '#0ff' }} />
@@ -556,7 +559,7 @@ const Profile = () => {
                       }}
                     >
                       <Typography variant="h6" sx={{ color: '#0ff', mb: 2 }}>
-                        <SecurityIcon sx={{ mr: 1 }} /> Вердикты
+                        <SecurityIcon sx={{ mr: 1 }} /> {t('verdikty')}
                       </Typography>
                       {loading ? (
                         <CircularProgress sx={{ color: '#0ff' }} />
@@ -565,13 +568,16 @@ const Profile = () => {
                           <PieChart>
                             <Pie
                               data={[
-                                { name: 'Безопасно', value: verdictDist.safe },
                                 {
-                                  name: 'Опасно',
+                                  name: t('bezopasno'),
+                                  value: verdictDist.safe,
+                                },
+                                {
+                                  name: t('opasno'),
                                   value: verdictDist.dangerous,
                                 },
                                 {
-                                  name: 'Неопределённо',
+                                  name: t('neopredely'),
                                   value: verdictDist.uncertain,
                                 },
                               ]}
@@ -612,13 +618,13 @@ const Profile = () => {
                       }}
                     >
                       <Typography variant="h6" sx={{ color: '#0ff', mb: 2 }}>
-                        <HistoryIcon sx={{ mr: 1 }} /> Последние проверки
+                        <HistoryIcon sx={{ mr: 1 }} /> {t('poslednie--0')}
                       </Typography>
                       {loading ? (
                         <CircularProgress sx={{ color: '#0ff' }} />
                       ) : recentChecks.length === 0 ? (
                         <Typography sx={{ color: '#aaa' }}>
-                          Нет проверок
+                          {t('net-prover')}
                         </Typography>
                       ) : (
                         <List dense sx={{ maxHeight: 220, overflow: 'auto' }}>
@@ -648,8 +654,8 @@ const Profile = () => {
                                   </Avatar>
                                 </ListItemAvatar>
                                 <ListItemText
-                                  primary={check.title || 'Без названия'}
-                                  secondary={`Безопасность: ${check.safety_percent}% • ${new Date(check.checked_at).toLocaleDateString()}`}
+                                  primary={check.title || t('bez-nazvan')}
+                                  secondary={`${t('bezopasnos')}: ${check.safety_percent}% • ${new Date(check.checked_at).toLocaleDateString()}`}
                                   primaryTypographyProps={{ color: '#fff' }}
                                   secondaryTypographyProps={{ color: '#aaa' }}
                                 />
@@ -680,10 +686,10 @@ const Profile = () => {
           sx: { bgcolor: '#111', color: '#fff', border: '1px solid #0ff' },
         }}
       >
-        <DialogTitle sx={{ color: '#fff' }}>Сменить аватар</DialogTitle>
+        <DialogTitle sx={{ color: '#fff' }}>{t('smenit-ava')}</DialogTitle>
         <DialogContent>
           <TextField
-            label="Ссылка на изображение"
+            label=<>{t('ssylka-na-')}</>
             fullWidth
             value={avatarUrlInput}
             onChange={(e) => setAvatarUrlInput(e.target.value)}
@@ -694,8 +700,7 @@ const Profile = () => {
             variant="caption"
             sx={{ display: 'block', mt: 1, color: '#aaa' }}
           >
-            Можно ввести как с протоколом, так и без – https:// добавится
-            автоматически
+            {t('mozhno-vve')}
           </Typography>
         </DialogContent>
         <DialogActions>
@@ -703,7 +708,7 @@ const Profile = () => {
             onClick={() => setAvatarDialogOpen(false)}
             sx={{ color: '#aaa' }}
           >
-            Отмена
+            {t('otmena')}
           </Button>
           <Button
             onClick={handleSaveAvatarUrl}
@@ -714,7 +719,7 @@ const Profile = () => {
             {avatarSaving ? (
               <CircularProgress size={24} sx={{ color: '#000' }} />
             ) : (
-              'Сохранить'
+              <>{t('sokhranit')}</>
             )}
           </Button>
         </DialogActions>

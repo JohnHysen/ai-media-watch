@@ -28,6 +28,7 @@ import {
 } from '@mui/material'
 import { $host } from '../http/API'
 import { useUser } from '../context/user/useUser'
+import { useTranslation } from 'react-i18next'
 import { toast } from 'react-toastify'
 import MenuIcon from '@mui/icons-material/Menu'
 import RefreshIcon from '@mui/icons-material/Refresh'
@@ -187,6 +188,7 @@ interface QueueItem {
 
 // ---------- Главный компонент ----------
 const QueueManager = () => {
+  const { t, ready } = useTranslation()
   const { user } = useUser()
   const [drawerOpen, setDrawerOpen] = useState(false)
   const [items, setItems] = useState<QueueItem[]>([])
@@ -213,7 +215,7 @@ const QueueManager = () => {
     } catch (err: any) {
       console.error('Ошибка загрузки очереди:', err)
       setError('Не удалось загрузить очередь')
-      toast.error('Ошибка загрузки')
+      toast.error(t('oshibka-za-0'))
     } finally {
       setLoading(false)
     }
@@ -235,9 +237,9 @@ const QueueManager = () => {
           item.id === id ? { ...item, priority: newPriority } : item
         )
       )
-      toast.success('Приоритет обновлён')
+      toast.success(t('prioritet-'))
     } catch (err: any) {
-      toast.error(err.response?.data?.error || 'Ошибка обновления')
+      toast.error(err.response?.data?.error || t('oshibka-ob-0'))
     } finally {
       setUpdating(null)
     }
@@ -248,11 +250,11 @@ const QueueManager = () => {
     try {
       await $host.delete(`/analysis-queue/${selectedId}`)
       setItems((prev) => prev.filter((item) => item.id !== selectedId))
-      toast.success('Задача удалена')
+      toast.success(t('zadacha-ud'))
       setDeleteDialogOpen(false)
       setSelectedId(null)
     } catch (err: any) {
-      toast.error(err.response?.data?.error || 'Ошибка удаления')
+      toast.error(err.response?.data?.error || t('oshibka-ud'))
     }
   }
 
@@ -308,13 +310,13 @@ const QueueManager = () => {
   const getStatusLabel = (status: string) => {
     switch (status) {
       case 'pending':
-        return 'В очереди'
+        return t('v-ocheredi')
       case 'processing':
-        return 'Обрабатывается'
+        return t('obrabatyva')
       case 'completed':
-        return 'Завершено'
+        return t('zaversheno')
       case 'failed':
-        return 'Ошибка'
+        return t('oshibka')
       default:
         return status
     }
@@ -333,10 +335,12 @@ const QueueManager = () => {
         }}
       >
         <SpaceBackground />
-        <Typography variant="h5">Доступ запрещён</Typography>
+        <Typography variant="h5">{t('dostup-zap')}</Typography>
       </Box>
     )
   }
+
+  if (!ready) return null
 
   return (
     <Box
@@ -394,7 +398,7 @@ const QueueManager = () => {
               gap: 1,
             }}
           >
-            <QueueIcon /> Управление очередью
+            <QueueIcon /> {t('upravlenie')}
           </Typography>
           <Button
             startIcon={<RefreshIcon />}
@@ -402,7 +406,7 @@ const QueueManager = () => {
             variant="outlined"
             sx={{ borderColor: '#0ff', color: '#0ff' }}
           >
-            Обновить
+            {t('obnovit')}
           </Button>
         </Box>
 
@@ -417,7 +421,7 @@ const QueueManager = () => {
           }}
         >
           <TextField
-            placeholder="Поиск по ссылке..."
+            placeholder={t('poisk-po-s')}
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             size="small"
@@ -440,7 +444,7 @@ const QueueManager = () => {
           />
 
           <FormControl size="small" sx={{ minWidth: 150 }}>
-            <InputLabel sx={{ color: '#aaa' }}>Приоритет</InputLabel>
+            <InputLabel sx={{ color: '#aaa' }}>{t('prioritet')}</InputLabel>
             <Select
               value={priorityFilter}
               onChange={(e) =>
@@ -455,11 +459,11 @@ const QueueManager = () => {
                 },
               }}
             >
-              <MenuItem value="all">Все</MenuItem>
-              <MenuItem value={0}>0 (Макс.)</MenuItem>
+              <MenuItem value="all">{t('vse')}</MenuItem>
+              <MenuItem value={0}>0 ({t('maks')})</MenuItem>
               <MenuItem value={1}>1</MenuItem>
               <MenuItem value={2}>2</MenuItem>
-              <MenuItem value={3}>3 (Мин.)</MenuItem>
+              <MenuItem value={3}>3 ({t('min')})</MenuItem>
             </Select>
           </FormControl>
 
@@ -480,7 +484,7 @@ const QueueManager = () => {
               '&:hover': { bgcolor: 'rgba(0,255,255,0.1)' },
             }}
           >
-            {sortOrder === 'desc' ? 'Новые сначала' : 'Старые сначала'}
+            {sortOrder === 'desc' ? t('novye-snac') : t('starye-sna')}
           </Button>
         </Box>
 
@@ -529,18 +533,20 @@ const QueueManager = () => {
                           },
                         }}
                       >
-                        <MenuItem value="all">Все</MenuItem>
-                        <MenuItem value="pending">В очереди</MenuItem>
-                        <MenuItem value="processing">Обрабатывается</MenuItem>
-                        <MenuItem value="failed">Ошибка</MenuItem>
+                        <MenuItem value="all">{t('vse')}</MenuItem>
+                        <MenuItem value="pending">{t('v-ocheredi')}</MenuItem>
+                        <MenuItem value="processing">
+                          {t('obrabatyva')}
+                        </MenuItem>
+                        <MenuItem value="failed">{t('oshibka')}</MenuItem>
                       </Select>
                     </FormControl>
                   </TableCell>
                   <TableCell sx={{ color: '#0ff', fontWeight: 'bold' }}>
-                    Приоритет
+                    {t('prioritet')}
                   </TableCell>
                   <TableCell sx={{ color: '#0ff', fontWeight: 'bold' }}>
-                    Инициатор
+                    {t('iniciator')}
                   </TableCell>
                   <TableCell
                     sx={{
@@ -553,7 +559,7 @@ const QueueManager = () => {
                     <Box
                       sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}
                     >
-                      Дата создания
+                      {t('data-sozda')}
                       {sortOrder === 'desc' ? (
                         <ArrowDownwardIcon
                           fontSize="small"
@@ -568,7 +574,7 @@ const QueueManager = () => {
                     </Box>
                   </TableCell>
                   <TableCell sx={{ color: '#0ff', fontWeight: 'bold' }}>
-                    Действия
+                    {t('deistviya')}
                   </TableCell>
                 </TableRow>
               </TableHead>
@@ -579,9 +585,7 @@ const QueueManager = () => {
                       colSpan={7}
                       sx={{ textAlign: 'center', color: '#aaa' }}
                     >
-                      {items.length === 0
-                        ? 'Очередь пуста'
-                        : 'Нет задач по выбранным фильтрам'}
+                      {items.length === 0 ? t('ochered-pu') : t('net-zadach')}
                     </TableCell>
                   </TableRow>
                 ) : (
@@ -617,7 +621,7 @@ const QueueManager = () => {
                         <Box
                           sx={{ display: 'flex', alignItems: 'center', gap: 1 }}
                         >
-                          <Tooltip title="Уменьшить приоритет (0 — макс.)">
+                          <Tooltip title={t('umenshit-p')}>
                             <IconButton
                               size="small"
                               onClick={() =>
@@ -644,7 +648,7 @@ const QueueManager = () => {
                           >
                             {item.priority}
                           </Typography>
-                          <Tooltip title="Увеличить приоритет (0 — макс.)">
+                          <Tooltip title={t('uvelichit-')}>
                             <IconButton
                               size="small"
                               onClick={() =>
@@ -680,7 +684,7 @@ const QueueManager = () => {
                         {new Date(item.createdAt).toLocaleString('ru-RU')}
                       </TableCell>
                       <TableCell>
-                        <Tooltip title="Удалить задачу">
+                        <Tooltip title={t('udalit-zad')}>
                           <IconButton
                             size="small"
                             onClick={() => {
@@ -710,14 +714,14 @@ const QueueManager = () => {
           sx: { bgcolor: '#111', color: '#fff', border: '1px solid #ff3366' },
         }}
       >
-        <DialogTitle>Подтверждение удаления</DialogTitle>
-        <DialogContent>
-          Вы уверены, что хотите удалить эту задачу из очереди?
-        </DialogContent>
+        <DialogTitle>{t('podtverzhd')}</DialogTitle>
+        <DialogContent>{t('vy-uvereny')}</DialogContent>
         <DialogActions>
-          <Button onClick={() => setDeleteDialogOpen(false)}>Отмена</Button>
+          <Button onClick={() => setDeleteDialogOpen(false)}>
+            {t('otmena')}
+          </Button>
           <Button onClick={handleDelete} sx={{ color: '#ff3366' }}>
-            Удалить
+            {t('udalit')}
           </Button>
         </DialogActions>
       </Dialog>

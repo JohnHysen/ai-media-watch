@@ -52,7 +52,7 @@ interface Props {
 export default function CyberSidebar({ open, onClose }: Props) {
   const { user, login, logout } = useUser()
   const navigate = useNavigate()
-  const { t } = useTranslation()
+  const { t, ready } = useTranslation()
 
   // Состояния для диалога выхода
   const [logoutConfirmOpen, setLogoutConfirmOpen] = useState(false)
@@ -100,7 +100,7 @@ export default function CyberSidebar({ open, onClose }: Props) {
   const handleLogin = async () => {
     setAuthError('')
     if (!loginEmail.trim() || !loginPassword.trim()) {
-      setAuthError('Заполните все поля')
+      setAuthError(t('zapolnite-'))
       return
     }
     setLoading(true)
@@ -122,10 +122,10 @@ export default function CyberSidebar({ open, onClose }: Props) {
         setLoginEmail('')
         setLoginPassword('')
       } else {
-        setAuthError('Ошибка входа: сервер не вернул данные')
+        setAuthError(t('oshibka-vk'))
       }
     } catch (err: any) {
-      setAuthError(err?.response?.data?.message || 'Ошибка входа')
+      setAuthError(err?.response?.data?.message || t('oshibka-vk-0'))
     } finally {
       setLoading(false)
     }
@@ -141,15 +141,15 @@ export default function CyberSidebar({ open, onClose }: Props) {
       !regPassword.trim() ||
       !regConfirmPassword.trim()
     ) {
-      setAuthError('Заполните все поля')
+      setAuthError(t('zapolnite-'))
       return
     }
     if (regPassword !== regConfirmPassword) {
-      setAuthError('Пароли не совпадают')
+      setAuthError(t('paroli-ne-'))
       return
     }
     if (regPassword.length < 6) {
-      setAuthError('Пароль должен быть не менее 6 символов')
+      setAuthError(t('parol-dolz'))
       return
     }
     setLoading(true)
@@ -174,10 +174,10 @@ export default function CyberSidebar({ open, onClose }: Props) {
         setRegPassword('')
         setRegConfirmPassword('')
       } else {
-        setAuthError('Ошибка регистрации: сервер не вернул данные')
+        setAuthError(t('oshibka-re'))
       }
     } catch (err: any) {
-      setAuthError(err?.response?.data?.message || 'Ошибка регистрации')
+      setAuthError(err?.response?.data?.message || t('oshibka-re-0'))
     } finally {
       setLoading(false)
     }
@@ -190,37 +190,39 @@ export default function CyberSidebar({ open, onClose }: Props) {
 
   // === Пункты меню ===
   const baseMenuItems = [
-    { text: 'Главная', icon: <DashboardIcon />, path: '/' },
-    { text: 'История проверок', icon: <HistoryIcon />, path: '/history' },
-    { text: 'Аналитика угроз', icon: <AnalyticsIcon />, path: '/analytics' },
+    { text: t('glavnaya'), icon: <DashboardIcon />, path: '/' },
+    { text: t('istoriya-p'), icon: <HistoryIcon />, path: '/history' },
+    { text: t('analitika--0'), icon: <AnalyticsIcon />, path: '/analytics' },
   ]
 
   const roleMenuItems = []
   if (isAdmin || isInspector) {
     roleMenuItems.push({
-      text: 'Управление очередью',
+      text: t('upravlenie'),
       icon: <QueueIcon />,
       path: '/queue',
     })
     roleMenuItems.push({
-      text: 'Реестр мош. ресурсов',
+      text: t('reestr-mos'),
       icon: <WarningIcon />,
       path: '/admin/fraud-resources',
     })
   }
   if (isAdmin) {
     roleMenuItems.push({
-      text: 'Управление пользователями',
+      text: t('upravlenie-0'),
       icon: <AdminPanelSettingsIcon />,
       path: '/users',
     })
     roleMenuItems.push({
-      text: 'Настройки системы',
+      text: t('nastroiki--0'),
       icon: <SettingsIcon />,
       path: '/settings',
     })
   }
   const menuItems = [...baseMenuItems, ...roleMenuItems]
+
+  if (!ready) return null
 
   return (
     <>
@@ -353,7 +355,7 @@ export default function CyberSidebar({ open, onClose }: Props) {
                   '&:hover': { bgcolor: 'rgba(0,255,255,0.1)' },
                 }}
               >
-                Войти / Регистрация
+                {t('voiti-regi')}
               </Button>
             </Box>
           )}
@@ -422,7 +424,7 @@ export default function CyberSidebar({ open, onClose }: Props) {
                   },
                 }}
               >
-                Выйти
+                {t('vyiti')}
               </Button>
             </Box>
           )}
@@ -497,16 +499,31 @@ export default function CyberSidebar({ open, onClose }: Props) {
                   fontWeight: 900,
                   fontSize: '1.8rem',
                   letterSpacing: 2,
-                  background: 'linear-gradient(135deg, #ff3366, #ff6633)',
-                  backgroundClip: 'text',
-                  WebkitBackgroundClip: 'text',
-                  color: 'transparent',
-                  textShadow: '0 0 30px rgba(255,51,102,0.5)',
                   pb: 1,
                   position: 'relative',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: 1,
                 }}
               >
-                ⚠️ ВЫХОД
+                <WarningIcon
+                  sx={{
+                    fontSize: 40,
+                    color: '#ff3366',
+                  }}
+                />
+                <span
+                  style={{
+                    background: 'linear-gradient(135deg, #ff3366, #ff6633)',
+                    backgroundClip: 'text',
+                    WebkitBackgroundClip: 'text',
+                    color: 'transparent',
+                    textShadow: '0 0 30px rgba(255,51,102,0.5)',
+                  }}
+                >
+                  {t('vykhod')}
+                </span>
               </DialogTitle>
 
               <DialogContent
@@ -546,7 +563,7 @@ export default function CyberSidebar({ open, onClose }: Props) {
                     mb: 1,
                   }}
                 >
-                  Вы уверены, что хотите выйти?
+                  {t('vy-uvereny-0')}
                 </Typography>
                 <Typography
                   variant="body2"
@@ -556,7 +573,7 @@ export default function CyberSidebar({ open, onClose }: Props) {
                     mx: 'auto',
                   }}
                 >
-                  Все несохранённые данные будут потеряны.
+                  {t('vse-nesokh')}
                 </Typography>
               </DialogContent>
 
@@ -589,7 +606,7 @@ export default function CyberSidebar({ open, onClose }: Props) {
                     },
                   }}
                 >
-                  Отмена
+                  {t('otmena')}
                 </Button>
                 <Button
                   onClick={handleLogout}
@@ -611,7 +628,7 @@ export default function CyberSidebar({ open, onClose }: Props) {
                     },
                   }}
                 >
-                  Выйти
+                  {t('vyiti')}
                 </Button>
               </DialogActions>
             </motion.div>
@@ -643,11 +660,11 @@ export default function CyberSidebar({ open, onClose }: Props) {
             sx={{ '& .MuiTabs-indicator': { bgcolor: '#0ff' } }}
           >
             <Tab
-              label="Вход"
+              label={t('vkhod')}
               sx={{ color: '#fff', '&.Mui-selected': { color: '#0ff' } }}
             />
             <Tab
-              label="Регистрация"
+              label={t('registraci')}
               sx={{ color: '#fff', '&.Mui-selected': { color: '#0ff' } }}
             />
           </Tabs>
@@ -678,7 +695,7 @@ export default function CyberSidebar({ open, onClose }: Props) {
                 }}
               />
               <TextField
-                label="Пароль"
+                label={t('parol')}
                 type={showLoginPassword ? 'text' : 'password'}
                 fullWidth
                 value={loginPassword}
@@ -708,7 +725,7 @@ export default function CyberSidebar({ open, onClose }: Props) {
           {authTab === 1 && (
             <Stack spacing={2}>
               <TextField
-                label="Имя"
+                label={t('imya')}
                 fullWidth
                 value={regFirstName}
                 onChange={(e) => setRegFirstName(e.target.value)}
@@ -721,7 +738,7 @@ export default function CyberSidebar({ open, onClose }: Props) {
                 }}
               />
               <TextField
-                label="Фамилия"
+                label={t('familiya')}
                 fullWidth
                 value={regLastName}
                 onChange={(e) => setRegLastName(e.target.value)}
@@ -748,7 +765,7 @@ export default function CyberSidebar({ open, onClose }: Props) {
                 }}
               />
               <TextField
-                label="Пароль"
+                label={t('parol')}
                 type={showRegPassword ? 'text' : 'password'}
                 fullWidth
                 value={regPassword}
@@ -773,7 +790,7 @@ export default function CyberSidebar({ open, onClose }: Props) {
                 }}
               />
               <TextField
-                label="Повторите пароль"
+                label={t('povtorite-')}
                 type={showRegConfirmPassword ? 'text' : 'password'}
                 fullWidth
                 value={regConfirmPassword}
@@ -811,7 +828,7 @@ export default function CyberSidebar({ open, onClose }: Props) {
             onClick={() => setAuthDialogOpen(false)}
             sx={{ color: '#aaa' }}
           >
-            Отмена
+            {t('otmena')}
           </Button>
           <Button
             onClick={authTab === 0 ? handleLogin : handleRegister}
@@ -826,9 +843,9 @@ export default function CyberSidebar({ open, onClose }: Props) {
             {loading ? (
               <CircularProgress size={24} sx={{ color: '#000' }} />
             ) : authTab === 0 ? (
-              'Войти'
+              t('voiti')
             ) : (
-              'Зарегистрироваться'
+              t('zaregistrirovatsya')
             )}
           </Button>
         </DialogActions>
