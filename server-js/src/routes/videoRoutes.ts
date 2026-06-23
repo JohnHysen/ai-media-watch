@@ -14,7 +14,7 @@ const router = Router()
 router.post('/create', createVideoAnalysis)
 router.post('/internal/create', createVideoAnalysisInternal)
 
-router.get('/', authMiddleware, getAllVideoAnalyses)
+router.get('/', getAllVideoAnalyses)
 router.get('/:id', authMiddleware, getVideoAnalysisById)
 router.get('/user/:userId', authMiddleware, getAnalysesByUser)
 router.post('/scrap', authMiddleware, scrapVideo)

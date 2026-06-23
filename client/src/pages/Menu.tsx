@@ -39,6 +39,7 @@ import {
   Link,
   TableHead,
   type SelectChangeEvent,
+  Tooltip,
 } from '@mui/material'
 import MenuIcon from '@mui/icons-material/Menu'
 import SearchIcon from '@mui/icons-material/Search'
@@ -64,6 +65,9 @@ import CurrencyBitcoinIcon from '@mui/icons-material/CurrencyBitcoin'
 import PeopleAltIcon from '@mui/icons-material/PeopleAlt'
 import WarningAmberIcon from '@mui/icons-material/WarningAmber'
 import LeaderboardIcon from '@mui/icons-material/Leaderboard'
+// Импорт для Telegram
+import TelegramIcon from '@mui/icons-material/Telegram'
+
 import { motion, AnimatePresence } from 'framer-motion'
 import { Canvas, useFrame } from '@react-three/fiber'
 import { OrbitControls, Environment, Stars } from '@react-three/drei'
@@ -441,6 +445,15 @@ const CyberMediaWatchPro = () => {
     },
   }
 
+  // --- СОСТОЯНИЕ И ЭФФЕКТ ДЛЯ МОДАЛЬНОГО ОКНА ВХОДА ---
+  const [loginModalOpen, setLoginModalOpen] = useState(false)
+
+  useEffect(() => {
+    if (!user) {
+      setLoginModalOpen(true)
+    }
+  }, [user])
+
   const fetchData = async () => {
     setLoading(true)
     setError(null)
@@ -652,6 +665,9 @@ const CyberMediaWatchPro = () => {
     )
   }
 
+  // Ссылка на Telegram бота (замените на свою)
+  const TELEGRAM_BOT_URL = 'https://t.me/AMWPro_Bot'
+
   return (
     <Box
       sx={{
@@ -791,6 +807,8 @@ const CyberMediaWatchPro = () => {
               </motion.div>
             )}
           </AnimatePresence>
+
+          {/* ===== КАРТОЧКА АНАЛИЗА ВИДЕО ===== */}
           <Box sx={{ display: 'flex', justifyContent: 'center', mb: 5 }}>
             <Card
               sx={{
@@ -863,8 +881,82 @@ const CyberMediaWatchPro = () => {
               >
                 {t('multimodal')}
               </Typography>
+
+              {/* ===== НОВЫЙ БЛОК: Telegram бот и QR-код ===== */}
+              <Divider sx={{ my: 2, borderColor: 'rgba(0,255,255,0.2)' }} />
+              <Box
+                sx={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  flexWrap: 'wrap',
+                  gap: 2,
+                }}
+              >
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                  <Button
+                    variant="outlined"
+                    startIcon={<TelegramIcon />}
+                    onClick={() => window.open(TELEGRAM_BOT_URL, '_blank')}
+                    sx={{
+                      borderColor: '#0ff',
+                      color: '#0ff',
+                      borderRadius: 30,
+                      px: 3,
+                      '&:hover': {
+                        bgcolor: 'rgba(0,255,255,0.15)',
+                        borderColor: '#33ffcc',
+                        boxShadow: '0 0 20px rgba(0,255,255,0.3)',
+                      },
+                    }}
+                  >
+                    Перейти в Telegram бот
+                  </Button>
+                </Box>
+
+                <Tooltip title="Отсканируйте QR-код, чтобы открыть бота" arrow>
+                  <Box
+                    component="a"
+                    target="_blank"
+                    sx={{
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'center',
+                      textDecoration: 'none',
+                      color: '#0ff',
+                      cursor: 'pointer',
+                      transition: '0.2s',
+                      '&:hover': {
+                        filter: 'drop-shadow(0 0 10px #0ff)',
+                      },
+                    }}
+                  >
+                    <Box
+                      component="img"
+                      src="/images/AMWPro.png"
+                      alt="QR-код для Telegram бота AMWPro"
+                      sx={{
+                        width: 100,
+                        height: 100,
+                        borderRadius: 5,
+                        border: '1px solid rgba(0,255,255,0.3)',
+                        backgroundColor: '#fff',
+                        p: 0.5,
+                      }}
+                    />
+                    <Typography
+                      variant="caption"
+                      sx={{ color: '#aaa', mt: 0.5 }}
+                    >
+                      AMWPro
+                    </Typography>
+                  </Box>
+                </Tooltip>
+              </Box>
+              {/* {КОНЕЦ БЛОКА} */}
             </Card>
           </Box>
+
           {loading ? (
             <Box sx={{ display: 'flex', justifyContent: 'center', my: 4 }}>
               <CircularProgress sx={{ color: '#0ff' }} />
@@ -992,6 +1084,7 @@ const CyberMediaWatchPro = () => {
                   </motion.div>
                 </Grid>
               </Grid>
+
               <Box
                 sx={{
                   display: 'flex',
@@ -1123,6 +1216,7 @@ const CyberMediaWatchPro = () => {
                   </Select>
                 </FormControl>
               </Box>
+
               <Typography
                 variant="h5"
                 sx={{
@@ -1282,6 +1376,7 @@ const CyberMediaWatchPro = () => {
                   )
                 })}
               </Box>
+
               <Typography
                 variant="h5"
                 sx={{
@@ -1983,7 +2078,6 @@ const CyberMediaWatchPro = () => {
               </IconButton>
             </DialogTitle>
             <DialogContent sx={{ pt: 3 }}>
-              {/* Превью */}
               {selectedVideo.preview_image_url ? (
                 <Box
                   component="img"
@@ -2104,7 +2198,6 @@ const CyberMediaWatchPro = () => {
                         )}
                       </TableCell>
                     </TableRow>
-                    {/* Удалены строки "Безопасность, %" и "Инициатор" */}
                     <TableRow>
                       <TableCell
                         sx={{
@@ -2232,6 +2325,83 @@ const CyberMediaWatchPro = () => {
             </DialogActions>
           </>
         )}
+      </Dialog>
+
+      {/* ========== МОДАЛЬНОЕ ОКНО ДЛЯ НЕАВТОРИЗОВАННЫХ ПОЛЬЗОВАТЕЛЕЙ ========== */}
+      <Dialog
+        open={loginModalOpen}
+        onClose={() => setLoginModalOpen(false)}
+        maxWidth="xs"
+        fullWidth
+        PaperProps={{
+          sx: {
+            bgcolor: 'rgba(10,10,30,0.95)',
+            backdropFilter: 'blur(16px)',
+            border: '1px solid rgba(0,255,255,0.4)',
+            borderRadius: 4,
+            color: '#fff',
+            p: 3,
+          },
+        }}
+      >
+        <DialogTitle sx={{ color: '#0ff', textAlign: 'center' }}>
+          🔐 Войдите в аккаунт
+        </DialogTitle>
+        <DialogContent>
+          <Typography
+            variant="body2"
+            sx={{ color: '#ddd', textAlign: 'center', mb: 2 }}
+          >
+            Войдите, чтобы сохранять историю проверок и получать
+            персонализированные рекомендации.
+            <br />
+            <span style={{ color: '#aaa' }}>
+              Вы можете продолжить как гость.
+            </span>
+          </Typography>
+          <Box
+            sx={{
+              display: 'flex',
+              justifyContent: 'center',
+              gap: 2,
+              flexWrap: 'wrap',
+            }}
+          >
+            <Button
+              variant="contained"
+              onClick={() => {
+                setLoginModalOpen(false)
+                navigate('/login')
+              }}
+              sx={{
+                bgcolor: '#0ff',
+                color: '#000',
+                '&:hover': { bgcolor: '#33ffcc' },
+              }}
+            >
+              Войти
+            </Button>
+            <Button
+              variant="outlined"
+              onClick={() => setLoginModalOpen(false)}
+              sx={{
+                borderColor: '#0ff',
+                color: '#0ff',
+                '&:hover': { bgcolor: 'rgba(0,255,255,0.1)' },
+              }}
+            >
+              Продолжить как гость
+            </Button>
+          </Box>
+        </DialogContent>
+        <DialogActions sx={{ justifyContent: 'center' }}>
+          <IconButton
+            onClick={() => setLoginModalOpen(false)}
+            sx={{ color: '#666' }}
+          >
+            <CloseIcon />
+          </IconButton>
+        </DialogActions>
       </Dialog>
     </Box>
   )
