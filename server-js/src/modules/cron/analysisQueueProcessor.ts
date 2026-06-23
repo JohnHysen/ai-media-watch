@@ -9,7 +9,7 @@ import {
 let isRunning = false
 let lastRunTime: Date | null = null
 let currentIntervalMinutes = 1
-const MAX_RETRIES = 3 // максимальное количество попыток
+const MAX_RETRIES = 3
 
 const getScanInterval = async (): Promise<number> => {
   try {
@@ -46,7 +46,6 @@ const processQueue = async () => {
 
   try {
     while (true) {
-      // Берём задачу с наивысшим приоритетом и статусом PENDING
       const job = await AnalysisQueue.findOne({
         where: { status: QueueStatus.PENDING },
         order: [
@@ -60,7 +59,6 @@ const processQueue = async () => {
         break
       }
 
-      // Проверяем, не проанализировано ли уже это видео
       const existingAnalysis = await VideoAnalysis.findOne({
         where: { video_url: job.url },
       })
@@ -72,7 +70,6 @@ const processQueue = async () => {
         continue
       }
 
-      // Проверяем количество попыток
       const retries = job.get('retries') || 0
       if (retries >= MAX_RETRIES) {
         console.warn(
@@ -101,7 +98,6 @@ const processQueue = async () => {
         const controller = new AbortController()
         const timeoutId = setTimeout(() => controller.abort(), 600000)
 
-        // Отправляем запрос в FastAPI
         const response = await fetch(analyzeUrl.toString(), {
           signal: controller.signal,
           headers: { Accept: 'application/json' },
@@ -112,14 +108,9 @@ const processQueue = async () => {
           throw new Error(`HTTP ${response.status}: ${response.statusText}`)
         }
 
-        // ✅ FastAPI успешно принял и обработал видео
         const data = await response.json()
-        console.log(
-          '📦 Получен ответ от Python:',
-          JSON.stringify(data, null, 2)
-        )
+        console.log('Получен ответ от Python:', JSON.stringify(data, null, 2))
 
-        // Сохраняем результат
         const videoData = {
           video_url: job.url,
           title: data.title || null,
@@ -135,7 +126,6 @@ const processQueue = async () => {
           uploader: data.uploader,
         }
 
-        // ✅ Меняем статус на PROCESSING непосредственно перед сохранением
         await job.update({ status: QueueStatus.PROCESSING })
 
         await VideoAnalysis.create(videoData)
@@ -144,13 +134,11 @@ const processQueue = async () => {
           `✅ Видео ${job.url} успешно обработано и удалено из очереди`
         )
       } catch (fetchError: any) {
-        // ❌ Ошибка при отправке или обработке
         console.error(
-          `❌ Ошибка при обработке видео ${job.url}:`,
+          `Ошибка при обработке видео ${job.url}:`,
           fetchError.message
         )
 
-        // Увеличиваем счётчик попыток и возвращаем в PENDING для повторной попытки
         const newRetries = (job.get('retries') || 0) + 1
         if (newRetries >= MAX_RETRIES) {
           await job.update({
@@ -161,14 +149,14 @@ const processQueue = async () => {
         } else {
           await job.update({
             status: QueueStatus.PENDING,
-            error_message: null, // очищаем ошибку для повторной попытки
+            error_message: null,
             retries: newRetries,
           })
         }
       }
     }
   } catch (error) {
-    console.error('❌ Критическая ошибка в воркере очереди:', error)
+    console.error('Критическая ошибка в воркере очереди:', error)
   } finally {
     isRunning = false
   }
@@ -177,14 +165,14 @@ const processQueue = async () => {
 const startWorker = async () => {
   currentIntervalMinutes = await getScanInterval()
   console.log(
-    `🕒 Воркер очереди запущен с интервалом ${currentIntervalMinutes} мин. (проверка каждую минуту)`
+    `Воркер очереди запущен с интервалом ${currentIntervalMinutes} мин. (проверка каждую минуту)`
   )
 
   cron.schedule('*/1 * * * *', async () => {
     const newInterval = await getScanInterval()
     if (newInterval !== currentIntervalMinutes) {
       console.log(
-        `🔄 Интервал обновлён: ${currentIntervalMinutes} → ${newInterval} мин.`
+        `Интервал обновлён: ${currentIntervalMinutes} → ${newInterval} мин.`
       )
       currentIntervalMinutes = newInterval
     }
@@ -195,4 +183,4 @@ const startWorker = async () => {
 }
 
 startWorker()
-console.log('✅ Воркер очереди инициализирован')
+console.log('Воркер очереди инициализирован')

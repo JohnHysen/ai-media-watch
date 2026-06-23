@@ -16,13 +16,11 @@ export class SystemSettings extends Model {
   @Column(DataType.INTEGER)
   declare id: number
 
-  // ========== НАСТРОЙКИ АНАЛИЗА ==========
   @AllowNull(false)
   @Default(5)
   @Column(DataType.INTEGER)
   declare scanInterval: number
 
-  // ========== НАСТРОЙКИ НОВОСТЕЙ ==========
   @AllowNull(false)
   @Default(true)
   @Column(DataType.BOOLEAN)
@@ -38,7 +36,6 @@ export class SystemSettings extends Model {
   @Column(DataType.TEXT)
   declare newsSources: string
 
-  // ========== НАСТРОЙКИ ПАРСИНГА ==========
   @AllowNull(false)
   @Default(60)
   @Column(DataType.INTEGER)

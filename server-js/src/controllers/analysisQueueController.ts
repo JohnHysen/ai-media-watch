@@ -38,7 +38,6 @@ export const createAnalysisJob = async (req: Request, res: Response) => {
       })
     }
 
-    // Приоритет по умолчанию = 1 (средний)
     await AnalysisQueue.create({
       url,
       userId,
@@ -52,7 +51,7 @@ export const createAnalysisJob = async (req: Request, res: Response) => {
       message: 'Видео добавлено в очередь обработки',
     })
   } catch (error) {
-    console.error('❌ Ошибка создания задачи:', error)
+    console.error('Ошибка создания задачи:', error)
     return res.status(500).json({
       ok: false,
       message: 'Внутренняя ошибка сервера',
@@ -86,7 +85,7 @@ export const getQueue = async (req: Request, res: Response) => {
       data: items.rows,
     })
   } catch (error) {
-    console.error('❌ Ошибка получения очереди:', error)
+    console.error('Ошибка получения очереди:', error)
     res.status(500).json({
       ok: false,
       message: 'Внутренняя ошибка сервера',
@@ -126,7 +125,7 @@ export const updatePriority = async (req: Request, res: Response) => {
 
     res.json({ message: 'Приоритет обновлён', job })
   } catch (error) {
-    console.error('❌ Ошибка обновления приоритета:', error)
+    console.error('Ошибка обновления приоритета:', error)
     res.status(500).json({ error: 'Внутренняя ошибка сервера' })
   }
 }
@@ -148,7 +147,7 @@ export const deleteQueueItem = async (req: Request, res: Response) => {
     await job.destroy()
     res.json({ message: 'Задача удалена' })
   } catch (error) {
-    console.error('❌ Ошибка удаления задачи:', error)
+    console.error('Ошибка удаления задачи:', error)
     res.status(500).json({ error: 'Внутренняя ошибка сервера' })
   }
 }

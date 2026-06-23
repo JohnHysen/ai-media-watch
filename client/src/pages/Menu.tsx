@@ -65,7 +65,6 @@ import CurrencyBitcoinIcon from '@mui/icons-material/CurrencyBitcoin'
 import PeopleAltIcon from '@mui/icons-material/PeopleAlt'
 import WarningAmberIcon from '@mui/icons-material/WarningAmber'
 import LeaderboardIcon from '@mui/icons-material/Leaderboard'
-// Импорт для Telegram
 import TelegramIcon from '@mui/icons-material/Telegram'
 
 import { motion, AnimatePresence } from 'framer-motion'
@@ -90,7 +89,6 @@ import {
   createAnalysisJob,
 } from '../http/API'
 
-// ---------- 3D фон с летающими фигурами ----------
 const FloatingShapes = () => {
   const groupRef = useRef<THREE.Group>(null!)
 
@@ -217,7 +215,6 @@ const CyberBackground3D = () => {
   )
 }
 
-// ---------- Компонент спидометра ----------
 interface CyberSpeedometerProps {
   value: number
   label?: string
@@ -360,7 +357,6 @@ const CyberSpeedometer: React.FC<CyberSpeedometerProps> = ({
   )
 }
 
-// ---------- Главный компонент ----------
 const CyberMediaWatchPro = () => {
   const { user } = useUser()
   const navigate = useNavigate()
@@ -445,7 +441,6 @@ const CyberMediaWatchPro = () => {
     },
   }
 
-  // --- СОСТОЯНИЕ И ЭФФЕКТ ДЛЯ МОДАЛЬНОГО ОКНА ВХОДА ---
   const [loginModalOpen, setLoginModalOpen] = useState(false)
 
   useEffect(() => {
@@ -488,7 +483,6 @@ const CyberMediaWatchPro = () => {
         (t) => new Date(t.checked_at) > new Date(now.getTime() - 30 * 86400000)
       )
     }
-    // timeframe === 'all' – не фильтруем по времени
     if (selectedVerdictFilter.length > 0) {
       threats = threats.filter((t) =>
         selectedVerdictFilter.includes(t.verdict_text)
@@ -665,7 +659,6 @@ const CyberMediaWatchPro = () => {
     )
   }
 
-  // Ссылка на Telegram бота (замените на свою)
   const TELEGRAM_BOT_URL = 'https://t.me/AMWPro_Bot'
 
   return (
@@ -808,7 +801,6 @@ const CyberMediaWatchPro = () => {
             )}
           </AnimatePresence>
 
-          {/* ===== КАРТОЧКА АНАЛИЗА ВИДЕО ===== */}
           <Box sx={{ display: 'flex', justifyContent: 'center', mb: 5 }}>
             <Card
               sx={{
@@ -882,18 +874,25 @@ const CyberMediaWatchPro = () => {
                 {t('multimodal')}
               </Typography>
 
-              {/* ===== НОВЫЙ БЛОК: Telegram бот и QR-код ===== */}
               <Divider sx={{ my: 2, borderColor: 'rgba(0,255,255,0.2)' }} />
               <Box
                 sx={{
                   display: 'flex',
                   alignItems: 'center',
-                  justifyContent: 'space-between',
+                  justifyContent: 'center',
                   flexWrap: 'wrap',
-                  gap: 2,
+                  gap: 10,
                 }}
               >
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                <Box
+                  sx={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 2,
+                    flexWrap: 'wrap',
+                    justifyContent: 'center',
+                  }}
+                >
                   <Button
                     variant="outlined"
                     startIcon={<TelegramIcon />}
@@ -938,10 +937,11 @@ const CyberMediaWatchPro = () => {
                       sx={{
                         width: 100,
                         height: 100,
-                        borderRadius: 5,
+                        borderRadius: 3,
                         border: '1px solid rgba(0,255,255,0.3)',
                         backgroundColor: '#fff',
                         p: 0.5,
+                        alignItems: 'center',
                       }}
                     />
                     <Typography
@@ -953,7 +953,6 @@ const CyberMediaWatchPro = () => {
                   </Box>
                 </Tooltip>
               </Box>
-              {/* {КОНЕЦ БЛОКА} */}
             </Card>
           </Box>
 
@@ -1490,7 +1489,6 @@ const CyberMediaWatchPro = () => {
                 </List>
               </Card>
 
-              {/* Спидометр + круговая диаграмма */}
               <Grid container spacing={4} sx={{ mb: 5 }}>
                 <Grid size={{ xs: 12, md: 7 }}>
                   <Card
@@ -1606,7 +1604,6 @@ const CyberMediaWatchPro = () => {
                 </Grid>
               </Grid>
 
-              {/* ========== ЛИДЕРБОРД ОПАСНЫХ АВТОРОВ (по uploader) ========== */}
               {authorLeaderboard.length > 0 && (
                 <Box sx={{ mb: 5 }}>
                   <Typography
@@ -1781,7 +1778,6 @@ const CyberMediaWatchPro = () => {
                 </Box>
               )}
 
-              {/* Инфографика */}
               <Grid container spacing={4} sx={{ mb: 5 }}>
                 <Grid size={{ xs: 12, md: 6 }}>
                   <Card
@@ -2035,7 +2031,6 @@ const CyberMediaWatchPro = () => {
         </Box>
       </Box>
 
-      {/* ========== МОДАЛЬНОЕ ОКНО С ДЕТАЛЯМИ ВИДЕО ========== */}
       <Dialog
         open={modalOpen}
         onClose={() => setModalOpen(false)}
@@ -2327,7 +2322,6 @@ const CyberMediaWatchPro = () => {
         )}
       </Dialog>
 
-      {/* ========== МОДАЛЬНОЕ ОКНО ДЛЯ НЕАВТОРИЗОВАННЫХ ПОЛЬЗОВАТЕЛЕЙ ========== */}
       <Dialog
         open={loginModalOpen}
         onClose={() => setLoginModalOpen(false)}

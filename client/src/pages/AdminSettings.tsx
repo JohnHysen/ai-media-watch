@@ -20,10 +20,7 @@ import SaveIcon from '@mui/icons-material/Save'
 import RefreshIcon from '@mui/icons-material/Refresh'
 import AddIcon from '@mui/icons-material/Add'
 import SettingsIcon from '@mui/icons-material/Settings'
-import TimerIcon from '@mui/icons-material/Timer'
 import NewsIcon from '@mui/icons-material/Feed'
-import RssFeedIcon from '@mui/icons-material/RssFeed'
-import LinkIcon from '@mui/icons-material/Link'
 import PlayArrowIcon from '@mui/icons-material/PlayArrow'
 import StopIcon from '@mui/icons-material/Stop'
 import AnalyticsIcon from '@mui/icons-material/Analytics'
@@ -35,7 +32,6 @@ import { useUser } from '../context/user/useUser'
 import { $host } from '../http/API'
 import { toast } from 'react-toastify'
 
-// ---------- Интерфейсы ----------
 interface Settings {
   scanInterval: number
   autoRefreshNews: boolean
@@ -60,7 +56,6 @@ interface ScrapeStatus {
   totalAnalyzed: number
 }
 
-// ---------- Геометрический фон ----------
 const GeometricBackground = () => (
   <Box
     sx={{
@@ -122,7 +117,6 @@ const GeometricBackground = () => (
   </Box>
 )
 
-// ---------- Главный компонент ----------
 const AdminSettings = () => {
   const { user } = useUser()
   const [drawerOpen, setDrawerOpen] = useState(false)
@@ -189,9 +183,8 @@ const AdminSettings = () => {
       })
       await fetchStatus()
     } catch (err: any) {
-      console.error('Ошибка загрузки настроек:', err)
-      setError('Не удалось загрузить настройки')
-      toast.error('Ошибка загрузки настроек')
+      setError('Ошибка сервера')
+      toast.error('Ошибка сервера')
     } finally {
       setLoading(false)
     }
@@ -203,7 +196,7 @@ const AdminSettings = () => {
       const res = await $host.get('/settings/status')
       setStatus(res.data)
     } catch (err) {
-      console.error('Ошибка загрузки статуса:', err)
+      // ignore
     } finally {
       setStatusLoading(false)
     }
@@ -221,9 +214,8 @@ const AdminSettings = () => {
       toast.success('Настройки сохранены')
       await fetchStatus()
     } catch (err: any) {
-      console.error('Ошибка сохранения:', err)
-      setError('Не удалось сохранить настройки')
-      toast.error('Ошибка сохранения')
+      setError('Ошибка сервера')
+      toast.error('Ошибка сервера')
     } finally {
       setSaving(false)
     }
@@ -250,9 +242,6 @@ const AdminSettings = () => {
     }))
   }
 
-  // ============================================================
-  // УПРАВЛЕНИЕ ПАРСИНГОМ
-  // ============================================================
   const handleToggleScraping = async () => {
     setToggling(true)
     try {
@@ -264,8 +253,7 @@ const AdminSettings = () => {
       toast.success(res.data.message)
       await fetchStatus()
     } catch (err: any) {
-      console.error('Ошибка переключения парсинга:', err)
-      toast.error(err.response?.data?.error || 'Ошибка переключения парсинга')
+      toast.error('Ошибка сервера')
     } finally {
       setToggling(false)
     }
@@ -278,8 +266,7 @@ const AdminSettings = () => {
       toast.success(res.data.message || 'Сбор видео запущен')
       await fetchStatus()
     } catch (err: any) {
-      console.error('Ошибка ручного запуска:', err)
-      toast.error(err.response?.data?.error || 'Ошибка запуска сбора')
+      toast.error('Ошибка сервера')
     } finally {
       setScrapingManually(false)
     }
@@ -387,9 +374,6 @@ const AdminSettings = () => {
           </Alert>
         )}
 
-        {/* ============================================ */}
-        {/* ПАНЕЛЬ 1: УПРАВЛЕНИЕ ПАРСИНГОМ */}
-        {/* ============================================ */}
         <Card
           sx={{
             mb: 4,
@@ -414,9 +398,7 @@ const AdminSettings = () => {
           </Typography>
 
           <Grid container spacing={3}>
-            {/* Левая колонка: управление */}
             <Grid size={{ xs: 12, md: 6 }}>
-              {/* КНОПКА ЗАПУСКА/ОСТАНОВКИ (ПЕРВАЯ) */}
               <Box
                 sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 3 }}
               >
@@ -450,7 +432,6 @@ const AdminSettings = () => {
                 </Typography>
               </Box>
 
-              {/* Остальные настройки парсинга */}
               <Box sx={{ mb: 2 }}>
                 <Typography sx={{ color: '#fff', mb: 1 }}>
                   Интервал между циклами: {settings.videoScrapeInterval} мин.
@@ -622,7 +603,6 @@ const AdminSettings = () => {
               </Button>
             </Grid>
 
-            {/* Правая колонка: статус */}
             <Grid size={{ xs: 12, md: 6 }}>
               <Box
                 sx={{
@@ -778,9 +758,6 @@ const AdminSettings = () => {
           </Grid>
         </Card>
 
-        {/* ============================================ */}
-        {/* ПАНЕЛЬ 2: УПРАВЛЕНИЕ АНАЛИЗОМ ВИДЕО */}
-        {/* ============================================ */}
         <Card
           sx={{
             mb: 4,
@@ -833,9 +810,6 @@ const AdminSettings = () => {
           </Box>
         </Card>
 
-        {/* ============================================ */}
-        {/* ПАНЕЛЬ 3: УПРАВЛЕНИЕ НОВОСТЯМИ */}
-        {/* ============================================ */}
         <Card
           sx={{
             mb: 4,

@@ -42,7 +42,6 @@ import { Canvas, useFrame } from '@react-three/fiber'
 import { OrbitControls, Environment, Stars } from '@react-three/drei'
 import * as THREE from 'three'
 
-// ---------- 3D фон с парящими фигурами ----------
 const FloatingShapes = () => {
   const groupRef = React.useRef<THREE.Group>(null!)
 
@@ -169,7 +168,6 @@ const SpaceBackground = () => {
   )
 }
 
-// ---------- Интерфейсы ----------
 interface QueueItem {
   id: number
   url: string
@@ -185,7 +183,6 @@ interface QueueItem {
   }
 }
 
-// ---------- Главный компонент ----------
 const QueueManager = () => {
   const { user } = useUser()
   const [drawerOpen, setDrawerOpen] = useState(false)
@@ -196,7 +193,6 @@ const QueueManager = () => {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const [selectedId, setSelectedId] = useState<number | null>(null)
 
-  // Фильтры и сортировка
   const [searchTerm, setSearchTerm] = useState('')
   const [statusFilter, setStatusFilter] = useState<string>('all')
   const [priorityFilter, setPriorityFilter] = useState<number | 'all'>('all')
@@ -256,27 +252,22 @@ const QueueManager = () => {
     }
   }
 
-  // Фильтрация и сортировка
   const filteredAndSorted = useMemo(() => {
     let result = [...items]
 
-    // Поиск по URL
     if (searchTerm.trim()) {
       const term = searchTerm.toLowerCase().trim()
       result = result.filter((item) => item.url.toLowerCase().includes(term))
     }
 
-    // Фильтр по статусу
     if (statusFilter !== 'all') {
       result = result.filter((item) => item.status === statusFilter)
     }
 
-    // Фильтр по приоритету
     if (priorityFilter !== 'all') {
       result = result.filter((item) => item.priority === priorityFilter)
     }
 
-    // Сортировка по дате
     result.sort((a, b) => {
       const dateA = new Date(a.createdAt).getTime()
       const dateB = new Date(b.createdAt).getTime()
@@ -406,7 +397,6 @@ const QueueManager = () => {
           </Button>
         </Box>
 
-        {/* Фильтры */}
         <Box
           sx={{
             display: 'flex',
@@ -510,7 +500,6 @@ const QueueManager = () => {
                     URL
                   </TableCell>
                   <TableCell sx={{ color: '#0ff', fontWeight: 'bold' }}>
-                    {/* Фильтр по статусу в заголовке */}
                     <FormControl size="small" fullWidth>
                       <Select
                         value={statusFilter}

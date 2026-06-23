@@ -38,7 +38,6 @@ import { Canvas, useFrame } from '@react-three/fiber'
 import { OrbitControls, Environment, Stars } from '@react-three/drei'
 import * as THREE from 'three'
 
-// ---------- 3D фон с парящими фигурами ----------
 const FloatingShapes = () => {
   const groupRef = React.useRef<THREE.Group>(null!)
 
@@ -163,7 +162,6 @@ const SpaceBackground = () => {
   )
 }
 
-// ---------- Интерфейс для отображения ----------
 interface Author {
   id: string
   platform: 'youtube' | 'tiktok' | 'instagram' | 'unknown'
@@ -173,7 +171,6 @@ interface Author {
   total_videos_count: number
 }
 
-// ---------- Главный компонент ----------
 const FraudResources = () => {
   const { user } = useUser()
   const [drawerOpen, setDrawerOpen] = useState(false)
@@ -189,7 +186,6 @@ const FraudResources = () => {
   const isInspector = user?.role === 'INSPECTOR'
   const canManage = isAdmin || isInspector
 
-  // ---------- Загрузка данных из VideoAnalysis ----------
   const fetchAuthors = async () => {
     setLoading(true)
     setError('')
@@ -256,7 +252,6 @@ const FraudResources = () => {
     if (canManage) fetchAuthors()
   }, [canManage])
 
-  // ---------- Фильтрация ----------
   const filteredAuthors = useMemo(() => {
     let result = authors
     if (showOnlyDangerous) {
@@ -273,12 +268,10 @@ const FraudResources = () => {
     if (platformFilter) {
       result = result.filter((a) => a.platform === platformFilter)
     }
-    // Сортируем по количеству опасных видео
     result.sort((a, b) => b.dangerous_videos_count - a.dangerous_videos_count)
     return result
   }, [authors, showOnlyDangerous, search, platformFilter])
 
-  // ---------- Авто-обновление каждые 30 секунд ----------
   useEffect(() => {
     if (!canManage) return
     intervalRef.current = setInterval(fetchAuthors, 30000)

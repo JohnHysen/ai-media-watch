@@ -38,7 +38,6 @@ import {
 } from '@react-three/drei'
 import * as THREE from 'three'
 
-// ---------- 3D фон с фигурами ----------
 const FloatingShapes = () => {
   const groupRef = useRef<THREE.Group>(null!)
   const shapes = useMemo(
@@ -200,7 +199,6 @@ const CyberBackground3D = () => (
   </Box>
 )
 
-// ---------- Интерфейс пользователя ----------
 interface User {
   id: number
   email: string
@@ -212,7 +210,6 @@ interface User {
   is_google: boolean
 }
 
-// ---------- Маппинг ролей для отображения ----------
 const ROLE_LABELS: Record<string, string> = {
   USER: 'Пользователь',
   INSPECTOR: 'Инспектор',
@@ -225,7 +222,6 @@ const ROLE_COLORS: Record<string, 'default' | 'warning' | 'error'> = {
   ADMIN: 'error',
 }
 
-// ---------- Главный компонент ----------
 const AdminUsers = () => {
   const { user: currentUser } = useUser()
   const [drawerOpen, setDrawerOpen] = useState(false)

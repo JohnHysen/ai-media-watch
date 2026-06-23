@@ -9,11 +9,9 @@ import path from 'path'
 import fs from 'fs'
 import { fileURLToPath } from 'url'
 
-// Для получения __dirname в ES-модулях
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
 
-// Переменная для хранения последнего результата парсинга
 let lastScrapeResult: {
   timestamp: Date | null
   addedCount: number
@@ -26,22 +24,16 @@ let lastScrapeResult: {
   error: null,
 }
 
-// Хранилище запущенного процесса парсинга (для отдельного окна)
 let scrapeProcess: any = null
 
-// ============================================================
-// ОПРЕДЕЛЕНИЕ ПУТИ К PYTHON-СКРИПТУ И ВИРТУАЛЬНОМУ ОКРУЖЕНИЮ
-// ============================================================
 const getPythonPath = (): string => {
-  // 1. Если задано через переменную окружения
   if (process.env.PYTHON_EXECUTABLE) {
     return process.env.PYTHON_EXECUTABLE
   }
 
-  // 2. Проверяем стандартные пути для виртуального окружения
   const venvPaths = [
-    path.join(__dirname, '../../../server/.venv/Scripts/python.exe'), // Windows
-    path.join(__dirname, '../../../server/.venv/bin/python'), // Linux/Mac
+    path.join(__dirname, '../../../server/.venv/Scripts/python.exe'),
+    path.join(__dirname, '../../../server/.venv/bin/python'),
   ]
   for (const p of venvPaths) {
     if (fs.existsSync(p)) {
@@ -50,25 +42,20 @@ const getPythonPath = (): string => {
     }
   }
 
-  // 3. Fallback: просто 'python'
-  console.warn(
-    '⚠️ Виртуальное окружение не найдено, используем "python" из PATH'
-  )
+  console.warn('Виртуальное окружение не найдено, используем "python" из PATH')
   return 'python'
 }
 
 const getPythonScriptPath = (): string => {
-  // Приоритет: переменная окружения
   if (process.env.PYTHON_SCRAPER_PATH) {
     const envPath = process.env.PYTHON_SCRAPER_PATH
     if (fs.existsSync(envPath)) {
-      console.log(`✅ Используем путь из PYTHON_SCRAPER_PATH: ${envPath}`)
+      console.log(`Используем путь из PYTHON_SCRAPER_PATH: ${envPath}`)
       return envPath
     }
-    console.warn(`⚠️ Путь из PYTHON_SCRAPER_PATH не существует: ${envPath}`)
+    console.warn(`Путь из PYTHON_SCRAPER_PATH не существует: ${envPath}`)
   }
 
-  // Возможные пути (относительно текущего файла: server-js/src/controllers)
   const possiblePaths = [
     path.join(__dirname, '../../../server/python_scrapers/main_parser.py'),
     path.join(__dirname, '../../server/python_scrapers/main_parser.py'),
@@ -79,26 +66,22 @@ const getPythonScriptPath = (): string => {
 
   for (const p of possiblePaths) {
     if (fs.existsSync(p)) {
-      console.log(`✅ Найден Python-скрипт: ${p}`)
+      console.log(`Найден Python-скрипт: ${p}`)
       return p
     }
   }
 
-  // Если не найден, возвращаем путь по умолчанию для ошибки
   const defaultPath = path.join(
     __dirname,
     '../../../server/python_scrapers/main_parser.py'
   )
-  console.warn(`⚠️ Python-скрипт не найден. Используем: ${defaultPath}`)
+  console.warn(`Python-скрипт не найден. Используем: ${defaultPath}`)
   return defaultPath
 }
 
 const PYTHON_EXECUTABLE = getPythonPath()
 const PYTHON_SCRIPT_PATH = getPythonScriptPath()
 
-// ============================================================
-// ВСПОМОГАТЕЛЬНАЯ ФУНКЦИЯ: ЗАПУСК ПАРСИНГА (возвращает JSON)
-// ============================================================
 const runPythonScraper = (): Promise<{
   success: boolean
   addedCount: number
@@ -107,7 +90,7 @@ const runPythonScraper = (): Promise<{
 }> => {
   return new Promise((resolve) => {
     if (!fs.existsSync(PYTHON_SCRIPT_PATH)) {
-      console.error(`❌ Файл не найден: ${PYTHON_SCRIPT_PATH}`)
+      console.error(`Файл не найден: ${PYTHON_SCRIPT_PATH}`)
       return resolve({
         success: false,
         addedCount: 0,
@@ -116,21 +99,20 @@ const runPythonScraper = (): Promise<{
       })
     }
 
-    // Получаем директорию, где находится скрипт, чтобы добавить в PYTHONPATH
     const scriptDir = path.dirname(PYTHON_SCRIPT_PATH)
     const pythonPathEnv = process.env.PYTHONPATH || ''
     const newPythonPath =
       scriptDir + (pythonPathEnv ? path.delimiter + pythonPathEnv : '')
 
     const cmd = `"${PYTHON_EXECUTABLE}" "${PYTHON_SCRIPT_PATH}" --json`
-    console.log('🔄 Запуск Python-скрапера:', cmd)
+    console.log('Запуск Python-скрапера:', cmd)
     console.log(`   PYTHONPATH=${newPythonPath}`)
 
     const env = { ...process.env, PYTHONPATH: newPythonPath }
 
     exec(cmd, { timeout: 300000, env }, (error, stdout, stderr) => {
       if (error) {
-        console.error('❌ Ошибка выполнения Python-скрипта:', error.message)
+        console.error('Ошибка выполнения Python-скрипта:', error.message)
         console.error('stderr:', stderr)
         return resolve({
           success: false,
@@ -142,7 +124,7 @@ const runPythonScraper = (): Promise<{
 
       try {
         const result = JSON.parse(stdout)
-        console.log('✅ Python-скрипт выполнен:', result)
+        console.log('Python-скрипт выполнен:', result)
         resolve({
           success: true,
           addedCount: result.total_added || 0,
@@ -150,7 +132,7 @@ const runPythonScraper = (): Promise<{
           message: 'Сбор выполнен успешно',
         })
       } catch (e) {
-        console.error('❌ Ошибка парсинга JSON из stdout:', stdout)
+        console.error('Ошибка парсинга JSON из stdout:', stdout)
         resolve({
           success: false,
           addedCount: 0,
@@ -162,9 +144,6 @@ const runPythonScraper = (): Promise<{
   })
 }
 
-// ============================================================
-// ПОЛУЧИТЬ ВСЕ НАСТРОЙКИ
-// ============================================================
 export const getSettings = async (req: Request, res: Response) => {
   try {
     let settings = await SystemSettings.findOne()
@@ -206,9 +185,6 @@ export const getSettings = async (req: Request, res: Response) => {
   }
 }
 
-// ============================================================
-// ОБНОВИТЬ НАСТРОЙКИ
-// ============================================================
 export const updateSettings = async (req: Request, res: Response) => {
   try {
     const {
@@ -275,9 +251,6 @@ export const updateSettings = async (req: Request, res: Response) => {
   }
 }
 
-// ============================================================
-// ВКЛЮЧИТЬ/ВЫКЛЮЧИТЬ ЦИКЛИЧЕСКИЙ ПАРСИНГ
-// ============================================================
 export const toggleScraping = async (req: Request, res: Response) => {
   try {
     let settings = await SystemSettings.findOne()
@@ -288,7 +261,7 @@ export const toggleScraping = async (req: Request, res: Response) => {
     await settings.save()
 
     if (settings.scrapingEnabled) {
-      console.log('🔄 Парсинг включён, запускаем первый сбор...')
+      console.log('Парсинг включён, запускаем первый сбор...')
       const result = await runPythonScraper()
       if (result.success) {
         lastScrapeResult = {
@@ -318,9 +291,6 @@ export const toggleScraping = async (req: Request, res: Response) => {
   }
 }
 
-// ============================================================
-// РУЧНОЙ ЗАПУСК СБОРА ВИДЕО (ОДНОРАЗОВЫЙ)
-// ============================================================
 export const triggerVideoScrape = async (req: Request, res: Response) => {
   try {
     const result = await runPythonScraper()
@@ -358,9 +328,6 @@ export const triggerVideoScrape = async (req: Request, res: Response) => {
   }
 }
 
-// ============================================================
-// ЗАПУСК ПАРСИНГА В ОТДЕЛЬНОМ ОКНЕ ТЕРМИНАЛА
-// ============================================================
 export const startScrapingProcess = async (req: Request, res: Response) => {
   try {
     if (scrapeProcess) {
@@ -374,9 +341,8 @@ export const startScrapingProcess = async (req: Request, res: Response) => {
       return res.status(404).json({ error: `Файл не найден: ${scriptPath}` })
     }
 
-    console.log('🚀 Запуск парсинга в отдельном окне...')
+    console.log('Запуск парсинга в отдельном окне...')
 
-    // Для Windows используем команду start
     if (process.platform === 'win32') {
       scrapeProcess = spawn('start', ['cmd', '/k', pythonCmd, scriptPath], {
         shell: true,
@@ -384,7 +350,6 @@ export const startScrapingProcess = async (req: Request, res: Response) => {
         detached: true,
       })
     } else {
-      // Для Linux/macOS пробуем xterm, иначе в фоне
       try {
         scrapeProcess = spawn('xterm', ['-e', pythonCmd, scriptPath], {
           stdio: 'ignore',
@@ -410,17 +375,14 @@ export const startScrapingProcess = async (req: Request, res: Response) => {
     unexpectedError(res, e)
   }
 }
-
-// ============================================================
-// ОСТАНОВКА ПАРСИНГА В ОТДЕЛЬНОМ ОКНЕ
-// ============================================================
+5
 export const stopScrapingProcess = async (req: Request, res: Response) => {
   try {
     if (!scrapeProcess) {
       return res.status(400).json({ error: 'Парсинг не запущен' })
     }
 
-    console.log(`🛑 Остановка процесса парсинга (PID: ${scrapeProcess.pid})`)
+    console.log(`Остановка процесса парсинга (PID: ${scrapeProcess.pid})`)
 
     if (process.platform === 'win32') {
       const { exec } = await import('child_process')
@@ -436,9 +398,6 @@ export const stopScrapingProcess = async (req: Request, res: Response) => {
   }
 }
 
-// ============================================================
-// ПОЛУЧИТЬ СТАТУС ПАРСИНГА (включая состояние процесса)
-// ============================================================
 export const getScrapeStatus = async (req: Request, res: Response) => {
   try {
     const settings = await SystemSettings.findOne()

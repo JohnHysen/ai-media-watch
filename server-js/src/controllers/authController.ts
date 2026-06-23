@@ -4,7 +4,6 @@ import unexpectedError from '../helpers/unexpectedError'
 import { generateJwt } from '../helpers/generateJwt'
 import cfg from '../config'
 import bcrypt from 'bcryptjs'
-// import { confEmail } from '../modules/email/confEmail' // если нужно
 import crypto from 'crypto'
 
 export const signUp = async (req: Request, res: Response) => {
@@ -32,7 +31,7 @@ export const signUp = async (req: Request, res: Response) => {
       token: generateJwt(new_user.id, new_user.role),
     })
   } catch (e) {
-    console.error('❌ signUp error:', e)
+    console.error('signUp error:', e)
     unexpectedError(res, e)
   }
 }
@@ -53,7 +52,7 @@ export const signIn = async (req: Request, res: Response) => {
       token: generateJwt(candidate.id, candidate.role),
     })
   } catch (e) {
-    console.error('❌ signIn error:', e)
+    console.error('signIn error:', e)
     unexpectedError(res, e)
   }
 }
@@ -80,7 +79,7 @@ export const getUsers = async (req: Request, res: Response) => {
       return res.json({ users })
     }
   } catch (e) {
-    console.error('❌ getUsers error:', e)
+    console.error('getUsers error:', e)
     unexpectedError(res, e)
   }
 }
@@ -114,7 +113,7 @@ export const updateUserRole = async (req: Request, res: Response) => {
       },
     })
   } catch (e) {
-    console.error('❌ updateUserRole error:', e)
+    console.error('updateUserRole error:', e)
     unexpectedError(res, e)
   }
 }

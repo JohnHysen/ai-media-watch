@@ -94,7 +94,6 @@ const router = createBrowserRouter([
         path: '/analytics',
         element: <Analytics />,
       },
-      // ✅ Новый маршрут для администратора
       {
         path: '/users',
         element: <WithAuth c={<AdminUsers />} roles={['ADMIN']} />,

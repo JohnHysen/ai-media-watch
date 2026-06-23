@@ -35,9 +35,6 @@ const input = {
   proxyCountryCode: 'None',
 }
 
-// ============================================================
-// 1. ПУБЛИЧНЫЙ ЭНДПОИНТ (с авторизацией, userId из req.user)
-// ============================================================
 export const createVideoAnalysis = async (req: Request, res: Response) => {
   try {
     const userId = req.user?.id || null
@@ -78,7 +75,6 @@ export const createVideoAnalysis = async (req: Request, res: Response) => {
 
     console.log('Создание записи для userId:', userId)
 
-    // 1. Создаём запись о видеоанализе
     const analysis = await VideoAnalysis.create({
       video_url,
       title: title || null,
@@ -95,7 +91,6 @@ export const createVideoAnalysis = async (req: Request, res: Response) => {
       uploader: uploader || null,
     })
 
-    // 2. Автоматическое добавление в реестр мошеннических ресурсов
     if (analysis.is_dangerous && analysis.uploader) {
       try {
         await autoAddResourceFromAnalysis(analysis)
@@ -122,9 +117,6 @@ export const createVideoAnalysis = async (req: Request, res: Response) => {
   }
 }
 
-// ============================================================
-// 2. ВНУТРЕННИЙ ЭНДПОИНТ ДЛЯ FASTAPI (без auth, userId из тела)
-// ============================================================
 export const createVideoAnalysisInternal = async (
   req: Request,
   res: Response
@@ -161,7 +153,6 @@ export const createVideoAnalysisInternal = async (
 
     console.log('Внутреннее создание записи для userId:', userId)
 
-    // 1. Создаём запись о видеоанализе
     const analysis = await VideoAnalysis.create({
       video_url,
       title: title || null,
@@ -177,7 +168,6 @@ export const createVideoAnalysisInternal = async (
       uploader: uploader || null,
     })
 
-    // 2. Автоматическое добавление в реестр мошеннических ресурсов
     if (analysis.is_dangerous && analysis.uploader) {
       try {
         await autoAddResourceFromAnalysis(analysis)
@@ -204,9 +194,6 @@ export const createVideoAnalysisInternal = async (
   }
 }
 
-// ============================================================
-// 3. ПОЛУЧИТЬ ВСЕ ЗАПИСИ (с фильтром по userId)
-// ============================================================
 export const getAllVideoAnalyses = async (req: Request, res: Response) => {
   try {
     const { is_dangerous, userId, limit = 50, offset = 0 } = req.query
@@ -238,9 +225,6 @@ export const getAllVideoAnalyses = async (req: Request, res: Response) => {
   }
 }
 
-// ============================================================
-// 4. ПОЛУЧИТЬ ОДНУ ЗАПИСЬ ПО ID
-// ============================================================
 export const getVideoAnalysisById = async (req: Request, res: Response) => {
   try {
     const { id } = req.params
@@ -259,9 +243,6 @@ export const getVideoAnalysisById = async (req: Request, res: Response) => {
   }
 }
 
-// ============================================================
-// 5. ПОЛУЧИТЬ ЗАПИСИ ПО ID ПОЛЬЗОВАТЕЛЯ
-// ============================================================
 export const getAnalysesByUser = async (req: Request, res: Response) => {
   try {
     const { userId } = req.params
@@ -280,9 +261,6 @@ export const getAnalysesByUser = async (req: Request, res: Response) => {
   }
 }
 
-// ============================================================
-// 6. ЭНДПОИНТ ДЛЯ СКРАПИНГА (оставлен без изменений)
-// ============================================================
 export const scrapVideo = async (req: Request, res: Response) => {
   const run = await client.actor('clockworks/tiktok-scraper').call(input)
 

@@ -55,7 +55,6 @@ import {
   Cell,
 } from 'recharts'
 
-// ---------- Компонент планеты ----------
 const Planet = ({ radius, color, position, speed, emissive = false }) => {
   const meshRef = React.useRef<THREE.Mesh>(null)
   useFrame(({ clock }) => {
@@ -77,7 +76,6 @@ const Planet = ({ radius, color, position, speed, emissive = false }) => {
   )
 }
 
-// ---------- Космический фон с планетами ----------
 const SpaceBackground = () => {
   return (
     <Box
@@ -151,7 +149,6 @@ const SpaceBackground = () => {
   )
 }
 
-// ---------- Интерфейсы ----------
 interface UserStats {
   totalChecks: number
   threatsFound: number
@@ -169,20 +166,17 @@ interface VerdictDistribution {
   uncertain: number
 }
 
-// ---------- Главный компонент Profile ----------
 const Profile = () => {
   const { user, login } = useUser()
   const navigate = useNavigate()
   const [drawerOpen, setDrawerOpen] = useState(false)
 
-  // Статистика
   const [stats, setStats] = useState<UserStats>({
     totalChecks: 0,
     threatsFound: 0,
     averageRisk: 0,
   })
 
-  // Данные графиков
   const [activity, setActivity] = useState<ActivityData[]>([])
   const [verdictDist, setVerdictDist] = useState<VerdictDistribution>({
     safe: 0,
@@ -350,7 +344,6 @@ const Profile = () => {
           </motion.div>
 
           <Grid container spacing={4}>
-            {/* Левая колонка - аватар */}
             <Grid size={{ xs: 12, md: 4 }}>
               <motion.div
                 initial={{ opacity: 0, x: -30 }}
@@ -420,9 +413,7 @@ const Profile = () => {
               </motion.div>
             </Grid>
 
-            {/* Правая колонка */}
             <Grid size={{ xs: 12, md: 8 }}>
-              {/* Статистика */}
               <motion.div
                 initial={{ opacity: 0, x: 30 }}
                 animate={{ opacity: 1, x: 0 }}
@@ -492,7 +483,6 @@ const Profile = () => {
                 </Card>
               </motion.div>
 
-              {/* Активность */}
               <motion.div
                 initial={{ opacity: 0, y: 30 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -537,7 +527,6 @@ const Profile = () => {
                 </Card>
               </motion.div>
 
-              {/* Распределение вердиктов + последние проверки */}
               <Grid container spacing={4}>
                 <Grid size={{ xs: 12, md: 6 }}>
                   <motion.div
@@ -670,7 +659,6 @@ const Profile = () => {
         </Container>
       </Box>
 
-      {/* Диалог смены аватара */}
       <Dialog
         open={avatarDialogOpen}
         onClose={() => setAvatarDialogOpen(false)}
@@ -720,7 +708,6 @@ const Profile = () => {
         </DialogActions>
       </Dialog>
 
-      {/* Snackbar */}
       <Snackbar
         open={snackbar.open}
         autoHideDuration={4000}
