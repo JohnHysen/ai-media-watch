@@ -12,6 +12,25 @@
     "action": {
         "default_popup":"popup.html"
     },
-    "permissions": ["scripting", "activeTab"],
-    "background":{}
+    "permissions": [
+        "scripting",
+        "activeTab",
+        "tabs",
+        "webNavigation",
+        "storage"
+    ],
+    "host_permissions": [
+        "http://localhost:3500/*",
+        "https://www.tiktok.com/*"
+    ],
+    "content_scripts": [
+        {
+            "matches": ["https://www.tiktok.com/*"],
+            "js": ["content.js"],
+            "run_at": "document_end"
+        }
+    ],
+    "background": {
+        "service_worker": "background.js"
+    }
 }

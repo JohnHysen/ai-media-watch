@@ -10,7 +10,8 @@ import { requireRole } from '../middleware/checkRoleMiddleware'
 
 const router = Router()
 
-router.post('/', authMiddleware, createAnalysisJob)
+// POST – доступен всем авторизованным
+router.post('/', createAnalysisJob)
 
 router.get('/', authMiddleware, requireRole(['INSPECTOR', 'ADMIN']), getQueue)
 
