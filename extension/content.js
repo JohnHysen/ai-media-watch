@@ -1,17 +1,13 @@
-// content.js - работает на странице TikTok
-
 console.log('[Content] ========== CONTENT SCRIPT LOADED ==========');
 console.log('[Content] Current URL:', window.location.href);
 
 let isAutoCollectEnabled = true;
 
-// Проверяем состояние автоподбора
 chrome.storage.sync.get(['autoCollectEnabled'], (result) => {
     isAutoCollectEnabled = result.autoCollectEnabled !== false;
     console.log('[Content] Auto-collect enabled:', isAutoCollectEnabled);
 });
 
-// Слушаем изменения состояния
 chrome.runtime.onMessage.addListener((msg) => {
     if (msg.action === 'toggleAutoCollect') {
         isAutoCollectEnabled = msg.enabled;
@@ -19,57 +15,50 @@ chrome.runtime.onMessage.addListener((msg) => {
     }
 });
 
-// Отправка в background
 function sendVideoToBackground(url) {
   if (!url) {
-    console.log('[Content] ❌ No URL to send');
+    console.log('[Content] No URL to send');
     return;
   }
   
-  // Проверяем включен ли автоподбор
   if (!isAutoCollectEnabled) {
-    console.log('[Content] ⏭️ Auto-collect disabled, skipping:', url);
+    console.log('[Content] Auto-collect disabled, skipping:', url);
     return;
   }
   
-  console.log('[Content] 📤 Sending video to background:', url);
+  console.log('[Content] Sending video to background:', url);
   
   chrome.runtime.sendMessage({
     url: url,
-    source: 'tiktok',
-    action: 'newVideo'
   }, (response) => {
     if (chrome.runtime.lastError) {
-      console.error('[Content] ❌ Error sending:', chrome.runtime.lastError.message);
+      console.error('[Content] Error sending:', chrome.runtime.lastError.message);
     } else {
-      console.log('[Content] ✅ Sent successfully', response);
+      console.log('[Content] Sent successfully', response);
     }
   });
 }
 
-// Получение прямого URL из адресной строки (только валидные форматы)
 function getDirectVideoUrl() {
   try {
     const currentUrl = window.location.href;
-    console.log('[Content] 🔍 Checking current URL:', currentUrl);
+    console.log('[Content] Checking current URL:', currentUrl);
     
-    // Проверяем ТОЛЬКО валидный формат: https://www.tiktok.com/@username/video/цифры
     const validMatch = currentUrl.match(/https?:\/\/www\.tiktok\.com\/@[^\/]+\/video\/\d+/);
     if (validMatch) {
       const url = validMatch[0];
-      console.log('[Content] ✅ Found valid video URL:', url);
+      console.log('[Content] Found valid video URL:', url);
       return url;
     }
     
-    // Проверяем альтернативный формат с параметрами
     const paramMatch = currentUrl.match(/https?:\/\/www\.tiktok\.com\/@[^\/]+\/video\/\d+\?/);
     if (paramMatch) {
       const baseUrl = paramMatch[0].split('?')[0];
-      console.log('[Content] ✅ Found video URL with params:', baseUrl);
+      console.log('[Content] Found video URL with params:', baseUrl);
       return baseUrl;
     }
     
-    console.log('[Content] ℹ️ Not a valid TikTok video page');
+    console.log('[Content] Not a valid TikTok video page');
     return null;
   } catch (error) {
     console.error('[Content] Error getting direct URL:', error);
@@ -77,10 +66,8 @@ function getDirectVideoUrl() {
   }
 }
 
-// Получение username для текущего видео
 function getCurrentUsername() {
   try {
-    // 1. Ищем через data-e2e атрибут
     const creatorInfo = document.querySelector('[data-e2e="video-author-avatar"]');
     if (creatorInfo) {
       const href = creatorInfo.getAttribute('href');
@@ -93,7 +80,6 @@ function getCurrentUsername() {
       }
     }
 
-    // 2. Ищем через ссылку автора
     const authorLink = document.querySelector('[data-e2e="video-author-avatar"]')?.closest('a');
     if (authorLink) {
       const href = authorLink.getAttribute('href');
@@ -106,7 +92,6 @@ function getCurrentUsername() {
       }
     }
 
-    // 3. Ищем через DivCreatorInfoContainer
     const creatorContainer = document.querySelector('.css-f1s7n1-7937d88b--DivCreatorInfoContainer');
     if (creatorContainer) {
       const link = creatorContainer.querySelector('a[href*="/@"]');
@@ -129,7 +114,6 @@ function getCurrentUsername() {
       }
     }
 
-    // 4. Ищем через article контейнер
     const article = document.querySelector('article[data-e2e="recommend-list-item-container"]');
     if (article) {
       const link = article.querySelector('a[href*="/@"]');
@@ -143,7 +127,6 @@ function getCurrentUsername() {
       }
     }
 
-    // 5. Ищем через avatar
     const avatar = document.querySelector('[data-e2e="video-author-avatar"]');
     if (avatar) {
       const href = avatar.getAttribute('href');
@@ -156,7 +139,6 @@ function getCurrentUsername() {
       }
     }
 
-    // 6. Ищем через wrapper
     const wrapper = document.querySelector('[id^="xgwrapper-"]');
     if (wrapper) {
       const container = wrapper.closest('article') || wrapper.closest('[data-e2e="recommend-list-item-container"]');
@@ -173,14 +155,13 @@ function getCurrentUsername() {
       }
     }
 
-    // 7. Пробуем через URL страницы
     const urlMatch = window.location.href.match(/@([^\/]+)/);
     if (urlMatch) {
       console.log('[Content] Found username from URL:', urlMatch[1]);
       return urlMatch[1];
     }
 
-    console.log('[Content] ⚠️ Username not found');
+    console.log('[Content] Username not found');
     return null;
   } catch (error) {
     console.error('[Content] Error getting username:', error);
@@ -188,7 +169,6 @@ function getCurrentUsername() {
   }
 }
 
-// Получение video ID из xgwrapper
 function getVideoIdFromWrapper() {
   try {
     const wrapper = document.querySelector('[id^="xgwrapper-"]');
@@ -200,14 +180,13 @@ function getVideoIdFromWrapper() {
       }
     }
     
-    // Альтернативный способ - из URL
     const urlMatch = window.location.href.match(/\/video\/(\d+)/);
     if (urlMatch) {
       console.log('[Content] Found video ID from URL:', urlMatch[1]);
       return urlMatch[1];
     }
     
-    console.log('[Content] ❌ No video ID found');
+    console.log('[Content] No video ID found');
     return null;
   } catch (error) {
     console.error('[Content] Error getting video ID:', error);
@@ -215,45 +194,39 @@ function getVideoIdFromWrapper() {
   }
 }
 
-// Получение URL видео
 function getVideoUrl() {
   try {    
-    // 1. Проверяем прямой URL из адресной строки (только валидные форматы)
     const directUrl = getDirectVideoUrl();
     if (directUrl) {
-      console.log('[Content] ✅ Using direct URL from address bar:', directUrl);
+      console.log('[Content] Using direct URL from address bar:', directUrl);
       return directUrl;
     }
     
-    // 2. Если нет прямого URL, собираем из элементов DOM
     const videoId = getVideoIdFromWrapper();
     if (!videoId) {
-      console.log('[Content] ❌ No video ID found in DOM');
+      console.log('[Content] No video ID found in DOM');
       return null;
     }
     
     const username = getCurrentUsername();
     
-    // Всегда строим URL с @username
     if (username) {
       const url = `https://www.tiktok.com/@${username}/video/${videoId}`;
-      console.log('[Content] ✅ Built URL with username:', url);
+      console.log('[Content] Built URL with username:', url);
       return url;
     } else {
-      // Если username не найден, пытаемся получить из URL
       const urlMatch = window.location.href.match(/@([^\/]+)/);
       if (urlMatch) {
         const urlFromUrl = `https://www.tiktok.com/@${urlMatch[1]}/video/${videoId}`;
-        console.log('[Content] ✅ Built URL from URL username:', urlFromUrl);
+        console.log('[Content] Built URL from URL username:', urlFromUrl);
         return urlFromUrl;
       }
       
-      // Если совсем не найдено - возвращаем null
-      console.log('[Content] ❌ Cannot build valid URL without username');
+      console.log('[Content] Cannot build valid URL without username');
       return null;
     }
   } catch (error) {
-    console.error('[Content] ❌ Error getting video URL:', error);
+    console.error('[Content] Error getting video URL:', error);
     return null;
   }
 }
@@ -278,13 +251,11 @@ function checkVideo() {
   }
 }
 
-// Запускаем проверку
-console.log('[Content] ⏰ Starting checks...');
+console.log('[Content] Starting checks...');
 setTimeout(checkVideo, 1000);
 setTimeout(checkVideo, 3000);
 setTimeout(checkVideo, 5000);
 
-// MutationObserver для отслеживания изменений
 const observer = new MutationObserver(() => {
   const wrapper = document.querySelector('[id^="xgwrapper-"]');
   if (wrapper) {
@@ -300,38 +271,22 @@ if (document.body) {
     attributes: true,
     attributeFilter: ['id', 'src', 'href']
   });
-  console.log('[Content] 👀 DOM observer started');
+  console.log('[Content] DOM observer started');
 }
 
-// Отслеживаем изменение URL (SPA)
 let lastPath = window.location.pathname;
 setInterval(() => {
   const currentPath = window.location.pathname;
   if (currentPath !== lastPath) {
-    console.log(`[Content] 🔄 URL changed from ${lastPath} to ${currentPath}`);
+    console.log(`[Content] URL changed from ${lastPath} to ${currentPath}`);
     lastPath = currentPath;
     lastUrl = '';
     setTimeout(checkVideo, 500);
   }
 }, 500);
 
-// popstate
 window.addEventListener('popstate', () => {
-  console.log('[Content] 🔄 Popstate detected');
+  console.log('[Content] Popstate detected');
   lastUrl = '';
   setTimeout(checkVideo, 500);
 });
-
-// Экспорт для отладки
-window.__tiktokDebug = {
-  getDirectVideoUrl,
-  getVideoUrl,
-  getCurrentUsername,
-  getVideoIdFromWrapper,
-  checkVideo,
-  sendVideoToBackground,
-  isAutoCollectEnabled
-};
-
-console.log('[Content] ✅ Ready and waiting for videos');
-console.log('[Content] 📝 Debug: __tiktokDebug.getVideoUrl()');
