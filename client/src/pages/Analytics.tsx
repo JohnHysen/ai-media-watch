@@ -46,7 +46,6 @@ import CyberSidebar from '../components/CyberSidebar'
 import { $host, getVideoAnalyses, VideoAnalysis } from '../http/API'
 import { useTranslation } from 'react-i18next'
 
-// ---------- 3D фон ----------
 const FloatingCube = ({ position, color, size, speed }: any) => {
   const meshRef = React.useRef<THREE.Mesh>(null)
   useFrame(({ clock }) => {
@@ -133,7 +132,6 @@ const truncateToSentences = (text: string, maxSentences = 5): string => {
   return truncated.trim()
 }
 
-// ---------- Главный компонент Analytics ----------
 const Analytics = () => {
   const { t, ready } = useTranslation()
   const THREAT_DEFINITIONS = [
@@ -203,12 +201,10 @@ const Analytics = () => {
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null)
   const [updating, setUpdating] = useState(false)
 
-  // Состояния для видеоанализов
   const [videoAnalyses, setVideoAnalyses] = useState<VideoAnalysis[]>([])
   const [loadingAnalyses, setLoadingAnalyses] = useState(true)
   const [analysesError, setAnalysesError] = useState<string | null>(null)
 
-  // Загрузка видеоанализов
   const fetchAnalyses = async () => {
     setLoadingAnalyses(true)
     setAnalysesError(null)
@@ -223,7 +219,6 @@ const Analytics = () => {
     }
   }
 
-  // Загрузка новостей
   const fetchNews = async (showLoading = true) => {
     if (showLoading) setLoadingNews(true)
     setUpdating(true)
@@ -268,7 +263,6 @@ const Analytics = () => {
     return <AnnouncementIcon sx={{ color: '#ffaa44', fontSize: 18 }} />
   }
 
-  // Статистика по типам угроз из БД (только количество)
   const threatStats = useMemo(() => {
     const map: Record<string, number> = {}
     videoAnalyses.forEach((v) => {
@@ -280,14 +274,12 @@ const Analytics = () => {
     return map
   }, [videoAnalyses])
 
-  // Подготовка данных для отображения с динамическим уровнем риска
   const threatData = useMemo(() => {
     const data = THREAT_DEFINITIONS.map((def) => ({
       ...def,
       count: threatStats[def.id] || 0,
     }))
     const maxCount = Math.max(...data.map((d) => d.count), 1)
-    // Сортируем для вычисления квартилей
     const sortedCounts = data.map((d) => d.count).sort((a, b) => a - b)
     const median = sortedCounts[Math.floor(sortedCounts.length / 2)] || 0
     const q3 = sortedCounts[Math.floor(sortedCounts.length * 0.75)] || 0
@@ -501,7 +493,6 @@ const Analytics = () => {
             </Grid>
           )}
 
-          {/* Блок новостей и официальные источники */}
           <Grid container spacing={4} sx={{ mb: 6 }}>
             <Grid size={{ xs: 12, md: 6 }}>
               <Card
@@ -871,7 +862,6 @@ const Analytics = () => {
             </Grid>
           </Grid>
 
-          {/* Памятка для пользователей */}
           <Card
             sx={{
               bgcolor: 'rgba(10,10,30,0.6)',

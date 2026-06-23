@@ -54,7 +54,6 @@ import {
   VideoAnalysis,
 } from '../http/API'
 
-// ---------- Фон с вращающимися кубами ----------
 const FloatingCube = ({ position, color, size, speed }: any) => {
   const meshRef = React.useRef<THREE.Mesh>(null)
   useFrame(({ clock }) => {
@@ -145,7 +144,6 @@ const History = () => {
   const [videoAnalyses, setVideoAnalyses] = useState<VideoAnalysis[]>([])
   const [totalCount, setTotalCount] = useState(0)
 
-  // Состояния для фильтров
   const [verdictFilter, setVerdictFilter] = useState<string>('all')
   const [riskFilter, setRiskFilter] = useState<string>('all')
 
@@ -243,7 +241,6 @@ const History = () => {
   const filteredAndPaginated = useMemo(() => {
     let filtered = [...videoAnalyses]
 
-    // Поиск
     if (searchTerm) {
       const term = searchTerm.toLowerCase()
       filtered = filtered.filter(
@@ -260,12 +257,10 @@ const History = () => {
       filtered = filtered.filter((item) => item.verdict_text === verdictFilter)
     }
 
-    // Фильтр по риску
     if (riskFilter !== 'all') {
       filtered = filtered.filter((item) => item.primary_risk === riskFilter)
     }
 
-    // Сортировка по дате (не изменяем)
     filtered.sort((a, b) => {
       const dateA = new Date(a.checked_at).getTime()
       const dateB = new Date(b.checked_at).getTime()
@@ -307,7 +302,6 @@ const History = () => {
     setPage(0)
   }
 
-  // Обработчики изменения фильтров
   const handleVerdictFilterChange = (value: string) => {
     setVerdictFilter(value)
     setPage(0)
@@ -378,7 +372,6 @@ const History = () => {
             </Typography>
           </motion.div>
 
-          {/* Две кнопки переключения */}
           <Box
             sx={{ display: 'flex', justifyContent: 'center', gap: 3, mb: 4 }}
           >
@@ -432,7 +425,6 @@ const History = () => {
             </Button>
           </Box>
 
-          {/* Карточка статистики */}
           <Card
             sx={{
               mb: 4,
@@ -501,7 +493,6 @@ const History = () => {
             </Grid>
           </Card>
 
-          {/* Поле поиска */}
           <TextField
             placeholder={t('poisk-po-n')}
             value={searchTerm}
@@ -527,7 +518,6 @@ const History = () => {
             }}
           />
 
-          {/* Таблица */}
           <TableContainer
             component={Paper}
             sx={{
@@ -553,7 +543,6 @@ const History = () => {
                     {t('bezopasnos')} (%)
                   </TableCell>
                   <TableCell sx={{ color: '#0ff', fontWeight: 'bold' }}>
-                    {/* Фильтр по вердикту */}
                     <FormControl size="small" fullWidth>
                       <Select
                         value={verdictFilter}
@@ -583,7 +572,6 @@ const History = () => {
                     </FormControl>
                   </TableCell>
                   <TableCell sx={{ color: '#0ff', fontWeight: 'bold' }}>
-                    {/* Фильтр по основному риску */}
                     <FormControl size="small" fullWidth>
                       <Select
                         value={riskFilter}

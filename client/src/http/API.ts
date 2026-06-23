@@ -12,7 +12,6 @@ $host.interceptors.request.use((config) => {
   return config
 })
 
-// ========== Auth ==========
 export const signUp = async (
   first_name: string,
   last_name: string,
@@ -61,7 +60,6 @@ export const googleLogin = async (idToken: string) => {
   }
 }
 
-// ========== User ==========
 export const bindTg = async (tg_id: string) => {
   try {
     const res = await $host.post('user/bind_tg', { tg_id })
@@ -134,7 +132,6 @@ export const getVerdictDistribution = () =>
 export const getRecentChecks = (limit = 5) =>
   $host.get(`/user/recent-checks?limit=${limit}`)
 
-// ========== Video Analysis ==========
 export interface VideoAnalysis {
   id: number
   video_url: string
@@ -215,7 +212,6 @@ export const deleteVideoAnalysis = async (id: number) => {
   }
 }
 
-// ========== Queue ==========
 export const createAnalysisJob = async (url: string) => {
   try {
     const res = await $host.post('analysis-queue', {
@@ -227,11 +223,6 @@ export const createAnalysisJob = async (url: string) => {
   }
 }
 
-// ============================================================
-//  НОВЫЕ МЕТОДЫ ДЛЯ УПРАВЛЕНИЯ НАСТРОЙКАМИ И ПАРСИНГОМ
-// ============================================================
-
-// ---------- Интерфейсы ----------
 export interface SystemSettings {
   scanInterval: number
   autoRefreshNews: boolean
@@ -256,7 +247,6 @@ export interface ScrapeStatus {
   totalAnalyzed: number
 }
 
-// ---------- Получить все настройки ----------
 export const getSettings = async (): Promise<SystemSettings> => {
   try {
     const res = await $host.get<SystemSettings>('/settings')
@@ -268,7 +258,6 @@ export const getSettings = async (): Promise<SystemSettings> => {
   }
 }
 
-// ---------- Обновить настройки ----------
 export const updateSettings = async (
   settings: SystemSettings
 ): Promise<{ message: string; settings: SystemSettings }> => {
@@ -286,7 +275,6 @@ export const updateSettings = async (
   }
 }
 
-// ---------- Включить/выключить циклический парсинг ----------
 export const toggleScraping = async (): Promise<{
   message: string
   scrapingEnabled: boolean
@@ -305,7 +293,6 @@ export const toggleScraping = async (): Promise<{
   }
 }
 
-// ---------- Ручной запуск сбора видео ----------
 export const triggerScrape = async (): Promise<{
   message: string
   addedCount: number
@@ -326,7 +313,6 @@ export const triggerScrape = async (): Promise<{
   }
 }
 
-// ---------- Получить статус парсинга ----------
 export const getScrapeStatus = async (): Promise<ScrapeStatus> => {
   try {
     const res = await $host.get<ScrapeStatus>('/settings/status')
@@ -337,7 +323,6 @@ export const getScrapeStatus = async (): Promise<ScrapeStatus> => {
     throw e
   }
 }
-// ========== Fraud Resources (Реестр мошеннических ресурсов) ==========
 export interface FraudResource {
   id: number
   platform: 'youtube' | 'tiktok' | 'instagram' | 'telegram' | 'unknown'
@@ -368,7 +353,6 @@ export interface FraudResource {
   }
 }
 
-// Получить список ресурсов (с фильтрацией и пагинацией)
 export const getFraudResources = async (params?: {
   status?: string
   platform?: string
@@ -389,7 +373,6 @@ export const getFraudResources = async (params?: {
   }
 }
 
-// Получить один ресурс по ID
 export const getFraudResourceById = async (
   id: number
 ): Promise<FraudResource> => {
@@ -403,7 +386,6 @@ export const getFraudResourceById = async (
   }
 }
 
-// Создать ресурс (только для INSPECTOR/ADMIN)
 export const createFraudResource = async (
   data: Omit<
     FraudResource,
@@ -421,7 +403,6 @@ export const createFraudResource = async (
   }
 }
 
-// Обновить ресурс (только для INSPECTOR/ADMIN)
 export const updateFraudResource = async (
   id: number,
   data: Partial<FraudResource>
@@ -437,7 +418,6 @@ export const updateFraudResource = async (
   }
 }
 
-// Удалить ресурс (только для ADMIN)
 export const deleteFraudResource = async (id: number): Promise<void> => {
   try {
     await $host.delete(`/fraud-resources/${id}`)

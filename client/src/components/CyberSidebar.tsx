@@ -41,7 +41,6 @@ import { useTranslation } from 'react-i18next'
 import { signIn, signUp } from '../http/API'
 import { UserData } from '../context/user/UserProvider'
 
-// Импорт framer-motion для анимации
 import { motion, AnimatePresence } from 'framer-motion'
 
 interface Props {
@@ -54,19 +53,15 @@ export default function CyberSidebar({ open, onClose }: Props) {
   const navigate = useNavigate()
   const { t, ready } = useTranslation()
 
-  // Состояния для диалога выхода
   const [logoutConfirmOpen, setLogoutConfirmOpen] = useState(false)
 
-  // Состояния для диалога авторизации
   const [authDialogOpen, setAuthDialogOpen] = useState(false)
-  const [authTab, setAuthTab] = useState(0) // 0 - вход, 1 - регистрация
+  const [authTab, setAuthTab] = useState(0)
 
-  // Поля входа
   const [loginEmail, setLoginEmail] = useState('')
   const [loginPassword, setLoginPassword] = useState('')
   const [showLoginPassword, setShowLoginPassword] = useState(false)
 
-  // Поля регистрации
   const [regFirstName, setRegFirstName] = useState('')
   const [regLastName, setRegLastName] = useState('')
   const [regEmail, setRegEmail] = useState('')
@@ -82,21 +77,18 @@ export default function CyberSidebar({ open, onClose }: Props) {
   const isAdmin = user?.role === 'ADMIN'
   const isInspector = user?.role === 'INSPECTOR'
 
-  // Навигация по пунктам меню
   const handleNavigation = (path: string) => {
     navigate(path)
     onClose()
   }
 
-  // Выход из системы — закрываем диалог и выходим
   const handleLogout = () => {
-    setLogoutConfirmOpen(false) // закрываем диалог
+    setLogoutConfirmOpen(false)
     logout()
     onClose()
     navigate('/')
   }
 
-  // === Вход через API ===
   const handleLogin = async () => {
     setAuthError('')
     if (!loginEmail.trim() || !loginPassword.trim()) {
@@ -131,7 +123,6 @@ export default function CyberSidebar({ open, onClose }: Props) {
     }
   }
 
-  // === Регистрация через API ===
   const handleRegister = async () => {
     setAuthError('')
     if (
@@ -188,7 +179,6 @@ export default function CyberSidebar({ open, onClose }: Props) {
     setAuthError('')
   }
 
-  // === Пункты меню ===
   const baseMenuItems = [
     { text: t('glavnaya'), icon: <DashboardIcon />, path: '/' },
     { text: t('istoriya-p'), icon: <HistoryIcon />, path: '/history' },
@@ -226,7 +216,6 @@ export default function CyberSidebar({ open, onClose }: Props) {
 
   return (
     <>
-      {/* ====== БОКОВОЕ МЕНЮ (Drawer) ====== */}
       <Drawer
         anchor="left"
         open={open}
@@ -257,7 +246,6 @@ export default function CyberSidebar({ open, onClose }: Props) {
             color: '#fff',
           }}
         >
-          {/* Заголовок */}
           <Box
             sx={{
               display: 'flex',
@@ -298,7 +286,6 @@ export default function CyberSidebar({ open, onClose }: Props) {
             </IconButton>
           </Box>
 
-          {/* Профиль пользователя */}
           {isAuthenticated ? (
             <Box
               sx={{
@@ -360,7 +347,6 @@ export default function CyberSidebar({ open, onClose }: Props) {
             </Box>
           )}
 
-          {/* Навигация */}
           <List sx={{ flex: 1, px: 1 }}>
             {menuItems.map((item) => (
               <ListItem
@@ -405,7 +391,6 @@ export default function CyberSidebar({ open, onClose }: Props) {
 
           <Divider sx={{ borderColor: 'rgba(0,255,255,0.2)', my: 1 }} />
 
-          {/* Кнопка выхода (только для авторизованных) */}
           {isAuthenticated && (
             <Box sx={{ p: 2 }}>
               <Button
@@ -431,7 +416,6 @@ export default function CyberSidebar({ open, onClose }: Props) {
         </Box>
       </Drawer>
 
-      {/* ====== НОВЫЙ КИБЕР-ДИАЛОГ ВЫХОДА ====== */}
       <Dialog
         open={logoutConfirmOpen}
         onClose={() => setLogoutConfirmOpen(false)}
@@ -465,7 +449,6 @@ export default function CyberSidebar({ open, onClose }: Props) {
                 overflow: 'hidden',
               }}
             >
-              {/* Декоративные фоновые круги */}
               <Box
                 sx={{
                   position: 'absolute',
@@ -636,7 +619,6 @@ export default function CyberSidebar({ open, onClose }: Props) {
         </AnimatePresence>
       </Dialog>
 
-      {/* ====== ДИАЛОГ АВТОРИЗАЦИИ (без изменений, но стилизован под кибер) ====== */}
       <Dialog
         open={authDialogOpen}
         onClose={() => setAuthDialogOpen(false)}

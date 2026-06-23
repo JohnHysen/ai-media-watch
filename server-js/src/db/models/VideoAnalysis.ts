@@ -68,13 +68,11 @@ export class VideoAnalysis extends Model {
   @Column(DataType.STRING)
   declare primary_risk: string | null
 
-  // ✅ Поле должно называться userId
   @ForeignKey(() => User)
   @AllowNull(true)
   @Column(DataType.INTEGER)
   declare userId: number | null
 
-  // ✅ В BelongsTo указываем правильное имя поля
   @BelongsTo(() => User, { foreignKey: 'userId' })
   declare initiator: User | null
 

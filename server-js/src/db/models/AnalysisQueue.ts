@@ -60,7 +60,6 @@ export class AnalysisQueue extends Model {
   @Column(DataType.INTEGER)
   declare priority: number
 
-  // ✅ Счётчик попыток
   @AllowNull(false)
   @Default(0)
   @Column(DataType.INTEGER)

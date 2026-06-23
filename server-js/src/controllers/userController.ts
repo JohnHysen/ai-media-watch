@@ -53,8 +53,8 @@ export const getUserStats = async (req: Request, res: Response) => {
 
 export const updateAvatar = async (req: Request, res: Response) => {
   try {
-    console.log('📸 updateAvatar вызван')
-    console.log('🔍 req.body:', req.body)
+    console.log('updateAvatar вызван')
+    console.log('req.body:', req.body)
 
     const { avatarUrl } = req.body
 
@@ -80,7 +80,7 @@ export const updateAvatar = async (req: Request, res: Response) => {
     const updatedUser = await User.findByPk(userId)
     res.json({ avatarUrl: trimmed, user: updatedUser })
   } catch (error) {
-    console.error('❌ Error updating avatar:', error)
+    console.error('Error updating avatar:', error)
     res.status(500).json({ error: 'Server error' })
   }
 }

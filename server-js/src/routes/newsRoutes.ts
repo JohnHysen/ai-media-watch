@@ -14,7 +14,6 @@ const parser = new Parser({
   },
 })
 
-// Получение списка RSS-источников из БД или fallback
 const getNewsSources = async (): Promise<string[]> => {
   try {
     const settings = await SystemSettings.findOne()
@@ -37,7 +36,6 @@ const getNewsSources = async (): Promise<string[]> => {
   ]
 }
 
-// ----- Инстансы RSSHub для Telegram -----
 const RSSHUB_INSTANCES = [
   'https://rsshub.rssforever.com',
   'https://rsshub.app',
@@ -47,7 +45,6 @@ const RSSHUB_INSTANCES = [
 
 const SOCIAL_FEEDS = [{ path: '/telegram/channel/afm_rk', type: 'telegram' }]
 
-// ----- Статический список ключевых слов для фильтрации (не изменяется админом) -----
 const KEYWORDS = [
   'мошенничеств',
   'обман',
@@ -118,8 +115,7 @@ router.get('/', async (req, res) => {
     const limit = parseInt(req.query.limit as string) || 50
     const allArticles: any[] = []
 
-    // 1. СМИ (источники из настроек, фильтрация по ключевым словам)
-    console.log('📰 Парсинг СМИ...')
+    console.log('Парсинг СМИ...')
     const sources = await getNewsSources()
     await Promise.all(
       sources.map(async (feedUrl) => {
@@ -140,15 +136,14 @@ router.get('/', async (req, res) => {
               urlToImage: getImageUrl(item),
             }))
           allArticles.push(...items)
-          console.log(`✅ СМИ ${feedUrl}: ${items.length} новостей`)
+          console.log(`СМИ ${feedUrl}: ${items.length} новостей`)
         } catch (err) {
-          console.error(`❌ Ошибка СМИ ${feedUrl}:`, (err as Error).message)
+          console.error(`Ошибка СМИ ${feedUrl}:`, (err as Error).message)
         }
       })
     )
 
-    // 2. Telegram (фильтрация по ключевым словам)
-    console.log('📱 Парсинг Telegram через RSSHub...')
+    console.log('Парсинг Telegram через RSSHub...')
     await Promise.all(
       SOCIAL_FEEDS.map(async (feedConfig) => {
         try {
@@ -168,9 +163,9 @@ router.get('/', async (req, res) => {
               urlToImage: getImageUrl(item),
             }))
           allArticles.push(...items)
-          console.log(`✅ Telegram: ${items.length} новостей`)
+          console.log(`Telegram: ${items.length} новостей`)
         } catch (err) {
-          console.error(`❌ Ошибка Telegram:`, (err as Error).message)
+          console.error(`Ошибка Telegram:`, (err as Error).message)
         }
       })
     )
@@ -184,12 +179,12 @@ router.get('/', async (req, res) => {
     const articles = allArticles.slice(0, limit)
 
     console.log(
-      `📊 ИТОГО: найдено ${allArticles.length}, возвращено ${articles.length}`
+      `ИТОГО: найдено ${allArticles.length}, возвращено ${articles.length}`
     )
 
     res.json({ articles })
   } catch (error) {
-    console.error('❌ News API fatal error:', error)
+    console.error('News API fatal error:', error)
     res.status(500).json({ error: 'Failed to fetch news' })
   }
 })

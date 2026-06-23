@@ -60,7 +60,7 @@ def get_yolo_model():
 def get_ocr_reader():
     global _ocr_reader
     if _ocr_reader is None and OCR_AVAILABLE:
-        _ocr_reader = easyocr.Reader(["ru", "en"], gpu=False)
+        _ocr_reader = easyocr.Reader(["ru", "en"], gpu=True)
     return _ocr_reader
 
 

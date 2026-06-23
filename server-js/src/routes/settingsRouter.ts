@@ -29,7 +29,6 @@ router.post(
 )
 router.get('/status', authMiddleware, requireRole(['ADMIN']), getScrapeStatus)
 
-// Новые маршруты для управления процессом
 router.post(
   '/scrape/start',
   authMiddleware,
