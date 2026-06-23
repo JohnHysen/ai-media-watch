@@ -910,7 +910,7 @@ const CyberMediaWatchPro = () => {
                       },
                     }}
                   >
-                    Перейти в Telegram бот
+                    {t('pereiti-v-')}
                   </Button>
                 </Box>
 
