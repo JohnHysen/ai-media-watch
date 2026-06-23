@@ -1,0 +1,9 @@
+{
+  "i18n t wrapper": {
+    "prefix": "twrap",
+    "body": [
+      "{t('$TM_SELECTED_TEXT')}"
+    ],
+    "description": "Wraps the selected text in i18n t()"
+  }
+}

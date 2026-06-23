@@ -38,6 +38,7 @@ import {
   Paper as TablePaper,
   Link,
   TableHead,
+  type SelectChangeEvent,
 } from '@mui/material'
 import MenuIcon from '@mui/icons-material/Menu'
 import SearchIcon from '@mui/icons-material/Search'
@@ -355,57 +356,6 @@ const CyberSpeedometer: React.FC<CyberSpeedometerProps> = ({
   )
 }
 
-const VERDICT_TYPES = {
-  safe: {
-    label: 'Безопасно',
-    color: '#33ffcc',
-    icon: <CheckCircleIcon sx={{ fontSize: 16, color: '#33ffcc' }} />,
-  },
-  dangerous: {
-    label: 'Опасно',
-    color: '#ff3366',
-    icon: <WarningIcon sx={{ fontSize: 16, color: '#ff3366' }} />,
-  },
-  uncertain: {
-    label: 'Неопределённо',
-    color: '#ffaa44',
-    icon: <HelpIcon sx={{ fontSize: 16, color: '#ffaa44' }} />,
-  },
-}
-
-const RISK_TYPES = {
-  казино: {
-    label: 'Казино',
-    color: '#ff3366',
-    icon: <CasinoIcon sx={{ fontSize: 16, color: '#ff3366' }} />,
-  },
-  пирамида: {
-    label: 'Пирамида',
-    color: '#ffaa44',
-    icon: <AccountTreeIcon sx={{ fontSize: 16, color: '#ffaa44' }} />,
-  },
-  инвестиции: {
-    label: 'Инвестиции',
-    color: '#ffaa44',
-    icon: <ShowChartIcon sx={{ fontSize: 16, color: '#ffaa44' }} />,
-  },
-  крипто: {
-    label: 'Крипто',
-    color: '#ffaa44',
-    icon: <CurrencyBitcoinIcon sx={{ fontSize: 16, color: '#ffaa44' }} />,
-  },
-  рефералы: {
-    label: 'Рефералы',
-    color: '#ffaa44',
-    icon: <PeopleAltIcon sx={{ fontSize: 16, color: '#ffaa44' }} />,
-  },
-  понци: {
-    label: 'Понци',
-    color: '#ffaa44',
-    icon: <WarningAmberIcon sx={{ fontSize: 16, color: '#ffaa44' }} />,
-  },
-}
-
 // ---------- Главный компонент ----------
 const CyberMediaWatchPro = () => {
   const { user } = useUser()
@@ -430,7 +380,66 @@ const CyberMediaWatchPro = () => {
   const [selectedVideo, setSelectedVideo] = useState<VideoAnalysis | null>(null)
   const [selectedRiskFilter, setSelectedRiskFilter] = useState<string[]>([])
   const isAdmin = user?.role === 'ADMIN'
-  const { i18n } = useTranslation()
+  const { t, i18n } = useTranslation()
+  const langs = [
+    { v: 'ru', l: t('lang_ru') },
+    { v: 'en', l: t('lang_en') },
+    { v: 'kz', l: t('lang_kz') },
+  ]
+  const handleLanguageChange = (e: SelectChangeEvent<string>) => {
+    i18n.changeLanguage(e.target.value)
+  }
+
+  const VERDICT_TYPES = {
+    safe: {
+      label: t('bezopasno'),
+      color: '#33ffcc',
+      icon: <CheckCircleIcon sx={{ fontSize: 16, color: '#33ffcc' }} />,
+    },
+    dangerous: {
+      label: t('opasno'),
+      color: '#ff3366',
+      icon: <WarningIcon sx={{ fontSize: 16, color: '#ff3366' }} />,
+    },
+    uncertain: {
+      label: t('neopredely'),
+      color: '#ffaa44',
+      icon: <HelpIcon sx={{ fontSize: 16, color: '#ffaa44' }} />,
+    },
+  }
+
+  const RISK_TYPES = {
+    казино: {
+      label: t('kazino'),
+      color: '#ff3366',
+      icon: <CasinoIcon sx={{ fontSize: 16, color: '#ff3366' }} />,
+    },
+    пирамида: {
+      label: t('piramida'),
+      color: '#ffaa44',
+      icon: <AccountTreeIcon sx={{ fontSize: 16, color: '#ffaa44' }} />,
+    },
+    инвестиции: {
+      label: t('investicii'),
+      color: '#ffaa44',
+      icon: <ShowChartIcon sx={{ fontSize: 16, color: '#ffaa44' }} />,
+    },
+    крипто: {
+      label: t('kripto'),
+      color: '#ffaa44',
+      icon: <CurrencyBitcoinIcon sx={{ fontSize: 16, color: '#ffaa44' }} />,
+    },
+    рефералы: {
+      label: t('referaly'),
+      color: '#ffaa44',
+      icon: <PeopleAltIcon sx={{ fontSize: 16, color: '#ffaa44' }} />,
+    },
+    понци: {
+      label: t('ponci'),
+      color: '#ffaa44',
+      icon: <WarningAmberIcon sx={{ fontSize: 16, color: '#ffaa44' }} />,
+    },
+  }
 
   const fetchData = async () => {
     setLoading(true)
@@ -628,17 +637,11 @@ const CyberMediaWatchPro = () => {
     setModalOpen(true)
   }
 
-  const langs = [
-    { v: 'ru', l: 'Русский', flag: '🇷🇺' },
-    { v: 'en', l: 'English', flag: 'en' },
-    { v: 'kz', l: 'Қазақша', flag: '🇰🇿' },
-  ]
-
   const getVerdictChip = (verdict: string) => {
     const map = {
-      safe: { label: 'Безопасно', color: '#44ff66' },
-      dangerous: { label: 'Опасно', color: '#ff3366' },
-      uncertain: { label: 'Неопределённо', color: '#ffaa44' },
+      safe: { label: <>{t('bezopasno')}</>, color: '#44ff66' },
+      dangerous: { label: <>{t('opasno')}</>, color: '#ff3366' },
+      uncertain: { label: <>{t('neopredely')}</>, color: '#ffaa44' },
     }
     const info = map[verdict as keyof typeof map] || map.uncertain
     return (
@@ -691,29 +694,42 @@ const CyberMediaWatchPro = () => {
         <Box
           sx={{
             position: 'fixed',
-            top: 20,
-            right: 20,
+            top: 12,
+            right: 16,
             zIndex: 1200,
-            display: 'flex',
-            gap: 1,
+            bgcolor: 'rgba(0,0,0,0.5)',
+            borderRadius: 2,
+            '&:hover': { bgcolor: 'rgba(0,0,0,0.7)' },
           }}
         >
-          <FormControl
-            sx={{
-              bgcolor: 'rgba(0,0,0,0.6)',
-              backdropFilter: 'blur(10px)',
-              borderRadius: 4,
-            }}
-          >
+          <FormControl fullWidth>
+            <InputLabel sx={{ color: '#aaa' }}>{t('trans.title')}</InputLabel>
             <Select
               value={i18n.language}
-              onChange={(e) => i18n.changeLanguage(e.target.value)}
-              sx={{ color: '#0ff', minWidth: 130 }}
+              label={t('trans.title')}
+              onChange={handleLanguageChange}
+              sx={{
+                color: 'white',
+                minWidth: 140,
+                '& .MuiSelect-icon': { color: 'white' },
+                '& .MuiOutlinedInput-notchedOutline': {
+                  borderColor: 'transparent',
+                },
+                '&:hover .MuiOutlinedInput-notchedOutline': {
+                  borderColor: '#777',
+                },
+              }}
             >
               {langs.map((lang) => (
                 <MenuItem key={lang.v} value={lang.v}>
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                    {lang.flag} {lang.l}
+                    <img
+                      height={15}
+                      src={`/images/flags/${lang.v}.svg`}
+                      alt={lang.l}
+                      style={{ marginRight: 5 }}
+                    />
+                    {lang.l}
                   </Box>
                 </MenuItem>
               ))}
@@ -746,8 +762,7 @@ const CyberMediaWatchPro = () => {
               variant="subtitle1"
               sx={{ textAlign: 'center', color: '#88f', mb: 4 }}
             >
-              <SecurityIcon /> Мониторинг угроз в реальном времени •
-              3D-аналитика • Превентивные предупреждения
+              <SecurityIcon /> {t('monitoring')}
             </Typography>
           </motion.div>
           <AnimatePresence>
@@ -799,11 +814,11 @@ const CyberMediaWatchPro = () => {
                   color: '#0ff',
                 }}
               >
-                <LinkIcon /> Анализ видео по ссылке
+                <LinkIcon /> {t('analiz-vid')}
               </Typography>
               <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
                 <TextField
-                  placeholder="Вставьте ссылку на TikTok / Instagram / YouTube"
+                  placeholder={t('vstavte-ss')}
                   value={videoUrl}
                   onChange={(e) => setVideoUrl(e.target.value)}
                   fullWidth
@@ -838,7 +853,7 @@ const CyberMediaWatchPro = () => {
                   {isChecking ? (
                     <CircularProgress size={24} sx={{ color: '#fff' }} />
                   ) : (
-                    'Проверить'
+                    <>{t('proverit')}</>
                   )}
                 </Button>
               </Box>
@@ -846,8 +861,7 @@ const CyberMediaWatchPro = () => {
                 variant="caption"
                 sx={{ mt: 1, color: '#aaa', display: 'block' }}
               >
-                Мультимодальный AI: видео, аудио, OCR, граф связей. Результат
-                через 1-2 минуты.
+                {t('multimodal')}
               </Typography>
             </Card>
           </Box>
@@ -865,19 +879,19 @@ const CyberMediaWatchPro = () => {
                 {[
                   {
                     icon: <VideoLibraryIcon />,
-                    label: 'Видео обработано',
+                    label: <>{t('video-obra')}</>,
                     value: stats.totalVideos,
                     color: '#33ffcc',
                   },
                   {
                     icon: <WarningIcon />,
-                    label: 'Угроз выявлено',
+                    label: <>{t('ugroz-vyya')}</>,
                     value: stats.dangerousCount,
                     color: '#ff3366',
                   },
                   {
                     icon: <TrendingUpIcon />,
-                    label: 'Опасных авторов',
+                    label: <>{t('opasnykh-a')}</>,
                     value: stats.dangerousAuthorsCount,
                     color: '#ffaa44',
                   },
@@ -971,7 +985,7 @@ const CyberMediaWatchPro = () => {
                           />
                         </Box>
                         <Typography variant="body2" sx={{ color: '#fff' }}>
-                          Платформы: YouTube, Instagram, TikTok
+                          {t('platformy-')}
                         </Typography>
                       </CardContent>
                     </Card>
@@ -1000,10 +1014,10 @@ const CyberMediaWatchPro = () => {
                     },
                   }}
                 >
-                  <ToggleButton value="day">День</ToggleButton>
-                  <ToggleButton value="week">Неделя</ToggleButton>
-                  <ToggleButton value="month">Месяц</ToggleButton>
-                  <ToggleButton value="all">Всё время</ToggleButton>
+                  <ToggleButton value="day">{t('den')}</ToggleButton>
+                  <ToggleButton value="week">{t('nedelya')}</ToggleButton>
+                  <ToggleButton value="month">{t('mesyac')}</ToggleButton>
+                  <ToggleButton value="all">{t('vsyo-vremy')}</ToggleButton>
                 </ToggleButtonGroup>
                 <FormControl
                   size="small"
@@ -1013,7 +1027,7 @@ const CyberMediaWatchPro = () => {
                     borderRadius: 2,
                   }}
                 >
-                  <InputLabel sx={{ color: '#0ff' }}>Вердикт</InputLabel>
+                  <InputLabel sx={{ color: '#0ff' }}>{t('verdikt')}</InputLabel>
                   <Select
                     multiple
                     value={selectedVerdictFilter}
@@ -1065,7 +1079,7 @@ const CyberMediaWatchPro = () => {
                   }}
                 >
                   <InputLabel sx={{ color: '#ffaa44' }}>
-                    Основной риск
+                    {t('osnovnoi-r')}
                   </InputLabel>
                   <Select
                     multiple
@@ -1119,7 +1133,7 @@ const CyberMediaWatchPro = () => {
                   color: '#ff6666',
                 }}
               >
-                <ReportProblemIcon /> ТОП-6 самых опасных видео
+                <ReportProblemIcon /> {t('top-6-samy')}
               </Typography>
               <Box
                 sx={{
@@ -1180,12 +1194,12 @@ const CyberMediaWatchPro = () => {
                               }}
                             >
                               <Typography variant="caption">
-                                Нет превью
+                                {t('net-prevyu')}
                               </Typography>
                             </Box>
                           )}
                           <Chip
-                            label={`ОПАСНОСТЬ ${Math.round(dangerPercent)}%`}
+                            label={`${t('opasnost-0')} ${Math.round(dangerPercent)}%`}
                             size="small"
                             sx={{
                               position: 'absolute',
@@ -1205,11 +1219,15 @@ const CyberMediaWatchPro = () => {
                             noWrap
                             sx={{ color: '#fff' }}
                           >
-                            {video.title || 'Без названия'}
+                            {video.title || <>{t('bez-nazvan')}</>}
                           </Typography>
                           <Typography variant="caption" sx={{ color: '#aaa' }}>
-                            {video.userId ? `ID: ${video.userId}` : 'Аноним'} •{' '}
-                            {new Date(video.checked_at).toLocaleDateString()}
+                            {video.userId ? (
+                              `ID: ${video.userId}`
+                            ) : (
+                              <>{t('anonim')}</>
+                            )}{' '}
+                            • {new Date(video.checked_at).toLocaleDateString()}
                           </Typography>
                           <Box
                             sx={{
@@ -1274,7 +1292,7 @@ const CyberMediaWatchPro = () => {
                   color: '#88f',
                 }}
               >
-                <AccessTimeIcon /> Последние выявленные угрозы
+                <AccessTimeIcon /> {t('poslednie-')}
               </Typography>
               <Card
                 sx={{
@@ -1318,7 +1336,9 @@ const CyberMediaWatchPro = () => {
                                     gap: 1,
                                   }}
                                 >
-                                  <span>{threat.title || 'Без названия'}</span>
+                                  <span>
+                                    {threat.title || <>{t('bez-nazvan')}</>}
+                                  </span>
                                   {threat.primary_risk && (
                                     <Chip
                                       label={
@@ -1340,7 +1360,8 @@ const CyberMediaWatchPro = () => {
                                   )}
                                 </Box>
                               }
-                              secondary={`Дата: ${new Date(threat.checked_at).toLocaleString()} • Опасность: ${Math.round(dangerPercent)}%`}
+                              secondary={`${t('data')}: ${new Date(threat.checked_at).toLocaleString()} • ${t('opasnost')}
+                              : ${Math.round(dangerPercent)}%`}
                               primaryTypographyProps={{ color: '#fff' }}
                               secondaryTypographyProps={{ color: '#aaa' }}
                             />
@@ -1401,7 +1422,7 @@ const CyberMediaWatchPro = () => {
                         gap: 1,
                       }}
                     >
-                      <AnalyticsIcon /> Уровень опасности
+                      <AnalyticsIcon /> {t('uroven-opa')}
                     </Typography>
                     <CyberSpeedometer
                       value={dangerLevel}
@@ -1418,19 +1439,19 @@ const CyberMediaWatchPro = () => {
                       }}
                     >
                       <Typography variant="body2" sx={{ color: '#aaa' }}>
-                        Всего проверок:{' '}
+                        {t('vsego-prov')}:{' '}
                         <strong style={{ color: '#fff' }}>
                           {filteredThreats.length}
                         </strong>
                       </Typography>
                       <Typography variant="body2" sx={{ color: '#aaa' }}>
-                        Опасных:{' '}
+                        {t('opasnykh')}:{' '}
                         <strong style={{ color: '#ff3366' }}>
                           {filteredThreats.filter((t) => t.is_dangerous).length}
                         </strong>
                       </Typography>
                       <Typography variant="body2" sx={{ color: '#aaa' }}>
-                        Безопасных:{' '}
+                        {t('bezopasnyk')}:{' '}
                         <strong style={{ color: '#33ffcc' }}>
                           {
                             filteredThreats.filter(
@@ -1464,7 +1485,7 @@ const CyberMediaWatchPro = () => {
                         gap: 1,
                       }}
                     >
-                      <PieChartIcon /> Распределение вердиктов
+                      <PieChartIcon /> {t('raspredele')}
                     </Typography>
                     <ResponsiveContainer width="100%" height={260}>
                       <PieChart>
@@ -1503,7 +1524,7 @@ const CyberMediaWatchPro = () => {
                       color: '#ffaa44',
                     }}
                   >
-                    <LeaderboardIcon /> Лидерборд опасных каналов
+                    <LeaderboardIcon /> {t('liderbord-')}
                   </Typography>
                   <Card
                     sx={{
@@ -1526,31 +1547,31 @@ const CyberMediaWatchPro = () => {
                             <TableCell
                               sx={{ color: '#ffaa44', fontWeight: 'bold' }}
                             >
-                              Канал
+                              {t('kanal')}
                             </TableCell>
                             <TableCell
                               sx={{ color: '#ffaa44', fontWeight: 'bold' }}
                               align="center"
                             >
-                              Опасных
+                              {t('opasnykh')}
                             </TableCell>
                             <TableCell
                               sx={{ color: '#ffaa44', fontWeight: 'bold' }}
                               align="center"
                             >
-                              Всего
+                              {t('vsego')}
                             </TableCell>
                             <TableCell
                               sx={{ color: '#ffaa44', fontWeight: 'bold' }}
                               align="center"
                             >
-                              % опасности
+                              % {t('opasnosti')}
                             </TableCell>
                             <TableCell
                               sx={{ color: '#ffaa44', fontWeight: 'bold' }}
                               align="center"
                             >
-                              Основной риск
+                              {t('osnovnoi-r')}
                             </TableCell>
                           </TableRow>
                         </TableHead>
@@ -1693,14 +1714,10 @@ const CyberMediaWatchPro = () => {
                           gap: 1,
                         }}
                       >
-                        <SearchIcon /> Как это работает?
+                        <SearchIcon /> {t('kak-eto-ra')}
                       </Typography>
                       <Typography variant="body2" sx={{ color: '#ddd' }}>
-                        AI Media Watch анализирует видео в 3 этапа: 1)
-                        Извлечение ключевых кадров, аудио и текста (OCR). 2)
-                        Детекция визуальных маркеров казино/пирамид (YOLO),
-                        транскрибация речи (Whisper), поиск запрещённых фраз
-                        (NLP). 3) Вынесение вердикта и объяснение риска.
+                        {t('ai-media-w')}
                       </Typography>
                     </CardContent>
                   </Card>
@@ -1731,13 +1748,10 @@ const CyberMediaWatchPro = () => {
                           gap: 1,
                         }}
                       >
-                        <WarningIcon /> Почему это важно?
+                        <WarningIcon /> {t('pochemu-et')}
                       </Typography>
                       <Typography variant="body2" sx={{ color: '#ddd' }}>
-                        Ежедневно тысячи пользователей попадаются на уловки
-                        мошенников в соцсетях: фейковые казино, финансовые
-                        пирамиды, реферальные схемы. Наш AI помогает выявлять
-                        такие угрозы до того, как они нанесут вред.
+                        {t('ezhednevno')}
                       </Typography>
                     </CardContent>
                   </Card>
@@ -1766,10 +1780,10 @@ const CyberMediaWatchPro = () => {
                           gap: 1,
                         }}
                       >
-                        <CasinoIcon /> Нелегальные казино
+                        <CasinoIcon /> {t('nelegalnye')}
                       </Typography>
                       <Typography variant="body2" sx={{ color: '#ddd' }}>
-                        Обещают лёгкий выигрыш, но на деле выводят деньги.
+                        {t('obeshayut-')}
                       </Typography>
                     </CardContent>
                   </Card>
@@ -1798,11 +1812,10 @@ const CyberMediaWatchPro = () => {
                           gap: 1,
                         }}
                       >
-                        <TrendingUpIcon /> Финансовые пирамиды
+                        <TrendingUpIcon /> {t('finansovye')}
                       </Typography>
                       <Typography variant="body2" sx={{ color: '#ddd' }}>
-                        «Инвестируй 1000, получи 10000» — классическая схема
-                        Понци.
+                        {t('investirui')}
                       </Typography>
                     </CardContent>
                   </Card>
@@ -1831,11 +1844,10 @@ const CyberMediaWatchPro = () => {
                           gap: 1,
                         }}
                       >
-                        <LinkIcon /> Реферальные схемы
+                        <LinkIcon /> {t('referalnye')}
                       </Typography>
                       <Typography variant="body2" sx={{ color: '#ddd' }}>
-                        Заработок только на привлечении новых жертв без
-                        реального продукта.
+                        {t('zarabotok-')}
                       </Typography>
                     </CardContent>
                   </Card>
@@ -1864,7 +1876,7 @@ const CyberMediaWatchPro = () => {
                 gap: 1,
               }}
             >
-              <SecurityIcon /> Как защитить себя от мошенничества?
+              <SecurityIcon /> {t('kak-zashit')}
             </Typography>
             <Grid container spacing={2}>
               <Grid size={{ xs: 12, md: 3 }}>
@@ -1878,7 +1890,7 @@ const CyberMediaWatchPro = () => {
                   }}
                 >
                   <CheckCircleIcon sx={{ color: '#33ffcc', fontSize: 18 }} /> Не
-                  переходите по подозрительным ссылкам
+                  {t('perekhodit')}
                 </Typography>
               </Grid>
               <Grid size={{ xs: 12, md: 3 }}>
@@ -1892,7 +1904,7 @@ const CyberMediaWatchPro = () => {
                   }}
                 >
                   <CheckCircleIcon sx={{ color: '#33ffcc', fontSize: 18 }} />{' '}
-                  Проверяйте отзывы о казино/инвестициях
+                  {t('proveryait')}
                 </Typography>
               </Grid>
               <Grid size={{ xs: 12, md: 3 }}>
@@ -1906,7 +1918,7 @@ const CyberMediaWatchPro = () => {
                   }}
                 >
                   <CheckCircleIcon sx={{ color: '#33ffcc', fontSize: 18 }} /> Не
-                  доверяйте гарантированному доходу
+                  {t('doveryaite')}
                 </Typography>
               </Grid>
               <Grid size={{ xs: 12, md: 3 }}>
@@ -1920,7 +1932,7 @@ const CyberMediaWatchPro = () => {
                   }}
                 >
                   <CheckCircleIcon sx={{ color: '#33ffcc', fontSize: 18 }} />{' '}
-                  Используйте наш AI для проверки видео
+                  {t('ispolzuite')}
                 </Typography>
               </Grid>
             </Grid>
@@ -1961,7 +1973,7 @@ const CyberMediaWatchPro = () => {
                 variant="h5"
                 sx={{ fontWeight: 'bold', color: '#0ff' }}
               >
-                Детали проверки
+                {t('detali-pro')}
               </Typography>
               <IconButton
                 onClick={() => setModalOpen(false)}
@@ -2021,7 +2033,7 @@ const CyberMediaWatchPro = () => {
                           borderBottom: '1px solid rgba(0,255,255,0.1)',
                         }}
                       >
-                        Основной риск
+                        {t('osnovnoi-r')}
                       </TableCell>
                       <TableCell
                         sx={{
@@ -2046,7 +2058,7 @@ const CyberMediaWatchPro = () => {
                             }}
                           />
                         ) : (
-                          'Не определен'
+                          <>{t('ne-opredel')}</>
                         )}
                       </TableCell>
                     </TableRow>
@@ -2058,7 +2070,7 @@ const CyberMediaWatchPro = () => {
                           borderBottom: '1px solid rgba(0,255,255,0.1)',
                         }}
                       >
-                        Вердикт
+                        {t('verdikt')}
                       </TableCell>
                       <TableCell
                         sx={{
@@ -2077,7 +2089,7 @@ const CyberMediaWatchPro = () => {
                           borderBottom: '1px solid rgba(0,255,255,0.1)',
                         }}
                       >
-                        Опасность
+                        {t('opasnost')}
                       </TableCell>
                       <TableCell
                         sx={{
@@ -2085,7 +2097,11 @@ const CyberMediaWatchPro = () => {
                           borderBottom: '1px solid rgba(0,255,255,0.1)',
                         }}
                       >
-                        {selectedVideo.is_dangerous ? 'Да' : 'Нет'}
+                        {selectedVideo.is_dangerous ? (
+                          <>{t('da')}</>
+                        ) : (
+                          <>{t('net')}</>
+                        )}
                       </TableCell>
                     </TableRow>
                     {/* Удалены строки "Безопасность, %" и "Инициатор" */}
@@ -2097,7 +2113,7 @@ const CyberMediaWatchPro = () => {
                           borderBottom: '1px solid rgba(0,255,255,0.1)',
                         }}
                       >
-                        Длительность
+                        {t('dlitelnost')}
                       </TableCell>
                       <TableCell
                         sx={{
@@ -2105,7 +2121,7 @@ const CyberMediaWatchPro = () => {
                           borderBottom: '1px solid rgba(0,255,255,0.1)',
                         }}
                       >
-                        {selectedVideo.duration_seconds} сек.
+                        {selectedVideo.duration_seconds} {t('sekund')}
                       </TableCell>
                     </TableRow>
                     <TableRow>
@@ -2116,7 +2132,7 @@ const CyberMediaWatchPro = () => {
                           borderBottom: '1px solid rgba(0,255,255,0.1)',
                         }}
                       >
-                        Дата проверки
+                        {t('data-prove')}
                       </TableCell>
                       <TableCell
                         sx={{
@@ -2136,7 +2152,7 @@ const CyberMediaWatchPro = () => {
                             borderBottom: '1px solid rgba(0,255,255,0.1)',
                           }}
                         >
-                          Теги
+                          {t('tegi')}
                         </TableCell>
                         <TableCell
                           sx={{
@@ -2164,7 +2180,7 @@ const CyberMediaWatchPro = () => {
                             borderBottom: '1px solid rgba(0,255,255,0.1)',
                           }}
                         >
-                          Обоснование
+                          {t('obosnovani')}
                         </TableCell>
                         <TableCell
                           sx={{
@@ -2179,7 +2195,7 @@ const CyberMediaWatchPro = () => {
                     )}
                     <TableRow>
                       <TableCell sx={{ color: '#0ff', fontWeight: 'bold' }}>
-                        Ссылка
+                        {t('ssylka')}
                       </TableCell>
                       <TableCell>
                         <Link
@@ -2191,7 +2207,7 @@ const CyberMediaWatchPro = () => {
                             '&:hover': { textDecoration: 'underline' },
                           }}
                         >
-                          Открыть видео
+                          {t('otkryt-vid')}
                         </Link>
                       </TableCell>
                     </TableRow>
@@ -2211,7 +2227,7 @@ const CyberMediaWatchPro = () => {
                   '&:hover': { bgcolor: '#33ffcc' },
                 }}
               >
-                Закрыть
+                {t('zakryt')}
               </Button>
             </DialogActions>
           </>
