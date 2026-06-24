@@ -19,6 +19,7 @@ import AdminUsers from './pages/AdminUsers'
 import AdminSettings from './pages/AdminSettings.tsx'
 import QueueManager from './pages/QueueManager'
 import FraudResources from './pages/FraudResources.tsx'
+import DirectionsManagement from './pages/DirectionsManagement'
 
 const font = 'teletext, "Roboto", "Arial", sans-serif'
 
@@ -85,6 +86,10 @@ const router = createBrowserRouter([
       {
         path: '/admin/fraud-resources',
         element: <FraudResources />,
+      },
+      {
+        path: '/directions',
+        element: <WithAuth c={<DirectionsManagement />} roles={['ADMIN']} />,
       },
     ],
   },

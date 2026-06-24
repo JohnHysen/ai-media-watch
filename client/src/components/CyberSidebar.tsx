@@ -35,12 +35,12 @@ import SettingsIcon from '@mui/icons-material/Settings'
 import WarningIcon from '@mui/icons-material/Warning'
 import Visibility from '@mui/icons-material/Visibility'
 import VisibilityOff from '@mui/icons-material/VisibilityOff'
+import LabelIcon from '@mui/icons-material/Label' // ← добавлено
 import { useNavigate } from 'react-router-dom'
 import { useUser } from '../context/user/useUser'
 import { useTranslation } from 'react-i18next'
 import { signIn, signUp } from '../http/API'
 import { UserData } from '../context/user/UserProvider'
-
 import { motion, AnimatePresence } from 'framer-motion'
 
 interface Props {
@@ -203,6 +203,11 @@ export default function CyberSidebar({ open, onClose }: Props) {
       text: t('upravlenie-0'),
       icon: <AdminPanelSettingsIcon />,
       path: '/users',
+    })
+    roleMenuItems.push({
+      text: 'Управление направлениями', // или используйте ключ перевода, если он есть
+      icon: <LabelIcon />,
+      path: '/directions',
     })
     roleMenuItems.push({
       text: t('nastroiki--0'),
@@ -416,6 +421,7 @@ export default function CyberSidebar({ open, onClose }: Props) {
         </Box>
       </Drawer>
 
+      {/* Диалог подтверждения выхода — без изменений */}
       <Dialog
         open={logoutConfirmOpen}
         onClose={() => setLogoutConfirmOpen(false)}
@@ -619,6 +625,7 @@ export default function CyberSidebar({ open, onClose }: Props) {
         </AnimatePresence>
       </Dialog>
 
+      {/* Диалог авторизации — без изменений */}
       <Dialog
         open={authDialogOpen}
         onClose={() => setAuthDialogOpen(false)}

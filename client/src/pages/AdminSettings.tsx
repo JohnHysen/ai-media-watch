@@ -26,6 +26,7 @@ import StopIcon from '@mui/icons-material/Stop'
 import AnalyticsIcon from '@mui/icons-material/Analytics'
 import CloudDownloadIcon from '@mui/icons-material/CloudDownload'
 import WarningIcon from '@mui/icons-material/Warning'
+import MusicNoteIcon from '@mui/icons-material/MusicNote'
 import { motion } from 'framer-motion'
 import CyberSidebar from '../components/CyberSidebar'
 import { useTranslation } from 'react-i18next'
@@ -45,10 +46,25 @@ interface Settings {
   enableTikTok: boolean
   enableInstagram: boolean
   scrapingEnabled: boolean
+  // TikTok Live отдельные настройки
+  tiktokLiveEnabled: boolean
+  tiktokLiveInterval: number
+  tiktokLiveLimit: number
+  tiktokLiveTimeout: number
 }
 
 interface ScrapeStatus {
   scrapingEnabled: boolean
+  lastRun: string | null
+  addedCount: number
+  totalFound: number
+  error: string | null
+  queueCount: number
+  totalAnalyzed: number
+}
+
+interface TiktokLiveStatus {
+  enabled: boolean
   lastRun: string | null
   addedCount: number
   totalFound: number
@@ -134,9 +150,22 @@ const AdminSettings = () => {
     enableTikTok: true,
     enableInstagram: true,
     scrapingEnabled: false,
+    tiktokLiveEnabled: false,
+    tiktokLiveInterval: 60,
+    tiktokLiveLimit: 5,
+    tiktokLiveTimeout: 30,
   })
   const [status, setStatus] = useState<ScrapeStatus>({
     scrapingEnabled: false,
+    lastRun: null,
+    addedCount: 0,
+    totalFound: 0,
+    error: null,
+    queueCount: 0,
+    totalAnalyzed: 0,
+  })
+  const [tiktokLiveStatus, setTiktokLiveStatus] = useState<TiktokLiveStatus>({
+    enabled: false,
     lastRun: null,
     addedCount: 0,
     totalFound: 0,
@@ -151,6 +180,12 @@ const AdminSettings = () => {
   const [statusLoading, setStatusLoading] = useState(false)
   const [scrapingManually, setScrapingManually] = useState(false)
   const [error, setError] = useState('')
+
+  // TikTok Live состояния
+  const [tiktokLiveToggling, setTiktokLiveToggling] = useState(false)
+  const [tiktokLiveScrapingManually, setTiktokLiveScrapingManually] =
+    useState(false)
+  const [tiktokLiveStatusLoading, setTiktokLiveStatusLoading] = useState(false)
 
   const isAdmin = user?.role === 'ADMIN'
 
@@ -182,12 +217,20 @@ const AdminSettings = () => {
           res.data.scrapingEnabled !== undefined
             ? res.data.scrapingEnabled
             : false,
+        tiktokLiveEnabled:
+          res.data.tiktokLiveEnabled !== undefined
+            ? res.data.tiktokLiveEnabled
+            : false,
+        tiktokLiveInterval: res.data.tiktokLiveInterval || 60,
+        tiktokLiveLimit: res.data.tiktokLiveLimit || 5,
+        tiktokLiveTimeout: res.data.tiktokLiveTimeout || 30,
       })
       await fetchStatus()
+      await fetchTiktokLiveStatus()
     } catch (err: any) {
       console.error('Ошибка загрузки настроек:', err)
-      setError(t('ne-udalos--3'))
-      toast.error(t('oshibka-za-1'))
+      setError('Ошибка сервера')
+      toast.error('Ошибка сервера')
     } finally {
       setLoading(false)
     }
@@ -205,6 +248,18 @@ const AdminSettings = () => {
     }
   }
 
+  const fetchTiktokLiveStatus = async () => {
+    setTiktokLiveStatusLoading(true)
+    try {
+      const res = await $host.get('/settings/tiktok-live/status')
+      setTiktokLiveStatus(res.data)
+    } catch (err) {
+      // ignore
+    } finally {
+      setTiktokLiveStatusLoading(false)
+    }
+  }
+
   useEffect(() => {
     fetchSettings()
   }, [])
@@ -214,12 +269,13 @@ const AdminSettings = () => {
     setError('')
     try {
       await $host.put('/settings', settings)
-      toast.success(t('nastroiki-'))
+      toast.success('Настройки сохранены')
       await fetchStatus()
+      await fetchTiktokLiveStatus()
     } catch (err: any) {
       console.error('Ошибка сохранения:', err)
-      setError(t('ne-udalos--4'))
-      toast.error(t('oshibka-so'))
+      setError('Ошибка сервера')
+      toast.error('Ошибка сервера')
     } finally {
       setSaving(false)
     }
@@ -229,7 +285,7 @@ const AdminSettings = () => {
     const url = newSource.trim()
     if (!url) return
     if (settings.newsSources.includes(url)) {
-      toast.warning(t('takoi-isto'))
+      toast.warning('Такой источник уже есть')
       return
     }
     setSettings((prev) => ({
@@ -246,35 +302,84 @@ const AdminSettings = () => {
     }))
   }
 
-  const handleToggleScraping = async () => {
+  const handleToggleScraping = () => {
+    if (toggling) return
     setToggling(true)
-    try {
-      const res = await $host.post('/settings/toggle-scraping')
-      setSettings((prev) => ({
-        ...prev,
-        scrapingEnabled: res.data.scrapingEnabled,
-      }))
-      toast.success(res.data.message)
-      await fetchStatus()
-    } catch (err: any) {
-      console.error('Ошибка переключения парсинга:', err)
-      toast.error(err.response?.data?.error || t('oshibka-pe'))
-    } finally {
-      setToggling(false)
-    }
+
+    const newState = !settings.scrapingEnabled
+    setSettings((prev) => ({
+      ...prev,
+      scrapingEnabled: newState,
+    }))
+
+    $host
+      .post('/settings/toggle-scraping')
+      .then(() => {
+        fetchStatus()
+      })
+      .catch((err) => {
+        console.error('Ошибка переключения парсинга:', err)
+        toast.error('Ошибка сервера')
+      })
+
+    toast.success(newState ? 'Парсинг запущен' : 'Парсинг остановлен')
+    setToggling(false)
   }
 
   const handleManualScrape = async () => {
     setScrapingManually(true)
     try {
       const res = await $host.post('/settings/scrape-video')
-      toast.success(res.data.message || t('sbor-video'))
+      toast.success(res.data.message || 'Сбор видео запущен')
       await fetchStatus()
     } catch (err: any) {
       console.error('Ошибка ручного запуска:', err)
-      toast.error(err.response?.data?.error || t('oshibka-za-2'))
+      toast.error(err.response?.data?.error || 'Ошибка сервера')
     } finally {
       setScrapingManually(false)
+    }
+  }
+
+  // TikTok Live функции
+  const handleToggleTiktokLive = () => {
+    if (tiktokLiveToggling) return
+    setTiktokLiveToggling(true)
+
+    const newState = !settings.tiktokLiveEnabled
+    setSettings((prev) => ({
+      ...prev,
+      tiktokLiveEnabled: newState,
+    }))
+
+    $host
+      .post('/settings/tiktok-live/toggle')
+      .then(() => {
+        fetchTiktokLiveStatus()
+      })
+      .catch((err) => {
+        console.error('Ошибка переключения TikTok Live:', err)
+        toast.error('Ошибка сервера')
+      })
+
+    toast.success(
+      newState
+        ? 'TikTok Live парсинг запущен'
+        : 'TikTok Live парсинг остановлен'
+    )
+    setTiktokLiveToggling(false)
+  }
+
+  const handleManualTiktokLiveScrape = async () => {
+    setTiktokLiveScrapingManually(true)
+    try {
+      const res = await $host.post('/settings/tiktok-live/scrape')
+      toast.success(res.data.message || 'Сбор TikTok Live запущен')
+      await fetchTiktokLiveStatus()
+    } catch (err: any) {
+      console.error('Ошибка ручного запуска TikTok Live:', err)
+      toast.error(err.response?.data?.error || 'Ошибка сервера')
+    } finally {
+      setTiktokLiveScrapingManually(false)
     }
   }
 
@@ -293,7 +398,9 @@ const AdminSettings = () => {
           backgroundColor: '#03030f',
         }}
       >
-        <Typography variant="h5">{t('dostup-zap-0')}</Typography>
+        <Typography variant="h5">
+          Доступ запрещён. Только для администраторов.
+        </Typography>
       </Box>
     )
   }
@@ -367,7 +474,7 @@ const AdminSettings = () => {
               color: 'transparent',
             }}
           >
-            <SettingsIcon sx={{ mr: 1 }} /> {t('nastroiki--0')}
+            <SettingsIcon sx={{ mr: 1 }} /> Настройки системы
           </Typography>
         </motion.div>
 
@@ -380,6 +487,7 @@ const AdminSettings = () => {
           </Alert>
         )}
 
+        {/* ===== ПАНЕЛЬ 1: ОБЫЧНЫЙ ПАРСИНГ ===== */}
         <Card
           sx={{
             mb: 4,
@@ -400,7 +508,7 @@ const AdminSettings = () => {
               gap: 1,
             }}
           >
-            <CloudDownloadIcon /> {t('upravlenie-1')}
+            <CloudDownloadIcon /> Управление парсингом
           </Typography>
 
           <Grid container spacing={3}>
@@ -413,32 +521,29 @@ const AdminSettings = () => {
                   onClick={handleToggleScraping}
                   disabled={toggling}
                   startIcon={
-                    toggling ? (
-                      <CircularProgress size={20} sx={{ color: '#000' }} />
-                    ) : settings.scrapingEnabled ? (
-                      <StopIcon />
-                    ) : (
-                      <PlayArrowIcon />
-                    )
+                    settings.scrapingEnabled ? <StopIcon /> : <PlayArrowIcon />
                   }
                   sx={{
                     bgcolor: settings.scrapingEnabled ? '#ff3366' : '#33ffcc',
                     color: '#000',
+                    minWidth: 180,
                     '&:hover': {
                       bgcolor: settings.scrapingEnabled ? '#ff0000' : '#00e676',
                     },
                   }}
                 >
-                  {settings.scrapingEnabled ? t('ostanovit-') : t('zapustit-p')}
+                  {settings.scrapingEnabled
+                    ? 'Остановить парсинг'
+                    : 'Запустить парсинг'}
                 </Button>
                 <Typography sx={{ color: '#aaa' }}>
-                  {settings.scrapingEnabled ? t('aktiven') : t('ostanovlen')}
+                  {settings.scrapingEnabled ? 'Активен' : 'Остановлен'}
                 </Typography>
               </Box>
 
               <Box sx={{ mb: 2 }}>
                 <Typography sx={{ color: '#fff', mb: 1 }}>
-                  {t('interval-m')} {settings.videoScrapeInterval} {t('minut')}
+                  Интервал между циклами: {settings.videoScrapeInterval} мин.
                 </Typography>
                 <Slider
                   value={settings.videoScrapeInterval}
@@ -458,13 +563,14 @@ const AdminSettings = () => {
                   }}
                 />
                 <Typography variant="caption" sx={{ color: '#aaa' }}>
-                  {t('kak-chasto')}
+                  Как часто запускать сбор видео (10–1440 мин.)
                 </Typography>
               </Box>
 
               <Box sx={{ mb: 2 }}>
                 <Typography sx={{ color: '#fff', mb: 1 }}>
-                  {t('kolichestv-0')} {settings.scrapeLimitPerPlatform}
+                  Количество видео с платформы:{' '}
+                  {settings.scrapeLimitPerPlatform}
                 </Typography>
                 <Slider
                   value={settings.scrapeLimitPerPlatform}
@@ -484,14 +590,15 @@ const AdminSettings = () => {
                   }}
                 />
                 <Typography variant="caption" sx={{ color: '#aaa' }}>
-                  {t('skolko-vid')}
+                  Сколько видео собирать с каждой активной платформы за один
+                  запуск
                 </Typography>
               </Box>
 
               <Box sx={{ mb: 2 }}>
                 <Typography sx={{ color: '#fff', mb: 1 }}>
-                  {t('taimaut-me')} {settings.scrapeTimeoutSeconds}{' '}
-                  {t('sekund')}
+                  Таймаут между платформами: {settings.scrapeTimeoutSeconds}{' '}
+                  сек.
                 </Typography>
                 <Slider
                   value={settings.scrapeTimeoutSeconds}
@@ -511,12 +618,12 @@ const AdminSettings = () => {
                   }}
                 />
                 <Typography variant="caption" sx={{ color: '#aaa' }}>
-                  {t('zaderzhka-')}
+                  Задержка между запросами к разным платформам
                 </Typography>
               </Box>
 
               <Typography sx={{ color: '#fff', mb: 1 }}>
-                {t('aktivnye-p')}
+                Активные платформы:
               </Typography>
               <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
                 <FormControlLabel
@@ -601,7 +708,7 @@ const AdminSettings = () => {
                 disabled={scrapingManually}
                 sx={{ mt: 2, borderColor: '#0ff', color: '#0ff' }}
               >
-                {scrapingManually ? t('sbor') : t('zapustit-s')}
+                {scrapingManually ? 'Сбор...' : 'Запустить сбор сейчас'}
               </Button>
             </Grid>
 
@@ -623,7 +730,7 @@ const AdminSettings = () => {
                   }}
                 >
                   <Typography variant="subtitle1" sx={{ color: '#0ff' }}>
-                    {t('status-par')}
+                    Статус парсинга
                   </Typography>
                   <IconButton
                     size="small"
@@ -652,12 +759,10 @@ const AdminSettings = () => {
                           fontSize: '1.2rem',
                         }}
                       >
-                        {status.scrapingEnabled
-                          ? t('aktiven')
-                          : t('ostanovlen')}
+                        {status.scrapingEnabled ? 'Активен' : 'Остановлен'}
                       </Typography>
                       <Typography variant="caption" sx={{ color: '#aaa' }}>
-                        {t('status')}
+                        Статус
                       </Typography>
                     </Paper>
                   </Grid>
@@ -680,7 +785,7 @@ const AdminSettings = () => {
                         {status.queueCount}
                       </Typography>
                       <Typography variant="caption" sx={{ color: '#aaa' }}>
-                        {t('v-ocheredi')}
+                        В очереди
                       </Typography>
                     </Paper>
                   </Grid>
@@ -703,7 +808,7 @@ const AdminSettings = () => {
                         {status.totalAnalyzed}
                       </Typography>
                       <Typography variant="caption" sx={{ color: '#aaa' }}>
-                        {t('obrabotano')}
+                        Обработано
                       </Typography>
                     </Paper>
                   </Grid>
@@ -728,7 +833,7 @@ const AdminSettings = () => {
                           : '—'}
                       </Typography>
                       <Typography variant="caption" sx={{ color: '#aaa' }}>
-                        {t('poslednii-')}
+                        Последний запуск
                       </Typography>
                     </Paper>
                   </Grid>
@@ -753,8 +858,8 @@ const AdminSettings = () => {
                     variant="caption"
                     sx={{ display: 'block', mt: 2, color: '#aaa' }}
                   >
-                    {t('poslednii--0')} {status.addedCount} {t('iz')}{' '}
-                    {status.totalFound} {t('naidennykh')}
+                    Последний сбор: добавлено {status.addedCount} из{' '}
+                    {status.totalFound} найденных видео
                   </Typography>
                 )}
               </Box>
@@ -762,6 +867,323 @@ const AdminSettings = () => {
           </Grid>
         </Card>
 
+        {/* ===== ПАНЕЛЬ 2: TIKTOK LIVE ПАРСИНГ ===== */}
+        <Card
+          sx={{
+            mb: 4,
+            bgcolor: 'rgba(10,10,30,0.7)',
+            backdropFilter: 'blur(8px)',
+            borderRadius: 4,
+            border: '1px solid rgba(255,170,68,0.3)',
+            p: 3,
+          }}
+        >
+          <Typography
+            variant="h5"
+            sx={{
+              color: '#ffaa44',
+              mb: 3,
+              display: 'flex',
+              alignItems: 'center',
+              gap: 1,
+            }}
+          >
+            <MusicNoteIcon /> TikTok Live парсинг
+          </Typography>
+
+          <Grid container spacing={3}>
+            <Grid size={{ xs: 12, md: 6 }}>
+              <Box
+                sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 3 }}
+              >
+                <Button
+                  variant="contained"
+                  onClick={handleToggleTiktokLive}
+                  disabled={tiktokLiveToggling}
+                  startIcon={
+                    settings.tiktokLiveEnabled ? (
+                      <StopIcon />
+                    ) : (
+                      <PlayArrowIcon />
+                    )
+                  }
+                  sx={{
+                    bgcolor: settings.tiktokLiveEnabled ? '#ff3366' : '#ffaa44',
+                    color: '#000',
+                    minWidth: 180,
+                    '&:hover': {
+                      bgcolor: settings.tiktokLiveEnabled
+                        ? '#ff0000'
+                        : '#e69500',
+                    },
+                  }}
+                >
+                  {settings.tiktokLiveEnabled
+                    ? 'Остановить TikTok Live'
+                    : 'Запустить TikTok Live'}
+                </Button>
+                <Typography sx={{ color: '#aaa' }}>
+                  {settings.tiktokLiveEnabled ? 'Активен' : 'Остановлен'}
+                </Typography>
+              </Box>
+
+              <Box sx={{ mb: 2 }}>
+                <Typography sx={{ color: '#fff', mb: 1 }}>
+                  Интервал между циклами: {settings.tiktokLiveInterval} мин.
+                </Typography>
+                <Slider
+                  value={settings.tiktokLiveInterval}
+                  onChange={(_, val) =>
+                    setSettings((prev) => ({
+                      ...prev,
+                      tiktokLiveInterval: val as number,
+                    }))
+                  }
+                  min={10}
+                  max={1440}
+                  step={5}
+                  sx={{
+                    color: '#ffaa44',
+                    '& .MuiSlider-track': { color: '#ffaa44' },
+                    '& .MuiSlider-thumb': { color: '#ffaa44' },
+                  }}
+                />
+                <Typography variant="caption" sx={{ color: '#aaa' }}>
+                  Как часто запускать сбор TikTok Live (10–1440 мин.)
+                </Typography>
+              </Box>
+
+              <Box sx={{ mb: 2 }}>
+                <Typography sx={{ color: '#fff', mb: 1 }}>
+                  Количество стримов за запуск: {settings.tiktokLiveLimit}
+                </Typography>
+                <Slider
+                  value={settings.tiktokLiveLimit}
+                  onChange={(_, val) =>
+                    setSettings((prev) => ({
+                      ...prev,
+                      tiktokLiveLimit: val as number,
+                    }))
+                  }
+                  min={1}
+                  max={20}
+                  step={1}
+                  sx={{
+                    color: '#ffaa44',
+                    '& .MuiSlider-track': { color: '#ffaa44' },
+                    '& .MuiSlider-thumb': { color: '#ffaa44' },
+                  }}
+                />
+                <Typography variant="caption" sx={{ color: '#aaa' }}>
+                  Сколько стримов собирать за один запуск
+                </Typography>
+              </Box>
+
+              <Box sx={{ mb: 2 }}>
+                <Typography sx={{ color: '#fff', mb: 1 }}>
+                  Таймаут между стримами: {settings.tiktokLiveTimeout} сек.
+                </Typography>
+                <Slider
+                  value={settings.tiktokLiveTimeout}
+                  onChange={(_, val) =>
+                    setSettings((prev) => ({
+                      ...prev,
+                      tiktokLiveTimeout: val as number,
+                    }))
+                  }
+                  min={5}
+                  max={120}
+                  step={5}
+                  sx={{
+                    color: '#ffaa44',
+                    '& .MuiSlider-track': { color: '#ffaa44' },
+                    '& .MuiSlider-thumb': { color: '#ffaa44' },
+                  }}
+                />
+                <Typography variant="caption" sx={{ color: '#aaa' }}>
+                  Задержка между запросами к разным стримам
+                </Typography>
+              </Box>
+
+              <Button
+                variant="outlined"
+                startIcon={
+                  tiktokLiveScrapingManually ? (
+                    <CircularProgress size={20} sx={{ color: '#ffaa44' }} />
+                  ) : (
+                    <RefreshIcon />
+                  )
+                }
+                onClick={handleManualTiktokLiveScrape}
+                disabled={tiktokLiveScrapingManually}
+                sx={{ mt: 2, borderColor: '#ffaa44', color: '#ffaa44' }}
+              >
+                {tiktokLiveScrapingManually
+                  ? 'Сбор...'
+                  : 'Запустить сбор сейчас'}
+              </Button>
+            </Grid>
+
+            <Grid size={{ xs: 12, md: 6 }}>
+              <Box
+                sx={{
+                  bgcolor: 'rgba(0,0,0,0.4)',
+                  borderRadius: 2,
+                  p: 2,
+                  height: '100%',
+                }}
+              >
+                <Box
+                  sx={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    mb: 2,
+                  }}
+                >
+                  <Typography variant="subtitle1" sx={{ color: '#ffaa44' }}>
+                    Статус TikTok Live
+                  </Typography>
+                  <IconButton
+                    size="small"
+                    onClick={fetchTiktokLiveStatus}
+                    disabled={tiktokLiveStatusLoading}
+                    sx={{ color: '#ffaa44' }}
+                  >
+                    <RefreshIcon fontSize="small" />
+                  </IconButton>
+                </Box>
+
+                <Grid container spacing={2}>
+                  <Grid size={{ xs: 6 }}>
+                    <Paper
+                      sx={{
+                        bgcolor: 'rgba(0,0,0,0.5)',
+                        p: 1.5,
+                        textAlign: 'center',
+                      }}
+                    >
+                      <Typography
+                        variant="h5"
+                        sx={{
+                          color: tiktokLiveStatus.enabled
+                            ? '#33ffcc'
+                            : '#ff6666',
+                          fontWeight: 'bold',
+                          fontSize: '1.2rem',
+                        }}
+                      >
+                        {tiktokLiveStatus.enabled ? 'Активен' : 'Остановлен'}
+                      </Typography>
+                      <Typography variant="caption" sx={{ color: '#aaa' }}>
+                        Статус
+                      </Typography>
+                    </Paper>
+                  </Grid>
+                  <Grid size={{ xs: 6 }}>
+                    <Paper
+                      sx={{
+                        bgcolor: 'rgba(0,0,0,0.5)',
+                        p: 1.5,
+                        textAlign: 'center',
+                      }}
+                    >
+                      <Typography
+                        variant="h5"
+                        sx={{
+                          color: '#ffaa44',
+                          fontWeight: 'bold',
+                          fontSize: '1.2rem',
+                        }}
+                      >
+                        {tiktokLiveStatus.queueCount}
+                      </Typography>
+                      <Typography variant="caption" sx={{ color: '#aaa' }}>
+                        В очереди
+                      </Typography>
+                    </Paper>
+                  </Grid>
+                  <Grid size={{ xs: 6 }}>
+                    <Paper
+                      sx={{
+                        bgcolor: 'rgba(0,0,0,0.5)',
+                        p: 1.5,
+                        textAlign: 'center',
+                      }}
+                    >
+                      <Typography
+                        variant="h5"
+                        sx={{
+                          color: '#33ffcc',
+                          fontWeight: 'bold',
+                          fontSize: '1.2rem',
+                        }}
+                      >
+                        {tiktokLiveStatus.totalAnalyzed}
+                      </Typography>
+                      <Typography variant="caption" sx={{ color: '#aaa' }}>
+                        Обработано
+                      </Typography>
+                    </Paper>
+                  </Grid>
+                  <Grid size={{ xs: 6 }}>
+                    <Paper
+                      sx={{
+                        bgcolor: 'rgba(0,0,0,0.5)',
+                        p: 1.5,
+                        textAlign: 'center',
+                      }}
+                    >
+                      <Typography
+                        variant="h5"
+                        sx={{
+                          color: '#ffaa44',
+                          fontWeight: 'bold',
+                          fontSize: '1.2rem',
+                        }}
+                      >
+                        {tiktokLiveStatus.lastRun
+                          ? new Date(
+                              tiktokLiveStatus.lastRun
+                            ).toLocaleTimeString()
+                          : '—'}
+                      </Typography>
+                      <Typography variant="caption" sx={{ color: '#aaa' }}>
+                        Последний запуск
+                      </Typography>
+                    </Paper>
+                  </Grid>
+                </Grid>
+
+                {tiktokLiveStatus.error && (
+                  <Alert
+                    severity="error"
+                    sx={{
+                      mt: 2,
+                      bgcolor: 'rgba(255,51,102,0.2)',
+                      color: '#ff8888',
+                    }}
+                  >
+                    <WarningIcon sx={{ mr: 1, fontSize: 18 }} />
+                    {tiktokLiveStatus.error}
+                  </Alert>
+                )}
+
+                {tiktokLiveStatus.addedCount > 0 && (
+                  <Typography
+                    variant="caption"
+                    sx={{ display: 'block', mt: 2, color: '#aaa' }}
+                  >
+                    Последний сбор: добавлено {tiktokLiveStatus.addedCount} из{' '}
+                    {tiktokLiveStatus.totalFound} найденных стримов
+                  </Typography>
+                )}
+              </Box>
+            </Grid>
+          </Grid>
+        </Card>
+
+        {/* ===== ПАНЕЛЬ 3: УПРАВЛЕНИЕ АНАЛИЗОМ ВИДЕО ===== */}
         <Card
           sx={{
             mb: 4,
@@ -782,12 +1204,13 @@ const AdminSettings = () => {
               gap: 1,
             }}
           >
-            <AnalyticsIcon /> {t('upravlenie-2')}
+            <AnalyticsIcon /> Управление анализом видео
           </Typography>
 
           <Box sx={{ mb: 2 }}>
             <Typography sx={{ color: '#fff', mb: 1 }}>
-              {t('interval-a')} {settings.scanInterval} {t('minut')}
+              Интервал автоматической проверки видео: {settings.scanInterval}{' '}
+              мин.
             </Typography>
             <Slider
               value={settings.scanInterval}
@@ -808,11 +1231,12 @@ const AdminSettings = () => {
               }}
             />
             <Typography variant="caption" sx={{ color: '#aaa' }}>
-              {t('kak-chasto-0')}
+              Как часто очередь проверяет новые видео (1–60 мин.)
             </Typography>
           </Box>
         </Card>
 
+        {/* ===== ПАНЕЛЬ 4: УПРАВЛЕНИЕ НОВОСТЯМИ ===== */}
         <Card
           sx={{
             mb: 4,
@@ -833,7 +1257,7 @@ const AdminSettings = () => {
               gap: 1,
             }}
           >
-            <NewsIcon /> {t('upravlenie-3')}
+            <NewsIcon /> Управление новостями
           </Typography>
 
           <Box sx={{ mb: 2 }}>
@@ -856,7 +1280,9 @@ const AdminSettings = () => {
                 />
               }
               label={
-                settings.autoRefreshNews ? t('avtoobnovl') : t('avtoobnovl-0')
+                settings.autoRefreshNews
+                  ? 'Автообновление включено'
+                  : 'Автообновление выключено'
               }
               sx={{ color: '#fff' }}
             />
@@ -864,7 +1290,7 @@ const AdminSettings = () => {
 
           <Box sx={{ mb: 2 }}>
             <Typography sx={{ color: '#fff', mb: 1 }}>
-              {t('interval-p')} {settings.newsParseInterval} {t('minut')}
+              Интервал парсинга новостей: {settings.newsParseInterval} мин.
             </Typography>
             <Slider
               value={settings.newsParseInterval}
@@ -885,17 +1311,17 @@ const AdminSettings = () => {
               }}
             />
             <Typography variant="caption" sx={{ color: '#aaa' }}>
-              {t('kak-chasto-1')}
+              Как часто обновлять новости (10–1440 мин.)
             </Typography>
           </Box>
 
           <Box sx={{ mt: 2 }}>
             <Typography sx={{ color: '#fff', mb: 1 }}>
-              {t('istochniki')}
+              Источники новостей (RSS):
             </Typography>
             <Box sx={{ display: 'flex', gap: 1, mb: 2 }}>
               <TextField
-                placeholder={t('vvedite-ur')}
+                placeholder="Введите URL RSS-ленты..."
                 value={newSource}
                 onChange={(e) => setNewSource(e.target.value)}
                 onKeyPress={(e) => e.key === 'Enter' && handleAddSource()}
@@ -923,7 +1349,7 @@ const AdminSettings = () => {
             <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
               {settings.newsSources.length === 0 ? (
                 <Typography sx={{ color: '#aaa' }}>
-                  {t('net-dobavl')}
+                  Нет добавленных источников
                 </Typography>
               ) : (
                 settings.newsSources.map((url, idx) => (
@@ -965,7 +1391,7 @@ const AdminSettings = () => {
             '&:hover': { bgcolor: '#33ffcc' },
           }}
         >
-          {saving ? t('sokhraneni') : t('sokhranit-')}
+          {saving ? 'Сохранение...' : 'Сохранить все настройки'}
         </Button>
       </Box>
     </Box>

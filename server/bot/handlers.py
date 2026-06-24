@@ -63,7 +63,6 @@ def handle_video_analysis(bot, message):
         f"🔍 *Начинаю анализ видео...*\n\n"
         f"📎 Ссылка: {video_url[:50]}...\n\n"
         f"⏳ Это может занять 1-3 минуты. Пожалуйста, подожди...",
-        parse_mode='Markdown'
     )
     
     try:
