@@ -130,20 +130,26 @@ def get_llm_verdict(
 Опасно: ДА или НЕТ (если уровень ≥ 50% → ДА, иначе НЕТ)  
 Уровень опасности: число от 0 до 100 (целое)  
 Основной риск: одно из: КАЗИНО, ПИРАМИДА, ИНВЕСТИЦИИ, КРИПТО, РЕФЕРАЛЫ, ПОНЦИ, НЕТ РИСКА  
-Причина: краткое объяснение (одно предложение)  
+Причина_ru: краткое объяснение на русском языке (одно предложение)  
+Причина_en: brief explanation in English (one sentence)  
+Причина_kz: қысқаша түсініктеме қазақ тілінде (бір сөйлем)  
 Уверенность: число от 0.0 до 1.0 (насколько ты уверен в своей оценке)  
 
 Примеры:  
 Опасно: ДА  
 Уровень опасности: 92  
 Основной риск: КАЗИНО  
-Причина: Видео демонстрирует игровые автоматы и призывает зарегистрироваться для получения бонуса  
+Причина_ru: Видео демонстрирует игровые автоматы и призывает зарегистрироваться для получения бонуса  
+Причина_en: The video shows slot machines and urges registration to get a bonus  
+Причина_kz: Бейне ойын автоматтарын көрсетіп, бонус алу үшін тіркелуге шақырады  
 Уверенность: 0.95  
 
 Опасно: НЕТ  
 Уровень опасности: 25  
 Основной риск: НЕТ РИСКА  
-Причина: Видео содержит только упоминание казино с предупреждением о рисках, без призывов  
+Причина_ru: Видео содержит только упоминание казино с предупреждением о рисках, без призывов  
+Причина_en: The video only mentions casino with a risk warning, no calls to action  
+Причина_kz: Бейнеде казино туралы ескерту ғана бар, шақырулар жоқ  
 Уверенность: 0.9  
 
 Теперь проанализируй предоставленные данные и выдай ответ строго по формату."""
@@ -226,20 +232,41 @@ def _parse_response(text: str) -> dict:
         except:
             pass
 
-    # Причина
-    reason = "Анализ на основе предоставленных данных"
-    match = re.search(r"причина:\s*(.+?)(?:\n|$)", text, re.IGNORECASE)
-    if match:
-        reason = match.group(1).strip()[:200]
-    elif len(text) > 20:
-        reason = text[:200]
+    reason_ru = "Анализ на основе предоставленных данных"
+    reason_en = "Analysis based on provided data"
+    reason_kz = "Берілген деректерге негізделген талдау"
+
+    # Ищем причину на русском
+    match_ru = re.search(r"причина_ru:\s*(.+?)(?:\n|$)", text, re.IGNORECASE)
+    if match_ru:
+        reason_ru = match_ru.group(1).strip()[:200]
+    
+    # Ищем причину на английском
+    match_en = re.search(r"причина_en:\s*(.+?)(?:\n|$)", text, re.IGNORECASE)
+    if match_en:
+        reason_en = match_en.group(1).strip()[:200]
+    
+    # Ищем причину на казахском
+    match_kz = re.search(r"причина_kz:\s*(.+?)(?:\n|$)", text, re.IGNORECASE)
+    if match_kz:
+        reason_kz = match_kz.group(1).strip()[:200]
+
+    if not match_ru and not match_en and not match_kz:
+        match = re.search(r"причина:\s*(.+?)(?:\n|$)", text, re.IGNORECASE)
+        if match:
+            reason_ru = match.group(1).strip()[:200]
+            reason_en = reason_ru
+            reason_kz = reason_ru
 
     return {
         "is_dangerous": is_dangerous,
         "danger_level": danger_level,
         "confidence": confidence,
         "verdict": "опасный" if is_dangerous else "безопасный",
-        "reason": reason,
+        "reason_ru": reason_ru,
+        "reason_en": reason_en,
+        "reason_kz": reason_kz,
+        "reason": reason_ru,
         "primary_risk": primary_risk,
     }
 
@@ -408,22 +435,36 @@ def _keyword_analysis(
 
     # Формируем причину
     if has_warning and not has_call:
-        reason = "Видео содержит предупреждения о рисках, призывы отсутствуют"
+        reason_ru = "Видео содержит предупреждения о рисках, призывы отсутствуют"
+        reason_en = "The video contains risk warnings, no calls to action"
+        reason_kz = "Бейнеде тәуекелдер туралы ескертулер бар, шақырулар жоқ"
     elif has_call and not has_warning:
-        reason = "Обнаружены прямые призывы к действию"
+        reason_ru = "Обнаружены прямые призывы к действию"
+        reason_en = "Direct calls to action detected"
+        reason_kz = "Тікелей әрекетке шақырулар анықталды"
     elif has_visual:
-        reason = f"Обнаружены визуальные маркеры: {', '.join(object_counts.keys())}"
+        objects = ', '.join(object_counts.keys())
+        reason_ru = f"Обнаружены визуальные маркеры: {objects}"
+        reason_en = f"Visual markers detected: {objects}"
+        reason_kz = f"Визуалды маркерлер анықталды: {objects}"
     else:
-        reason = "Анализ по ключевым словам"
+        reason_ru = "Анализ по ключевым словам"
+        reason_en = "Keyword-based analysis"
+        reason_kz = "Кілт сөздер негізінде талдау"
 
     if dangerous_links > 0:
-        reason += f", обнаружены ссылки на подозрительные ресурсы ({dangerous_links})"
+        reason_ru += f", обнаружены ссылки на подозрительные ресурсы ({dangerous_links})"
+        reason_en += f", suspicious links detected ({dangerous_links})"
+        reason_kz += f", күдікті сілтемелер анықталды ({dangerous_links})"
 
     return {
         "is_dangerous": is_dangerous,
         "danger_level": danger_level,
         "confidence": confidence,
         "verdict": "опасный" if is_dangerous else "безопасный",
-        "reason": reason[:200],
+        "reason_ru": reason_ru[:200],
+        "reason_en": reason_en[:200],
+        "reason_kz": reason_kz[:200],
+        "reason": reason_ru,
         "primary_risk": primary_risk,
     }

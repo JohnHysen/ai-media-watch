@@ -2259,28 +2259,34 @@ const CyberMediaWatchPro = () => {
                         </TableCell>
                       </TableRow>
                     )}
-                    {selectedVideo.reason && (
-                      <TableRow>
-                        <TableCell
-                          sx={{
-                            color: '#0ff',
-                            fontWeight: 'bold',
-                            borderBottom: '1px solid rgba(0,255,255,0.1)',
-                          }}
-                        >
-                          {t('obosnovani')}
-                        </TableCell>
-                        <TableCell
-                          sx={{
-                            color: '#ddd',
-                            borderBottom: '1px solid rgba(0,255,255,0.1)',
-                            whiteSpace: 'pre-wrap',
-                          }}
-                        >
-                          {selectedVideo.reason}
-                        </TableCell>
-                      </TableRow>
-                    )}
+                    {selectedVideo.reason_ru &&
+                      selectedVideo.reason_en &&
+                      selectedVideo.reason_kz && (
+                        <TableRow>
+                          <TableCell
+                            sx={{
+                              color: '#0ff',
+                              fontWeight: 'bold',
+                              borderBottom: '1px solid rgba(0,255,255,0.1)',
+                            }}
+                          >
+                            {t('obosnovani')}
+                          </TableCell>
+                          <TableCell
+                            sx={{
+                              color: '#ddd',
+                              borderBottom: '1px solid rgba(0,255,255,0.1)',
+                              whiteSpace: 'pre-wrap',
+                            }}
+                          >
+                            {i18n.language === 'en'
+                              ? selectedVideo.reason_en
+                              : i18n.language === 'kz'
+                                ? selectedVideo.reason_kz
+                                : selectedVideo.reason_ru}
+                          </TableCell>
+                        </TableRow>
+                      )}
                     <TableRow>
                       <TableCell sx={{ color: '#0ff', fontWeight: 'bold' }}>
                         {t('ssylka')}

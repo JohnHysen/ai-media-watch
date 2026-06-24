@@ -12,7 +12,7 @@ def transcribe_audio(analyze_id: str) -> str:
 
     model = get_whisper_model()
     
-    result = model.transcribe(str(audio_path), language="ru")
+    result = model.transcribe(str(audio_path), language=None)
     
     transcript_path = base_path / "transcript.txt"
     with open(transcript_path, 'w', encoding='utf-8') as f:

@@ -112,9 +112,20 @@ def send_result(bot, message, data, processing_msg):
     verdict_text = data.get("verdict_text", "unknown")
     safety_percent = data.get("safety_percent", 0)
     primary_risk = data.get("primary_risk", "не определен")
-    reason = data.get("reason", "Нет объяснения")
+    reason_ru = data.get("reason_ru", "")
+    reason_en = data.get("reason_en", "")
+    reason_kz = data.get("reason_kz", "")
     title = data.get("title", "Без названия")
     
+    user_lang = message.from_user.language_code or 'ru'
+
+    if user_lang and user_lang.startswith('en'):
+        reason = reason_en or reason_ru or "No explanation available"
+    elif user_lang and user_lang.startswith('kk'):
+        reason = reason_kz or reason_ru or "Түсініктеме жоқ"
+    else:
+        reason = reason_ru or reason_en or "Нет объяснения"
+
     # Определяем эмодзи для вердикта
     if is_dangerous:
         verdict_emoji = "⚠️"

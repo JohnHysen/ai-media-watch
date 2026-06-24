@@ -46,7 +46,15 @@ export class VideoAnalysis extends Model {
 
   @AllowNull(true)
   @Column(DataType.TEXT)
-  declare reason: string
+  declare reason_ru: string
+
+  @AllowNull(true)
+  @Column(DataType.TEXT)
+  declare reason_en: string
+
+  @AllowNull(true)
+  @Column(DataType.TEXT)
+  declare reason_kz: string
 
   @AllowNull(false)
   @Column(DataType.BOOLEAN)

@@ -147,7 +147,9 @@ export interface VideoAnalysis {
   createdAt: string
   updatedAt: string
   primary_risk: string | null
-  reason: string | null
+  reason_ru: string | null
+  reason_en: string | null
+  reason_kz: string | null
   uploader: string | null
   initiator?: {
     id: number
