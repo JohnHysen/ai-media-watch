@@ -439,6 +439,11 @@ const CyberMediaWatchPro = () => {
       color: '#ffaa44',
       icon: <WarningAmberIcon sx={{ fontSize: 16, color: '#ffaa44' }} />,
     },
+    'нет риска': {
+      label: t('net-riska'),
+      color: '#4caf50',
+      icon: <CheckCircleIcon sx={{ fontSize: 16, color: '#4caf50' }} />,
+    },
   }
 
   const [loginModalOpen, setLoginModalOpen] = useState(false)
