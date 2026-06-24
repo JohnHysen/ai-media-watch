@@ -134,7 +134,7 @@ export const UserProvider = ({ children }: UserProviderProps) => {
     }
   }, [])
 
-  useSocket(user, token, setSIO)
+  // useSocket(user, token, setSIO)
 
   return (
     <UserContext.Provider value={{ user, login, logout, sio, setUser }}>
