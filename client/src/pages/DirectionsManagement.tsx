@@ -78,9 +78,17 @@ const SEVERITY_COLORS: Record<string, string> = {
 }
 
 // Парсинг ключевых слов из строки в массив
-const parseKeywords = (keywords: string | null): string[] => {
+const parseKeywords = (keywords: string | string[] | null | any): string[] => {
   if (!keywords) return []
-  return keywords
+  if (Array.isArray(keywords)) {
+    return keywords.filter(k => typeof k === 'string' && k.trim())
+  }
+  if (typeof keywords === 'string') {
+    return keywords      .split(',')
+      .map(k => k.trim())
+      .filter(Boolean)
+  }
+  return []
 }
 
 // Безопасное получение маркеров
