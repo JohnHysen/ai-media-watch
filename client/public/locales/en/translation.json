@@ -326,5 +326,15 @@
   "vvedite-na": "Enter a name",
   "vvedite-na-0": "Enter a name, AI will generate a structure with markers",
   "vysokaya": "High",
-  "zapolnite--0": "Fill in the name"
+  "zapolnite--0": "Fill in the name",
+  "data-dobav": "Date added",
+  "istoriya-p-0": "Parsing history is empty",
+  "ne-udalos--5": "Failed to start parsing",
+  "ne-udalos--6": "Failed to stop parsing",
+  "parsing-ak": "Parsing is active",
+  "parsing-os": "Parsing stopped",
+  "poisk-po-s-0": "Search by link or user...",
+  "ssylka-na--0": "Link to stream",
+  "upravlenie-5": "Managing TikTok Live Parsing",
+  "vsego-v-oc": "Total queue:"
 }
