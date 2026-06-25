@@ -20,6 +20,7 @@ import AdminSettings from './pages/AdminSettings.tsx'
 import QueueManager from './pages/QueueManager'
 import FraudResources from './pages/FraudResources.tsx'
 import DirectionsManagement from './pages/DirectionsManagement'
+import TikTokLiveStats from './pages/TikTokLiveStats'
 
 const font = 'teletext, "Roboto", "Arial", sans-serif'
 
@@ -90,6 +91,12 @@ const router = createBrowserRouter([
       {
         path: '/directions',
         element: <WithAuth c={<DirectionsManagement />} roles={['ADMIN']} />,
+      },
+      {
+        path: '/tiktok-live',
+        element: (
+          <WithAuth c={<TikTokLiveStats />} roles={['INSPECTOR', 'ADMIN']} />
+        ),
       },
     ],
   },

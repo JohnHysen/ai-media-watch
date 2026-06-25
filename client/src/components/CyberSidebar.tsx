@@ -35,7 +35,8 @@ import SettingsIcon from '@mui/icons-material/Settings'
 import WarningIcon from '@mui/icons-material/Warning'
 import Visibility from '@mui/icons-material/Visibility'
 import VisibilityOff from '@mui/icons-material/VisibilityOff'
-import LabelIcon from '@mui/icons-material/Label' // ← добавлено
+import LabelIcon from '@mui/icons-material/Label'
+import MusicNoteIcon from '@mui/icons-material/MusicNote' // 👈 добавлено
 import { useNavigate } from 'react-router-dom'
 import { useUser } from '../context/user/useUser'
 import { useTranslation } from 'react-i18next'
@@ -205,9 +206,15 @@ export default function CyberSidebar({ open, onClose }: Props) {
       path: '/users',
     })
     roleMenuItems.push({
-      text: 'Управление направлениями', // или используйте ключ перевода, если он есть
+      text: 'Управление направлениями',
       icon: <LabelIcon />,
       path: '/directions',
+    })
+    // 👇 НОВЫЙ ПУНКТ ДЛЯ СТАТИСТИКИ TIKTOK LIVE
+    roleMenuItems.push({
+      text: 'TikTok Live статистика',
+      icon: <MusicNoteIcon />,
+      path: '/tiktok-live',
     })
     roleMenuItems.push({
       text: t('nastroiki--0'),
