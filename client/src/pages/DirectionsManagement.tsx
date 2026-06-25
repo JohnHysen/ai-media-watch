@@ -42,6 +42,7 @@ import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome'
 import { motion } from 'framer-motion'
 import { toast } from 'react-toastify'
 import CyberSidebar from '../components/CyberSidebar'
+import { useTranslation } from 'react-i18next'
 import { useUser } from '../context/user/useUser'
 import { $host } from '../http/API'
 
@@ -63,13 +64,6 @@ interface Direction {
   updated_at: string
 }
 
-const SEVERITY_OPTIONS = [
-  { value: 'low', label: 'Низкая', color: '#4caf50' },
-  { value: 'medium', label: 'Средняя', color: '#ff9800' },
-  { value: 'high', label: 'Высокая', color: '#f44336' },
-  { value: 'critical', label: 'Критическая', color: '#d50000' },
-]
-
 const SEVERITY_COLORS: Record<string, string> = {
   low: '#4caf50',
   medium: '#ff9800',
@@ -81,11 +75,12 @@ const SEVERITY_COLORS: Record<string, string> = {
 const parseKeywords = (keywords: string | string[] | null | any): string[] => {
   if (!keywords) return []
   if (Array.isArray(keywords)) {
-    return keywords.filter(k => typeof k === 'string' && k.trim())
+    return keywords.filter((k) => typeof k === 'string' && k.trim())
   }
   if (typeof keywords === 'string') {
-    return keywords      .split(',')
-      .map(k => k.trim())
+    return keywords
+      .split(',')
+      .map((k) => k.trim())
       .filter(Boolean)
   }
   return []
@@ -94,35 +89,50 @@ const parseKeywords = (keywords: string | string[] | null | any): string[] => {
 // Безопасное получение маркеров
 const safeMarkers = (markers: any): Array<{ text: string; weight: number }> => {
   if (!Array.isArray(markers)) return []
-  return markers.filter(m => m && m.text)
+  return markers.filter((m) => m && m.text)
 }
 
 const DirectionsManagement = () => {
+  const { t, ready } = useTranslation()
+  const SEVERITY_OPTIONS = [
+    { value: 'low', label: t('nizkaya'), color: '#4caf50' },
+    { value: 'medium', label: t('srednyaya'), color: '#ff9800' },
+    { value: 'high', label: t('vysokaya'), color: '#f44336' },
+    { value: 'critical', label: t('kritichesk'), color: '#d50000' },
+  ]
   const { user } = useUser()
   const [drawerOpen, setDrawerOpen] = useState(false)
   const [directions, setDirections] = useState<Direction[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
-  
+
   // Диалоги
   const [dialogOpen, setDialogOpen] = useState(false)
-  const [editingDirection, setEditingDirection] = useState<Direction | null>(null)
+  const [editingDirection, setEditingDirection] = useState<Direction | null>(
+    null
+  )
   const [generateDialogOpen, setGenerateDialogOpen] = useState(false)
-  
+
   // Форма (без code)
   const [formName, setFormName] = useState('')
   const [formNameKk, setFormNameKk] = useState('')
   const [formNameEn, setFormNameEn] = useState('')
   const [formDescription, setFormDescription] = useState('')
   const [formKeywords, setFormKeywords] = useState<string[]>([])
-  const [formSeverity, setFormSeverity] = useState<'low' | 'medium' | 'high' | 'critical'>('medium')
+  const [formSeverity, setFormSeverity] = useState<
+    'low' | 'medium' | 'high' | 'critical'
+  >('medium')
   const [formRiskThreshold, setFormRiskThreshold] = useState(6.0)
-  const [formVisualMarkers, setFormVisualMarkers] = useState<Array<{ text: string; weight: number }>>([])
-  const [formNegativeMarkers, setFormNegativeMarkers] = useState<Array<{ text: string; weight: number }>>([])
+  const [formVisualMarkers, setFormVisualMarkers] = useState<
+    Array<{ text: string; weight: number }>
+  >([])
+  const [formNegativeMarkers, setFormNegativeMarkers] = useState<
+    Array<{ text: string; weight: number }>
+  >([])
   const [formColor, setFormColor] = useState('#6c757d')
   const [formIcon, setFormIcon] = useState('')
   const [formIsActive, setFormIsActive] = useState(true)
-  
+
   // UI
   const [newKeyword, setNewKeyword] = useState('')
   const [newMarkerText, setNewMarkerText] = useState('')
@@ -136,7 +146,7 @@ const DirectionsManagement = () => {
   const isAdmin = user?.role === 'ADMIN'
 
   // ============ ЗАПРОСЫ К СЕРВЕРУ ============
-  
+
   const fetchDirections = async () => {
     setLoading(true)
     try {
@@ -144,7 +154,7 @@ const DirectionsManagement = () => {
       setDirections(res.data.data || [])
     } catch (err: any) {
       setError('Ошибка загрузки')
-      toast.error('Ошибка загрузки')
+      toast.error(t('oshibka-za-0'))
     } finally {
       setLoading(false)
     }
@@ -157,7 +167,7 @@ const DirectionsManagement = () => {
   }, [isAdmin])
 
   // ============ РАБОТА С ФОРМОЙ ============
-  
+
   const resetForm = () => {
     setFormName('')
     setFormNameKk('')
@@ -200,12 +210,12 @@ const DirectionsManagement = () => {
   }
 
   // ============ КЛЮЧЕВЫЕ СЛОВА ============
-  
+
   const handleAddKeyword = () => {
     const kw = newKeyword.trim()
     if (!kw) return
     if (formKeywords.includes(kw)) {
-      toast.warning('Уже добавлено')
+      toast.warning(t('uzhe-dobav'))
       return
     }
     setFormKeywords([...formKeywords, kw])
@@ -217,47 +227,47 @@ const DirectionsManagement = () => {
   }
 
   // ============ МАРКЕРЫ ============
-  
+
   const handleAddMarker = () => {
     const text = newMarkerText.trim()
     if (!text) return
-    
+
     const marker = { text, weight: newMarkerWeight }
-    
+
     if (markerType === 'visual') {
-      if (formVisualMarkers.some(m => m.text === text)) {
-        toast.warning('Уже добавлено')
+      if (formVisualMarkers.some((m) => m.text === text)) {
+        toast.warning(t('uzhe-dobav'))
         return
       }
       setFormVisualMarkers([...formVisualMarkers, marker])
     } else {
-      if (formNegativeMarkers.some(m => m.text === text)) {
-        toast.warning('Уже добавлено')
+      if (formNegativeMarkers.some((m) => m.text === text)) {
+        toast.warning(t('uzhe-dobav'))
         return
       }
       setFormNegativeMarkers([...formNegativeMarkers, marker])
     }
-    
+
     setNewMarkerText('')
     setNewMarkerWeight(1.0)
   }
 
   const handleRemoveMarker = (type: 'visual' | 'negative', text: string) => {
     if (type === 'visual') {
-      setFormVisualMarkers(formVisualMarkers.filter(m => m.text !== text))
+      setFormVisualMarkers(formVisualMarkers.filter((m) => m.text !== text))
     } else {
-      setFormNegativeMarkers(formNegativeMarkers.filter(m => m.text !== text))
+      setFormNegativeMarkers(formNegativeMarkers.filter((m) => m.text !== text))
     }
   }
 
   // ============ СОХРАНЕНИЕ ============
-  
+
   const handleSave = async () => {
     if (!formName.trim()) {
-      toast.warning('Заполните название')
+      toast.warning(t('zapolnite--0'))
       return
     }
-    
+
     setSaving(true)
     try {
       const payload = {
@@ -274,19 +284,19 @@ const DirectionsManagement = () => {
         icon: formIcon.trim() || null,
         is_active: formIsActive,
       }
-      
+
       if (editingDirection) {
         await $host.put(`/directions/${editingDirection.id}`, payload)
-        toast.success('Обновлено')
+        toast.success(t('obnovleno-0'))
       } else {
         await $host.post('/directions', payload)
-        toast.success('Создано')
+        toast.success(t('sozdano'))
       }
-      
+
       setDialogOpen(false)
       fetchDirections()
     } catch (err: any) {
-      toast.error(err.response?.data?.error || 'Ошибка')
+      toast.error(err.response?.data?.error || t('oshibka'))
     } finally {
       setSaving(false)
     }
@@ -299,27 +309,27 @@ const DirectionsManagement = () => {
       toast.success('Удалено')
       fetchDirections()
     } catch (err: any) {
-      toast.error(err.response?.data?.error || 'Ошибка')
+      toast.error(err.response?.data?.error || t('oshibka'))
     }
   }
 
   // ============ ГЕНЕРАЦИЯ ============
-  
+
   const handleGenerate = async () => {
     if (!generateName.trim()) {
-      toast.warning('Введите название')
+      toast.warning(t('vvedite-na'))
       return
     }
-    
+
     setGenerating(true)
     try {
       const res = await $host.post('/directions/generate', {
         name: generateName.trim(),
         description: generateDescription.trim() || '',
       })
-      
+
       const data = res.data.data
-      
+
       // Заполняем форму (без code)
       setFormName(data.name)
       setFormNameKk(data.name_kk || '')
@@ -332,47 +342,63 @@ const DirectionsManagement = () => {
       setFormColor(data.color)
       setFormIcon(data.icon || '')
       setFormKeywords(parseKeywords(data.keywords))
-      
-      toast.success('Сгенерировано!')
+
+      toast.success(t('sgenerirov'))
       setGenerateDialogOpen(false)
       setDialogOpen(true)
     } catch (err: any) {
-      toast.error(err.response?.data?.error || 'Ошибка генерации')
+      toast.error(err.response?.data?.error || t('oshibka-ge'))
     } finally {
       setGenerating(false)
     }
   }
 
   // ============ ВСПОМОГАТЕЛЬНЫЕ ============
-  
+
   const getSeverityColor = (severity: string) => {
     return SEVERITY_COLORS[severity] || '#6c757d'
   }
 
   const getSeverityLabel = (severity: string) => {
-    const found = SEVERITY_OPTIONS.find(s => s.value === severity)
+    const found = SEVERITY_OPTIONS.find((s) => s.value === severity)
     return found?.label || severity
   }
 
   // ============ RENDER ============
-  
+
   if (!isAdmin) {
     return (
-      <Box sx={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', bgcolor: '#03030f' }}>
-        <Typography variant="h5">Доступ запрещён</Typography>
+      <Box
+        sx={{
+          minHeight: '100vh',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          color: '#fff',
+          bgcolor: '#03030f',
+        }}
+      >
+        <Typography variant="h5">{t('dostup-zap')}</Typography>
       </Box>
     )
   }
-
+  if (!ready) return null
   return (
     <Box sx={{ minHeight: '100vh', bgcolor: '#03030f', color: '#fff' }}>
       {/* Хедер */}
-      <Box sx={{ display: 'flex', alignItems: 'center', p: 2, borderBottom: '1px solid rgba(255,255,255,0.1)' }}>
+      <Box
+        sx={{
+          display: 'flex',
+          alignItems: 'center',
+          p: 2,
+          borderBottom: '1px solid rgba(255,255,255,0.1)',
+        }}
+      >
         <IconButton onClick={() => setDrawerOpen(true)} sx={{ color: '#0ff' }}>
           <MenuIcon />
         </IconButton>
         <Typography variant="h5" sx={{ ml: 2, color: '#0ff' }}>
-          Направления
+          {t('napravleni')}
         </Typography>
         <Box sx={{ flex: 1 }} />
         <Button
@@ -381,7 +407,7 @@ const DirectionsManagement = () => {
           onClick={() => setGenerateDialogOpen(true)}
           sx={{ mr: 1, bgcolor: '#aa66ff' }}
         >
-          Сгенерировать
+          {t('sgenerirov-0')}
         </Button>
         <Button
           variant="contained"
@@ -389,7 +415,7 @@ const DirectionsManagement = () => {
           onClick={openCreateDialog}
           sx={{ bgcolor: '#0ff', color: '#000' }}
         >
-          Создать
+          {t('sozdat')}
         </Button>
       </Box>
 
@@ -409,7 +435,7 @@ const DirectionsManagement = () => {
             </Box>
           ) : directions.length === 0 ? (
             <Typography sx={{ textAlign: 'center', py: 4, color: '#888' }}>
-              Нет направлений
+              {t('net-naprav')}
             </Typography>
           ) : (
             <TableContainer component={Paper} sx={{ bgcolor: 'transparent' }}>
@@ -417,23 +443,35 @@ const DirectionsManagement = () => {
                 <TableHead>
                   <TableRow>
                     <TableCell sx={{ color: '#0ff' }}>ID</TableCell>
-                    <TableCell sx={{ color: '#0ff' }}>Название</TableCell>
-                    <TableCell sx={{ color: '#0ff' }}>Серьёзность</TableCell>
-                    <TableCell sx={{ color: '#0ff' }}>Порог</TableCell>
-                    <TableCell sx={{ color: '#0ff' }}>Маркеры</TableCell>
-                    <TableCell sx={{ color: '#0ff' }}>Статус</TableCell>
-                    <TableCell sx={{ color: '#0ff' }} align="right">Действия</TableCell>
+                    <TableCell sx={{ color: '#0ff' }}>
+                      {t('nazvanie')}
+                    </TableCell>
+                    <TableCell sx={{ color: '#0ff' }}>
+                      {t('seryoznost')}
+                    </TableCell>
+                    <TableCell sx={{ color: '#0ff' }}>{t('porog')}</TableCell>
+                    <TableCell sx={{ color: '#0ff' }}>{t('markery')}</TableCell>
+                    <TableCell sx={{ color: '#0ff' }}>{t('status')}</TableCell>
+                    <TableCell sx={{ color: '#0ff' }} align="right">
+                      {t('deistviya')}
+                    </TableCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>
                   {directions.map((dir) => (
-                    <TableRow key={dir.id} sx={{ '&:hover': { bgcolor: 'rgba(255,255,255,0.05)' } }}>
+                    <TableRow
+                      key={dir.id}
+                      sx={{ '&:hover': { bgcolor: 'rgba(255,255,255,0.05)' } }}
+                    >
                       <TableCell sx={{ color: '#fff' }}>#{dir.id}</TableCell>
                       <TableCell sx={{ color: '#fff' }}>
                         <Box>
                           <Typography variant="body2">{dir.name}</Typography>
                           {dir.name_kk && (
-                            <Typography variant="caption" sx={{ color: '#888' }}>
+                            <Typography
+                              variant="caption"
+                              sx={{ color: '#888' }}
+                            >
                               {dir.name_kk}
                             </Typography>
                           )}
@@ -450,37 +488,57 @@ const DirectionsManagement = () => {
                           }}
                         />
                       </TableCell>
-                      <TableCell sx={{ color: '#fff' }}>{dir.risk_threshold}</TableCell>
+                      <TableCell sx={{ color: '#fff' }}>
+                        {dir.risk_threshold}
+                      </TableCell>
                       <TableCell>
-                        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
-                          {safeMarkers(dir.visual_markers).slice(0, 3).map((m) => (
-                            <Chip
-                              key={m.text}
-                              label={m.text}
-                              size="small"
-                              sx={{ bgcolor: 'rgba(0,255,255,0.1)', color: '#0ff' }}
-                            />
-                          ))}
+                        <Box
+                          sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}
+                        >
+                          {safeMarkers(dir.visual_markers)
+                            .slice(0, 3)
+                            .map((m) => (
+                              <Chip
+                                key={m.text}
+                                label={m.text}
+                                size="small"
+                                sx={{
+                                  bgcolor: 'rgba(0,255,255,0.1)',
+                                  color: '#0ff',
+                                }}
+                              />
+                            ))}
                           {safeMarkers(dir.visual_markers).length > 3 && (
-                            <Chip label={`+${safeMarkers(dir.visual_markers).length - 3}`} size="small" />
+                            <Chip
+                              label={`+${safeMarkers(dir.visual_markers).length - 3}`}
+                              size="small"
+                            />
                           )}
                         </Box>
                       </TableCell>
                       <TableCell>
                         <Chip
-                          label={dir.is_active ? 'Активен' : 'Неактивен'}
+                          label={dir.is_active ? t('aktiven') : t('neaktiven')}
                           size="small"
                           sx={{
-                            bgcolor: dir.is_active ? 'rgba(0,255,0,0.15)' : 'rgba(255,0,0,0.15)',
+                            bgcolor: dir.is_active
+                              ? 'rgba(0,255,0,0.15)'
+                              : 'rgba(255,0,0,0.15)',
                             color: dir.is_active ? '#4caf50' : '#f44336',
                           }}
                         />
                       </TableCell>
                       <TableCell align="right">
-                        <IconButton onClick={() => openEditDialog(dir)} sx={{ color: '#0ff' }}>
+                        <IconButton
+                          onClick={() => openEditDialog(dir)}
+                          sx={{ color: '#0ff' }}
+                        >
                           <EditIcon />
                         </IconButton>
-                        <IconButton onClick={() => handleDelete(dir.id)} sx={{ color: '#ff3366' }}>
+                        <IconButton
+                          onClick={() => handleDelete(dir.id)}
+                          sx={{ color: '#ff3366' }}
+                        >
                           <DeleteIcon />
                         </IconButton>
                       </TableCell>
@@ -508,11 +566,20 @@ const DirectionsManagement = () => {
           },
         }}
       >
-        <DialogTitle sx={{ borderBottom: '1px solid rgba(0,255,255,0.2)', display: 'flex', justifyContent: 'space-between' }}>
+        <DialogTitle
+          sx={{
+            borderBottom: '1px solid rgba(0,255,255,0.2)',
+            display: 'flex',
+            justifyContent: 'space-between',
+          }}
+        >
           <Typography sx={{ color: '#0ff' }}>
-            {editingDirection ? 'Редактировать' : 'Новое направление'}
+            {editingDirection ? t('redaktirov') : t('novoe-napr')}
           </Typography>
-          <IconButton onClick={() => setDialogOpen(false)} sx={{ color: '#0ff' }}>
+          <IconButton
+            onClick={() => setDialogOpen(false)}
+            sx={{ color: '#0ff' }}
+          >
             <CloseIcon />
           </IconButton>
         </DialogTitle>
@@ -520,74 +587,76 @@ const DirectionsManagement = () => {
           <Grid container spacing={2}>
             <Grid item xs={12}>
               <TextField
-                label="Название *"
+                label={t('nazvanie-0')}
                 fullWidth
                 value={formName}
                 onChange={(e) => setFormName(e.target.value)}
-                sx={{ 
-                  '& .MuiOutlinedInput-root': { 
-                    bgcolor: 'rgba(0,0,0,0.4)', 
-                    '& fieldset': { borderColor: '#0ff' } 
-                  }, 
-                  input: { color: '#fff' }, 
-                  label: { color: '#aaa' } 
+                sx={{
+                  '& .MuiOutlinedInput-root': {
+                    bgcolor: 'rgba(0,0,0,0.4)',
+                    '& fieldset': { borderColor: '#0ff' },
+                  },
+                  input: { color: '#fff' },
+                  label: { color: '#aaa' },
                 }}
               />
             </Grid>
             <Grid item xs={12} md={6}>
               <TextField
-                label="Название (каз)"
+                label={t('nazvanie-k')}
                 fullWidth
                 value={formNameKk}
                 onChange={(e) => setFormNameKk(e.target.value)}
-                sx={{ 
-                  '& .MuiOutlinedInput-root': { 
-                    bgcolor: 'rgba(0,0,0,0.4)', 
-                    '& fieldset': { borderColor: '#0ff' } 
-                  }, 
-                  input: { color: '#fff' }, 
-                  label: { color: '#aaa' } 
+                sx={{
+                  '& .MuiOutlinedInput-root': {
+                    bgcolor: 'rgba(0,0,0,0.4)',
+                    '& fieldset': { borderColor: '#0ff' },
+                  },
+                  input: { color: '#fff' },
+                  label: { color: '#aaa' },
                 }}
               />
             </Grid>
             <Grid item xs={12} md={6}>
               <TextField
-                label="Название (англ)"
+                label={t('nazvanie-a')}
                 fullWidth
                 value={formNameEn}
                 onChange={(e) => setFormNameEn(e.target.value)}
-                sx={{ 
-                  '& .MuiOutlinedInput-root': { 
-                    bgcolor: 'rgba(0,0,0,0.4)', 
-                    '& fieldset': { borderColor: '#0ff' } 
-                  }, 
-                  input: { color: '#fff' }, 
-                  label: { color: '#aaa' } 
+                sx={{
+                  '& .MuiOutlinedInput-root': {
+                    bgcolor: 'rgba(0,0,0,0.4)',
+                    '& fieldset': { borderColor: '#0ff' },
+                  },
+                  input: { color: '#fff' },
+                  label: { color: '#aaa' },
                 }}
               />
             </Grid>
             <Grid item xs={12}>
               <TextField
-                label="Описание"
+                label={t('opisanie-0')}
                 fullWidth
                 multiline
                 rows={2}
                 value={formDescription}
                 onChange={(e) => setFormDescription(e.target.value)}
-                sx={{ 
-                  '& .MuiOutlinedInput-root': { 
-                    bgcolor: 'rgba(0,0,0,0.4)', 
-                    '& fieldset': { borderColor: '#0ff' } 
-                  }, 
-                  textarea: { color: '#fff' }, 
-                  label: { color: '#aaa' } 
+                sx={{
+                  '& .MuiOutlinedInput-root': {
+                    bgcolor: 'rgba(0,0,0,0.4)',
+                    '& fieldset': { borderColor: '#0ff' },
+                  },
+                  textarea: { color: '#fff' },
+                  label: { color: '#aaa' },
                 }}
               />
             </Grid>
-            
+
             <Grid item xs={12} md={6}>
               <FormControl fullWidth>
-                <InputLabel sx={{ color: '#aaa' }}>Серьёзность</InputLabel>
+                <InputLabel sx={{ color: '#aaa' }}>
+                  {t('seryoznost')}
+                </InputLabel>
                 <Select
                   value={formSeverity}
                   onChange={(e) => setFormSeverity(e.target.value as any)}
@@ -595,8 +664,17 @@ const DirectionsManagement = () => {
                 >
                   {SEVERITY_OPTIONS.map((s) => (
                     <MenuItem key={s.value} value={s.value}>
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                        <Box sx={{ width: 12, height: 12, borderRadius: '50%', bgcolor: s.color }} />
+                      <Box
+                        sx={{ display: 'flex', alignItems: 'center', gap: 1 }}
+                      >
+                        <Box
+                          sx={{
+                            width: 12,
+                            height: 12,
+                            borderRadius: '50%',
+                            bgcolor: s.color,
+                          }}
+                        />
                         {s.label}
                       </Box>
                     </MenuItem>
@@ -604,10 +682,12 @@ const DirectionsManagement = () => {
                 </Select>
               </FormControl>
             </Grid>
-            
+
             <Grid item xs={12} md={6}>
               <Box>
-                <Typography sx={{ color: '#aaa', fontSize: '0.8rem' }}>Порог: {formRiskThreshold}</Typography>
+                <Typography sx={{ color: '#aaa', fontSize: '0.8rem' }}>
+                  {t('porog-0')} {formRiskThreshold}
+                </Typography>
                 <Slider
                   value={formRiskThreshold}
                   onChange={(_, val) => setFormRiskThreshold(val as number)}
@@ -621,20 +701,26 @@ const DirectionsManagement = () => {
 
             {/* Ключевые слова */}
             <Grid item xs={12}>
-              <Typography sx={{ color: '#fff', mb: 1 }}>Ключевые слова</Typography>
+              <Typography sx={{ color: '#fff', mb: 1 }}>
+                {t('klyuchevye')}
+              </Typography>
               <Box sx={{ display: 'flex', gap: 1, mb: 1 }}>
                 <TextField
-                  placeholder="Введите..."
+                  placeholder={t('vvedite')}
                   value={newKeyword}
                   onChange={(e) => setNewKeyword(e.target.value)}
                   onKeyPress={(e) => e.key === 'Enter' && handleAddKeyword()}
-                  sx={{ 
-                    flex: 1, 
-                    '& .MuiOutlinedInput-root': { bgcolor: 'rgba(0,0,0,0.4)' }, 
-                    input: { color: '#fff' } 
+                  sx={{
+                    flex: 1,
+                    '& .MuiOutlinedInput-root': { bgcolor: 'rgba(0,0,0,0.4)' },
+                    input: { color: '#fff' },
                   }}
                 />
-                <Button variant="contained" onClick={handleAddKeyword} sx={{ bgcolor: '#0ff', color: '#000' }}>
+                <Button
+                  variant="contained"
+                  onClick={handleAddKeyword}
+                  sx={{ bgcolor: '#0ff', color: '#000' }}
+                >
                   <AddIcon />
                 </Button>
               </Box>
@@ -644,7 +730,11 @@ const DirectionsManagement = () => {
                     key={kw}
                     label={kw}
                     onDelete={() => handleRemoveKeyword(kw)}
-                    sx={{ bgcolor: 'rgba(0,255,255,0.15)', color: '#0ff', border: '1px solid #0ff' }}
+                    sx={{
+                      bgcolor: 'rgba(0,255,255,0.15)',
+                      color: '#0ff',
+                      border: '1px solid #0ff',
+                    }}
                   />
                 ))}
               </Box>
@@ -656,75 +746,93 @@ const DirectionsManagement = () => {
 
             {/* Маркеры */}
             <Grid item xs={12}>
-              <Typography sx={{ color: '#fff', mb: 1 }}>Маркеры</Typography>
+              <Typography sx={{ color: '#fff', mb: 1 }}>
+                {t('markery')}
+              </Typography>
               <Box sx={{ display: 'flex', gap: 1, mb: 1, flexWrap: 'wrap' }}>
                 <TextField
-                  placeholder="Текст..."
+                  placeholder={t('tekst')}
                   value={newMarkerText}
                   onChange={(e) => setNewMarkerText(e.target.value)}
                   onKeyPress={(e) => e.key === 'Enter' && handleAddMarker()}
-                  sx={{ 
-                    flex: 2, 
-                    minWidth: 150, 
-                    '& .MuiOutlinedInput-root': { bgcolor: 'rgba(0,0,0,0.4)' }, 
-                    input: { color: '#fff' } 
+                  sx={{
+                    flex: 2,
+                    minWidth: 150,
+                    '& .MuiOutlinedInput-root': { bgcolor: 'rgba(0,0,0,0.4)' },
+                    input: { color: '#fff' },
                   }}
                 />
                 <TextField
                   type="number"
-                  label="Вес"
+                  label={t('ves')}
                   value={newMarkerWeight}
                   onChange={(e) => setNewMarkerWeight(Number(e.target.value))}
                   inputProps={{ min: 0.5, max: 3, step: 0.1 }}
-                  sx={{ 
-                    width: 100, 
-                    '& .MuiOutlinedInput-root': { bgcolor: 'rgba(0,0,0,0.4)' }, 
-                    input: { color: '#fff' }, 
-                    label: { color: '#aaa' } 
+                  sx={{
+                    width: 100,
+                    '& .MuiOutlinedInput-root': { bgcolor: 'rgba(0,0,0,0.4)' },
+                    input: { color: '#fff' },
+                    label: { color: '#aaa' },
                   }}
                 />
                 <FormControl sx={{ minWidth: 120 }}>
-                  <InputLabel sx={{ color: '#aaa' }}>Тип</InputLabel>
+                  <InputLabel sx={{ color: '#aaa' }}>{t('tip')}</InputLabel>
                   <Select
                     value={markerType}
                     onChange={(e) => setMarkerType(e.target.value as any)}
                     sx={{ color: '#fff', bgcolor: 'rgba(0,0,0,0.4)' }}
                   >
-                    <MenuItem value="visual">Визуальный</MenuItem>
-                    <MenuItem value="negative">Негативный</MenuItem>
+                    <MenuItem value="visual">{t('vizualnyi')}</MenuItem>
+                    <MenuItem value="negative">{t('negativnyi')}</MenuItem>
                   </Select>
                 </FormControl>
-                <Button variant="contained" onClick={handleAddMarker} sx={{ bgcolor: '#ffaa44', color: '#000' }}>
+                <Button
+                  variant="contained"
+                  onClick={handleAddMarker}
+                  sx={{ bgcolor: '#ffaa44', color: '#000' }}
+                >
                   <AddIcon />
                 </Button>
               </Box>
-              
+
               {formVisualMarkers.length > 0 && (
                 <Box sx={{ mb: 1 }}>
-                  <Typography sx={{ color: '#0ff', fontSize: '0.8rem' }}>Визуальные ({formVisualMarkers.length}):</Typography>
+                  <Typography sx={{ color: '#0ff', fontSize: '0.8rem' }}>
+                    {t('vizualnye')} ({formVisualMarkers.length}):
+                  </Typography>
                   <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
                     {formVisualMarkers.map((m) => (
                       <Chip
                         key={m.text}
                         label={`${m.text} (${m.weight})`}
                         onDelete={() => handleRemoveMarker('visual', m.text)}
-                        sx={{ bgcolor: 'rgba(0,255,255,0.15)', color: '#0ff', border: '1px solid #0ff' }}
+                        sx={{
+                          bgcolor: 'rgba(0,255,255,0.15)',
+                          color: '#0ff',
+                          border: '1px solid #0ff',
+                        }}
                       />
                     ))}
                   </Box>
                 </Box>
               )}
-              
+
               {formNegativeMarkers.length > 0 && (
                 <Box>
-                  <Typography sx={{ color: '#ffaa44', fontSize: '0.8rem' }}>Негативные ({formNegativeMarkers.length}):</Typography>
+                  <Typography sx={{ color: '#ffaa44', fontSize: '0.8rem' }}>
+                    {t('negativnye')} ({formNegativeMarkers.length}):
+                  </Typography>
                   <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
                     {formNegativeMarkers.map((m) => (
                       <Chip
                         key={m.text}
                         label={`${m.text} (${m.weight})`}
                         onDelete={() => handleRemoveMarker('negative', m.text)}
-                        sx={{ bgcolor: 'rgba(255,170,68,0.15)', color: '#ffaa44', border: '1px solid #ffaa44' }}
+                        sx={{
+                          bgcolor: 'rgba(255,170,68,0.15)',
+                          color: '#ffaa44',
+                          border: '1px solid #ffaa44',
+                        }}
                       />
                     ))}
                   </Box>
@@ -740,30 +848,38 @@ const DirectionsManagement = () => {
             <Grid item xs={12} md={6}>
               <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
                 <TextField
-                  label="Цвет (HEX)"
+                  label={t('cvet')}
                   value={formColor}
                   onChange={(e) => setFormColor(e.target.value)}
-                  sx={{ 
-                    flex: 1, 
-                    '& .MuiOutlinedInput-root': { bgcolor: 'rgba(0,0,0,0.4)' }, 
-                    input: { color: '#fff' }, 
-                    label: { color: '#aaa' } 
+                  sx={{
+                    flex: 1,
+                    '& .MuiOutlinedInput-root': { bgcolor: 'rgba(0,0,0,0.4)' },
+                    input: { color: '#fff' },
+                    label: { color: '#aaa' },
                   }}
                 />
-                <Box sx={{ width: 48, height: 48, borderRadius: 2, bgcolor: formColor, border: '1px solid rgba(255,255,255,0.2)' }} />
+                <Box
+                  sx={{
+                    width: 48,
+                    height: 48,
+                    borderRadius: 2,
+                    bgcolor: formColor,
+                    border: '1px solid rgba(255,255,255,0.2)',
+                  }}
+                />
               </Box>
             </Grid>
-            
+
             <Grid item xs={12} md={6}>
               <TextField
-                label="Иконка"
+                label={t('ikonka')}
                 value={formIcon}
                 onChange={(e) => setFormIcon(e.target.value)}
                 placeholder="fa-casino"
-                sx={{ 
-                  '& .MuiOutlinedInput-root': { bgcolor: 'rgba(0,0,0,0.4)' }, 
-                  input: { color: '#fff' }, 
-                  label: { color: '#aaa' } 
+                sx={{
+                  '& .MuiOutlinedInput-root': { bgcolor: 'rgba(0,0,0,0.4)' },
+                  input: { color: '#fff' },
+                  label: { color: '#aaa' },
                 }}
               />
             </Grid>
@@ -771,20 +887,24 @@ const DirectionsManagement = () => {
             <Grid item xs={12}>
               <FormControlLabel
                 control={
-                  <Switch 
-                    checked={formIsActive} 
-                    onChange={(e) => setFormIsActive(e.target.checked)} 
-                    sx={{ '& .MuiSwitch-thumb': { bgcolor: '#0ff' } }} 
+                  <Switch
+                    checked={formIsActive}
+                    onChange={(e) => setFormIsActive(e.target.checked)}
+                    sx={{ '& .MuiSwitch-thumb': { bgcolor: '#0ff' } }}
                   />
                 }
-                label={formIsActive ? 'Активно' : 'Неактивно'}
+                label={formIsActive ? t('aktivno') : t('neaktivno')}
                 sx={{ color: '#fff' }}
               />
             </Grid>
           </Grid>
         </DialogContent>
-        <DialogActions sx={{ borderTop: '1px solid rgba(0,255,255,0.2)', p: 2 }}>
-          <Button onClick={() => setDialogOpen(false)} sx={{ color: '#aaa' }}>Отмена</Button>
+        <DialogActions
+          sx={{ borderTop: '1px solid rgba(0,255,255,0.2)', p: 2 }}
+        >
+          <Button onClick={() => setDialogOpen(false)} sx={{ color: '#aaa' }}>
+            {t('otmena')}
+          </Button>
           <Button
             onClick={handleSave}
             disabled={saving}
@@ -792,7 +912,7 @@ const DirectionsManagement = () => {
             startIcon={saving ? <CircularProgress size={20} /> : <SaveIcon />}
             sx={{ bgcolor: '#0ff', color: '#000' }}
           >
-            {saving ? 'Сохранение...' : 'Сохранить'}
+            {saving ? t('sokhraneni') : t('sokhranit')}
           </Button>
         </DialogActions>
       </Dialog>
@@ -812,61 +932,79 @@ const DirectionsManagement = () => {
           },
         }}
       >
-        <DialogTitle sx={{ borderBottom: '1px solid rgba(170,102,255,0.2)', display: 'flex', justifyContent: 'space-between' }}>
+        <DialogTitle
+          sx={{
+            borderBottom: '1px solid rgba(170,102,255,0.2)',
+            display: 'flex',
+            justifyContent: 'space-between',
+          }}
+        >
           <Typography sx={{ color: '#aa66ff' }}>
             <AutoAwesomeIcon sx={{ mr: 1 }} />
-            Генерация через AI
+            {t('generaciya')}
           </Typography>
-          <IconButton onClick={() => setGenerateDialogOpen(false)} sx={{ color: '#aa66ff' }}>
+          <IconButton
+            onClick={() => setGenerateDialogOpen(false)}
+            sx={{ color: '#aa66ff' }}
+          >
             <CloseIcon />
           </IconButton>
         </DialogTitle>
         <DialogContent sx={{ mt: 2 }}>
           <Typography sx={{ color: '#aaa', mb: 2 }}>
-            Введите название, AI сгенерирует структуру с маркерами
+            {t('vvedite-na-0')}
           </Typography>
           <TextField
-            label="Название *"
+            label={t('nazvanie-0')}
             fullWidth
             value={generateName}
             onChange={(e) => setGenerateName(e.target.value)}
-            sx={{ 
-              mb: 2, 
-              '& .MuiOutlinedInput-root': { 
-                bgcolor: 'rgba(0,0,0,0.4)', 
-                '& fieldset': { borderColor: '#aa66ff' } 
-              }, 
-              input: { color: '#fff' }, 
-              label: { color: '#aaa' } 
+            sx={{
+              mb: 2,
+              '& .MuiOutlinedInput-root': {
+                bgcolor: 'rgba(0,0,0,0.4)',
+                '& fieldset': { borderColor: '#aa66ff' },
+              },
+              input: { color: '#fff' },
+              label: { color: '#aaa' },
             }}
           />
           <TextField
-            label="Описание"
+            label={t('opisanie-0')}
             fullWidth
             multiline
             rows={3}
             value={generateDescription}
             onChange={(e) => setGenerateDescription(e.target.value)}
-            sx={{ 
-              '& .MuiOutlinedInput-root': { 
-                bgcolor: 'rgba(0,0,0,0.4)', 
-                '& fieldset': { borderColor: '#aa66ff' } 
-              }, 
-              textarea: { color: '#fff' }, 
-              label: { color: '#aaa' } 
+            sx={{
+              '& .MuiOutlinedInput-root': {
+                bgcolor: 'rgba(0,0,0,0.4)',
+                '& fieldset': { borderColor: '#aa66ff' },
+              },
+              textarea: { color: '#fff' },
+              label: { color: '#aaa' },
             }}
           />
         </DialogContent>
-        <DialogActions sx={{ borderTop: '1px solid rgba(170,102,255,0.2)', p: 2 }}>
-          <Button onClick={() => setGenerateDialogOpen(false)} sx={{ color: '#aaa' }}>Отмена</Button>
+        <DialogActions
+          sx={{ borderTop: '1px solid rgba(170,102,255,0.2)', p: 2 }}
+        >
+          <Button
+            onClick={() => setGenerateDialogOpen(false)}
+            sx={{ color: '#aaa' }}
+          >
+            {t('otmena')}
+          </Button>
           <Button
             onClick={handleGenerate}
             disabled={generating || !generateName.trim()}
             variant="contained"
-            startIcon={generating ? <CircularProgress size={20} /> : <AutoAwesomeIcon />}
+            startIcon={
+              generating ? <CircularProgress size={20} /> : <AutoAwesomeIcon />
+            }
             sx={{ bgcolor: '#aa66ff', color: '#fff' }}
           >
-            {generating ? 'Генерация...' : 'Сгенерировать'}
+            {generating ? t('generaciya-0') : t('sgenerirov-0')}
           </Button>
         </DialogActions>
       </Dialog>

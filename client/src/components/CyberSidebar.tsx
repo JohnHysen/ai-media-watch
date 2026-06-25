@@ -206,13 +206,13 @@ export default function CyberSidebar({ open, onClose }: Props) {
       path: '/users',
     })
     roleMenuItems.push({
-      text: 'Управление направлениями',
+      text: t('upravlenie-4'),
       icon: <LabelIcon />,
       path: '/directions',
     })
     // 👇 НОВЫЙ ПУНКТ ДЛЯ СТАТИСТИКИ TIKTOK LIVE
     roleMenuItems.push({
-      text: 'TikTok Live статистика',
+      text: t('tiktok-liv'),
       icon: <MusicNoteIcon />,
       path: '/tiktok-live',
     })
