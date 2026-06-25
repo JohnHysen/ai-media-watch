@@ -32,12 +32,18 @@ import { motion } from 'framer-motion'
 import CyberSidebar from '../components/CyberSidebar'
 import { useTranslation } from 'react-i18next'
 import { useUser } from '../context/user/useUser'
-import { $host } from '../http/API'
+import {
+  getTiktokLiveQueue,
+  startTiktokLiveParsing,
+  stopTiktokLiveParsing,
+  getTiktokLiveStatus,
+  QueueItem,
+} from '../http/API'
 import { Canvas, useFrame } from '@react-three/fiber'
 import { OrbitControls, Environment, Stars } from '@react-three/drei'
 import * as THREE from 'three'
 
-// ---------- 3D фон ----------
+// ---------- 3D фон (без изменений) ----------
 const FloatingRings = ({ position, color, size, speed }: any) => {
   const meshRef = React.useRef<THREE.Mesh>(null)
   useFrame(({ clock }) => {
@@ -114,6 +120,13 @@ const RingSpaceBackground = () => {
   )
 }
 
+const STATUS_MAP: Record<string, { label: string; color: string }> = {
+  pending: { label: 'В очереди', color: '#ffaa44' },
+  processing: { label: 'Обрабатывается', color: '#0ff' },
+  completed: { label: 'Завершено', color: '#44ff66' },
+  failed: { label: 'Ошибка', color: '#ff3366' },
+}
+
 const TikTokLiveStats = () => {
   const { user } = useUser()
   const { t } = useTranslation()
@@ -123,15 +136,15 @@ const TikTokLiveStats = () => {
   const [searchTerm, setSearchTerm] = useState('')
   const [page, setPage] = useState(0)
   const [rowsPerPage, setRowsPerPage] = useState(10)
-  const [queueItems, setQueueItems] = useState<any[]>([])
+  const [queueItems, setQueueItems] = useState<QueueItem[]>([])
   const [totalCount, setTotalCount] = useState(0)
   const [parsingActive, setParsingActive] = useState(false)
   const [actionLoading, setActionLoading] = useState(false)
 
   const fetchStatus = async () => {
     try {
-      const res = await $host.get('/settings/tiktok-live/status')
-      setParsingActive(res.data.processRunning || false)
+      const status = await getTiktokLiveStatus()
+      setParsingActive(status.processRunning || false)
     } catch (err) {
       console.error('Ошибка получения статуса парсинга:', err)
     }
@@ -141,11 +154,9 @@ const TikTokLiveStats = () => {
     setLoading(true)
     setError(null)
     try {
-      const res = await $host.get('/analysis-queue', {
-        params: { platform: 'tiktok_live', limit: 1000, offset: 0 },
-      })
-      setQueueItems(res.data.data)
-      setTotalCount(res.data.total)
+      const res = await getTiktokLiveQueue({ limit: 1000, offset: 0 })
+      setQueueItems(res.data)
+      setTotalCount(res.total)
       await fetchStatus()
     } catch (err: any) {
       console.error('Ошибка загрузки истории парсинга:', err)
@@ -162,7 +173,7 @@ const TikTokLiveStats = () => {
   const handleStartParsing = async () => {
     setActionLoading(true)
     try {
-      await $host.post('/settings/tiktok-live/start')
+      await startTiktokLiveParsing()
       await fetchData()
     } catch (err: any) {
       console.error('Ошибка запуска парсинга:', err)
@@ -175,7 +186,7 @@ const TikTokLiveStats = () => {
   const handleStopParsing = async () => {
     setActionLoading(true)
     try {
-      await $host.post('/settings/tiktok-live/stop')
+      await stopTiktokLiveParsing()
       await fetchData()
     } catch (err: any) {
       console.error('Ошибка остановки парсинга:', err)
@@ -215,7 +226,6 @@ const TikTokLiveStats = () => {
     setPage(0)
   }
 
-  // Извлечение имени канала из URL
   const getChannel = (url: string) => {
     const match = url.match(/https?:\/\/(?:www\.)?tiktok\.com\/@([^\/]+)\/live/)
     return match ? `@${match[1]}` : url
@@ -269,7 +279,7 @@ const TikTokLiveStats = () => {
             </Typography>
           </motion.div>
 
-          {/* Кнопки управления и статус */}
+          {/* Карточка управления */}
           <Card
             sx={{
               mb: 3,
@@ -320,7 +330,15 @@ const TikTokLiveStats = () => {
                   />
                 </Box>
               </Grid>
-              <Grid size={{ xs: 12, md: 6 }}></Grid>
+              <Grid size={{ xs: 12, md: 6 }}>
+                <Typography
+                  variant="body2"
+                  sx={{ color: '#aaa', textAlign: 'right' }}
+                >
+                  Всего в очереди:{' '}
+                  <strong style={{ color: '#ffaa44' }}>{totalCount}</strong>
+                </Typography>
+              </Grid>
             </Grid>
           </Card>
 

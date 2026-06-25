@@ -4,7 +4,25 @@ import { VideoAnalysis } from './models/VideoAnalysis'
 import { AnalysisQueue, QueueStatus } from './models/AnalysisQueue'
 import { SystemSettings } from './models/SystemSettings'
 import { Direction } from './models/Direction'
-sequelize.addModels([User, VideoAnalysis, AnalysisQueue, SystemSettings])
+import { TikTokLive } from './models/TikTokLive'
 
-export { User, VideoAnalysis, AnalysisQueue, QueueStatus, SystemSettings, Direction }
+// Регистрируем ВСЕ модели
+sequelize.addModels([
+  User,
+  VideoAnalysis,
+  AnalysisQueue,
+  SystemSettings,
+  Direction,
+  TikTokLive,
+])
+
+export {
+  User,
+  VideoAnalysis,
+  AnalysisQueue,
+  QueueStatus,
+  SystemSettings,
+  Direction,
+  TikTokLive,
+}
 export default sequelize

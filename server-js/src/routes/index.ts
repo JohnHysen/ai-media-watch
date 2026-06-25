@@ -8,16 +8,18 @@ import newsRoutes from './newsRoutes.js'
 import analysisQueueRouter from './analysisQueueRouter.js'
 import settingsRouter from './settingsRouter.js'
 import directionRouter from './directionRouter.js'
+import tiktokLiveRoutes from '../routes/TikTokLiveRouter.js'
 
 const router = Router()
 
+router.use('/settings/tiktok-live', tiktokLiveRoutes)
 router.use('/auth', authRouter)
 router.use('/user', accessLevel(1), userRouter)
 router.use('/video-analysis', videoRoutes)
 router.use('/news', newsRoutes)
 router.use('/analysis-queue', analysisQueueRouter)
 router.use('/settings', settingsRouter)
-router.use("/directions", directionRouter)
+router.use('/directions', directionRouter)
 router.use('/', proxyRoutes)
 
 export default router

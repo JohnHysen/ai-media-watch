@@ -430,3 +430,104 @@ export const deleteFraudResource = async (id: number): Promise<void> => {
     throw e
   }
 }
+// ===== TikTok Live =====
+
+export interface QueueItem {
+  id: number
+  url: string
+  status: 'pending' | 'processing' | 'completed' | 'failed'
+  platform: string
+  userId: number | null
+  error_message: string | null
+  processed_at: string | null
+  priority: number
+  retries: number
+  createdAt: string
+  updatedAt: string
+  User?: {
+    id: number
+    email: string
+    first_name: string
+    last_name: string
+  }
+}
+
+export interface TiktokLiveStatus {
+  enabled: boolean
+  lastRun: string | null
+  addedCount: number
+  totalFound: number
+  error: string | null
+  queueCount: number
+  totalAnalyzed: number
+  processRunning: boolean
+  pid: number | null
+}
+
+// Получить очередь TikTok Live
+export const getTiktokLiveQueue = async (params?: {
+  status?: string
+  limit?: number
+  offset?: number
+}): Promise<{
+  total: number
+  data: QueueItem[]
+  limit: number
+  offset: number
+}> => {
+  try {
+    const res = await $host.get('/analysis-queue', {
+      params: { platform: 'tiktok_live', ...params },
+    })
+    return res.data
+  } catch (e: any) {
+    if (e.response?.data?.error) toast.error(e.response.data.error)
+    console.log(e)
+    throw e
+  }
+}
+
+// Запустить парсинг TikTok Live
+export const startTiktokLiveParsing = async (): Promise<{
+  success: boolean
+  message: string
+  pid?: number
+}> => {
+  try {
+    const res = await $host.post('/settings/tiktok-live/start')
+    toast.success(res.data.message)
+    return res.data
+  } catch (e: any) {
+    if (e.response?.data?.error) toast.error(e.response.data.error)
+    console.log(e)
+    throw e
+  }
+}
+
+// Остановить парсинг TikTok Live
+export const stopTiktokLiveParsing = async (): Promise<{
+  success: boolean
+  message: string
+}> => {
+  try {
+    const res = await $host.post('/settings/tiktok-live/stop')
+    toast.success(res.data.message)
+    return res.data
+  } catch (e: any) {
+    if (e.response?.data?.error) toast.error(e.response.data.error)
+    console.log(e)
+    throw e
+  }
+}
+
+// Получить статус TikTok Live
+export const getTiktokLiveStatus = async (): Promise<TiktokLiveStatus> => {
+  try {
+    const res = await $host.get('/settings/tiktok-live/status')
+    return res.data
+  } catch (e: any) {
+    if (e.response?.data?.error) toast.error(e.response.data.error)
+    console.log(e)
+    throw e
+  }
+}
