@@ -18,7 +18,7 @@ export enum VerdictText {
   UNCERTAIN = 'uncertain',
 }
 
-@Table({ timestamps: true, tableName: 'video_analyses' })
+@Table({ timestamps: true, tableName: 'tiktoklives' })
 export class TikTokLive extends Model {
   @PrimaryKey
   @AutoIncrement

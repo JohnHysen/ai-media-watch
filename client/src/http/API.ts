@@ -494,7 +494,7 @@ export const startTiktokLiveParsing = async (): Promise<{
   pid?: number
 }> => {
   try {
-    const res = await $host.post('/settings/tiktok-live/start')
+    const res = await $host.get('/settings/tiktok-live/tiktoklive')
     toast.success(res.data.message)
     return res.data
   } catch (e: any) {
