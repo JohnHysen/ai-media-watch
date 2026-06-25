@@ -134,12 +134,15 @@ const TikTokLiveStats = () => {
   const [parsingActive, setParsingActive] = useState(false)
   const [actionLoading, setActionLoading] = useState(false)
 
-  const STATUS_MAP: Record<string, { label: string; color: string }> = {
-    pending: { label: t('v-ocheredi'), color: '#ffaa44' },
-    processing: { label: t('obrabatyva'), color: '#0ff' },
-    completed: { label: t('zaversheno'), color: '#44ff66' },
-    failed: { label: t('oshibka'), color: '#ff3366' },
-  }
+  const [liveRecords, setLiveRecords] = useState<TikTokLiveRecord[]>([])
+  const [totalRecords, setTotalRecords] = useState(0)
+
+  const [modalOpen, setModalOpen] = useState(false)
+  const [selectedRecord, setSelectedRecord] = useState<TikTokLiveRecord | null>(null)
+  const [modalLoading, setModalLoading] = useState(false)
+
+  // Получаем базовый URL из переменных окружения
+  const WS_URL = import.meta.env.VITE_WS_URL || 'http://localhost:3500'
 
   const fetchStatus = async () => {
     try {
@@ -166,8 +169,8 @@ const TikTokLiveStats = () => {
 
       await fetchStatus()
     } catch (err: any) {
-      console.error('Ошибка загрузки истории парсинга:', err)
-      setError(t('ne-udalos-'))
+      console.error('Ошибка загрузки данных:', err)
+      setError('Не удалось загрузить данные')
     } finally {
       setLoading(false)
     }
@@ -188,7 +191,7 @@ const TikTokLiveStats = () => {
       }, 2000)
     } catch (err: any) {
       console.error('Ошибка запуска парсинга:', err)
-      setError(t('ne-udalos--5'))
+      setError('Не удалось запустить парсинг')
     } finally {
       setActionLoading(false)
     }
@@ -279,8 +282,6 @@ const TikTokLiveStats = () => {
     return `${import.meta.env.VITE_WS_URL}${filename.slice(1)}`
   }
 
-  if (!ready) return null
-
   return (
     <>
       <RingSpaceBackground />
@@ -324,7 +325,7 @@ const TikTokLiveStats = () => {
                 gap: 1,
               }}
             >
-              <MusicNoteIcon sx={{ fontSize: 40 }} /> {t('upravlenie-5')}
+              <MusicNoteIcon sx={{ fontSize: 40 }} /> TikTok Live Анализ
             </Typography>
           </motion.div>
 
@@ -360,7 +361,9 @@ const TikTokLiveStats = () => {
                       },
                     }}
                   >
-                    {parsingActive ? t('ostanovit-') : t('zapustit-p')}
+                    {parsingActive 
+                      ? 'Парсинг запущен' 
+                      : 'Запустить парсинг'}
                   </Button>
                   <Button
                     variant="outlined"
@@ -368,16 +371,18 @@ const TikTokLiveStats = () => {
                     startIcon={<RefreshIcon />}
                     sx={{ borderColor: '#ffaa44', color: '#ffaa44' }}
                   >
-                    {t('obnovit')}
+                    Обновить
                   </Button>
-                  <Chip
-                    label={parsingActive ? t('parsing-ak') : t('parsing-os')}
-                    sx={{
-                      bgcolor: parsingActive ? '#44ff66' : '#ff6666',
-                      color: '#000',
-                      fontWeight: 'bold',
-                    }}
-                  />
+                  {parsingActive && (
+                    <Chip
+                      label="🟢 Активен"
+                      sx={{
+                        bgcolor: '#44ff66',
+                        color: '#000',
+                        fontWeight: 'bold',
+                      }}
+                    />
+                  )}
                 </Box>
               </Grid>
               <Grid size={{ xs: 12, md: 6 }}>
@@ -385,8 +390,8 @@ const TikTokLiveStats = () => {
                   variant="body2"
                   sx={{ color: '#aaa', textAlign: 'right' }}
                 >
-                  {t('vsego-v-oc')}{' '}
-                  <strong style={{ color: '#ffaa44' }}>{totalCount}</strong>
+                  Всего записей:{' '}
+                  <strong style={{ color: '#ffaa44' }}>{totalRecords}</strong>
                 </Typography>
               </Grid>
             </Grid>
@@ -404,7 +409,7 @@ const TikTokLiveStats = () => {
             }}
           >
             <TextField
-              placeholder={t('poisk-po-s-0')}
+              placeholder="Поиск по автору или ссылке..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               fullWidth
@@ -442,16 +447,22 @@ const TikTokLiveStats = () => {
               <TableHead>
                 <TableRow>
                   <TableCell sx={{ color: '#ffaa44', fontWeight: 'bold' }}>
-                    {t('kanal')}
+                    Автор
                   </TableCell>
                   <TableCell sx={{ color: '#ffaa44', fontWeight: 'bold' }}>
-                    {t('ssylka-na--0')}
+                    Ссылка
                   </TableCell>
                   <TableCell sx={{ color: '#ffaa44', fontWeight: 'bold' }}>
-                    {t('data-dobav')}
+                    Дата проверки
                   </TableCell>
                   <TableCell sx={{ color: '#ffaa44', fontWeight: 'bold' }}>
-                    {t('status')}
+                    Вердикт
+                  </TableCell>
+                  <TableCell sx={{ color: '#ffaa44', fontWeight: 'bold' }}>
+                    Безопасность
+                  </TableCell>
+                  <TableCell sx={{ color: '#ffaa44', fontWeight: 'bold' }}>
+                    Длительность
                   </TableCell>
                 </TableRow>
               </TableHead>
@@ -479,7 +490,9 @@ const TikTokLiveStats = () => {
                       align="center"
                       sx={{ py: 4, color: '#aaa' }}
                     >
-                      {searchTerm ? t('nichego-ne') : t('istoriya-p-0')}
+                      {searchTerm
+                        ? 'Ничего не найдено'
+                        : 'Данных пока нет. Запустите парсинг'}
                     </TableCell>
                   </TableRow>
                 ) : (
