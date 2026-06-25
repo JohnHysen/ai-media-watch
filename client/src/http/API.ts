@@ -531,3 +531,109 @@ export const getTiktokLiveStatus = async (): Promise<TiktokLiveStatus> => {
     throw e
   }
 }
+
+export interface TikTokLiveRecord {
+  id: number
+  authorName: string | null
+  video_url: string
+  safety_percent: number
+  verdict_text: 'safe' | 'dangerous' | 'uncertain'
+  reason_ru: string | null
+  reason_en: string | null
+  reason_kz: string | null
+  is_dangerous: boolean
+  duration_seconds: number
+  checked_at: string
+  primary_risk: string | null
+  createdAt: string
+  updatedAt: string
+}
+
+export interface TikTokLiveResponse {
+  success: boolean
+  data: TikTokLiveRecord[]
+  total: number
+  limit: number
+  offset: number
+}
+
+// ==================== TikTok Live ====================
+
+export interface TikTokLiveRecord {
+  id: number
+  authorName: string | null
+  video_url: string
+  safety_percent: number
+  verdict_text: 'safe' | 'dangerous' | 'uncertain'
+  reason_ru: string | null
+  reason_en: string | null
+  reason_kz: string | null
+  is_dangerous: boolean
+  duration_seconds: number
+  checked_at: string
+  primary_risk: string | null
+  createdAt: string
+  updatedAt: string
+}
+
+export interface TikTokLiveResponse {
+  success: boolean
+  data: TikTokLiveRecord[]
+  total: number
+  limit: number
+  offset: number
+}
+
+// Получение данных
+export const getTiktokLiveData = async (params?: {
+  limit?: number
+  offset?: number
+  search?: string
+  status?: string
+  sortBy?: string
+  sortOrder?: 'ASC' | 'DESC'
+}): Promise<TikTokLiveResponse> => {
+  try {
+    const res = await $host.get<TikTokLiveResponse>(
+      '/settings/tiktok-live/tiktok-live/data',
+      {
+        params,
+      }
+    )
+
+    return res.data
+  } catch (e: any) {
+    console.log(e)
+
+    if (e.response?.data?.error) {
+      toast.error(e.response.data.error)
+    }
+
+    throw e
+  }
+}
+
+// Получение одной записи
+export const getTiktokLiveById = async (
+  id: number
+): Promise<{
+  success: boolean
+  data: TikTokLiveRecord
+}> => {
+  try {
+    const res = await $host.get<{
+      success: boolean
+      data: TikTokLiveRecord
+    }>(`/settings/tiktok-live/tiktok-live/data/${id}`)
+
+    return res.data
+  } catch (e: any) {
+    console.log(e)
+
+    if (e.response?.data?.error) {
+      toast.error(e.response.data.error)
+    }
+
+    throw e
+  }
+}

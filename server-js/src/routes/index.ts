@@ -8,7 +8,7 @@ import newsRoutes from './newsRoutes.js'
 import analysisQueueRouter from './analysisQueueRouter.js'
 import settingsRouter from './settingsRouter.js'
 import directionRouter from './directionRouter.js'
-import tiktokLiveRoutes from '../routes/TikTokLiveRouter.js'
+import tiktokLiveRoutes from './TikTokLiveRouter.js'
 
 const router = Router()
 

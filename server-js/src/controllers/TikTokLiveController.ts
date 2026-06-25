@@ -184,6 +184,78 @@ export const getTiktokLiveStatus = async (req: Request, res: Response) => {
   }
 }
 
+import { TikTokLive } from '../db/index.js'
 
+export const getTiktokLiveData = async (req: Request, res: Response) => {
+  try {
+    const { 
+      limit = 50, 
+      offset = 0, 
+      search = '',
+      status,
+      sortBy = 'createdAt',
+      sortOrder = 'DESC'
+    } = req.query
 
+    // Строим WHERE условия
+    const where: any = {}
+    
+    // Фильтр по статусу (verdict_text)
+    if (status) {
+      where.verdict_text = status
+    }
 
+    // Поиск по автору или URL
+    if (search) {
+      where[Op.or] = [
+        { authorName: { [Op.like]: `%${search}%` } },
+        { video_url: { [Op.like]: `%${search}%` } },
+      ]
+    }
+
+    // Получаем общее количество
+    const total = await TikTokLive.count({ where })
+
+    // Получаем данные с пагинацией
+    const data = await TikTokLive.findAll({
+      where,
+      limit: Number(limit),
+      offset: Number(offset),
+      order: [[sortBy, sortOrder]],
+    })
+
+    res.json({
+      success: true,
+      data,
+      total,
+      limit: Number(limit),
+      offset: Number(offset),
+    })
+  } catch (e) {
+    unexpectedError(res, e)
+  }
+}
+
+// ==================== ПОЛУЧЕНИЕ ОДНОГО ЗАПИСИ ПО ID ====================
+
+export const getTiktokLiveById = async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params
+    
+    const record = await TikTokLive.findByPk(id)
+    
+    if (!record) {
+      return res.status(404).json({ 
+        success: false, 
+        error: 'Запись не найдена' 
+      })
+    }
+
+    res.json({
+      success: true,
+      data: record,
+    })
+  } catch (e) {
+    unexpectedError(res, e)
+  }
+}

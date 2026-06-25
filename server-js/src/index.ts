@@ -10,6 +10,7 @@ import sequelize from './db/db'
 import { sio_middleware, sio_chat } from './modules/sio/.'
 // Импорт воркера очереди (запускает cron-задачу)
 import './modules/cron/analysisQueueProcessor.js'
+import path from 'path'
 
 const allowedOrigins = [cfg.CLIENT]
 const PORT = cfg.PORT
@@ -24,7 +25,12 @@ app.use(fileUpload({ limits: { fileSize: 50 * 1024 * 1024 } }))
 app.use(cors({ origin: allowedOrigins, credentials: true }))
 
 // ✅ 3. Статика
-app.use('/static', express.static('static'))
+const storagePath = path.join(process.cwd(), '../storage');
+
+console.log('Storage path:', storagePath); // Для проверки пути
+
+// Раздаём storage
+app.use('/storage', express.static(storagePath));
 
 // ✅ 4. Подключаем все роуты (auth, user, queue, video-analysis и др.)
 app.use('/', router)

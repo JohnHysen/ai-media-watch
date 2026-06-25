@@ -11,9 +11,13 @@ import {
   startTiktokLiveProcess,
   stopTiktokLiveProcess,
   getTiktokLiveStatus,
+  getTiktokLiveData,
+  getTiktokLiveById,
 } from '../controllers/tiktokLiveController.js'
 import authMiddleware from '../middleware/authMiddleware.js'
 import { requireRole } from '../middleware/checkRoleMiddleware.js'
+import { TikTokLive } from '../db/db.js'
+import { VerdictText } from '../db/models/TikTokLive.js'
 
 const router = Router()
 
@@ -35,6 +39,10 @@ router.post(
   requireRole(['ADMIN']),
   stopTiktokLiveProcess
 )
+
+// Маршруты для получения данных из TikTokLive
+router.get('/tiktok-live/data', getTiktokLiveData)
+router.get('/tiktok-live/data/:id', getTiktokLiveById)
 
 router.get('/tiktoklive', async (req, res) => {
   let browser
@@ -169,6 +177,24 @@ router.get('/tiktoklive', async (req, res) => {
           analyzeUrl.searchParams.set('userName', username)
 
           const analyzeResponse = await fetch(analyzeUrl.toString())
+
+          const analyzeData = await analyzeResponse.json()
+
+          await TikTokLive.create({
+            authorName: analyzeData.authorName,
+            video_url: analyzeData.video_url,
+            safety_percent: analyzeData.safety_percent || 0,
+            verdict_text: analyzeData.verdict_text || VerdictText.UNCERTAIN,
+            reason_ru: analyzeData.reason_ru || null,
+            reason_en: analyzeData.reason_en || null,
+            reason_kz: analyzeData.reason_kz || null,
+            is_dangerous: analyzeData.is_dangerous || false,
+            duration_seconds: analyzeData.duration_seconds || 0,
+            checked_at: analyzeData.checked_at
+              ? new Date(analyzeData.checked_at)
+              : new Date(),
+            primary_risk: analyzeData.primary_risk || null,
+          })
 
           console.log('я тут')
         } else {

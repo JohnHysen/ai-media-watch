@@ -17,33 +17,35 @@ import {
   TablePagination,
   CircularProgress,
   Card,
-  CardContent,
   Grid,
   Link,
   Button,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
 } from '@mui/material'
 import MenuIcon from '@mui/icons-material/Menu'
 import SearchIcon from '@mui/icons-material/Search'
 import MusicNoteIcon from '@mui/icons-material/MusicNote'
 import PlayArrowIcon from '@mui/icons-material/PlayArrow'
-import StopIcon from '@mui/icons-material/Stop'
 import RefreshIcon from '@mui/icons-material/Refresh'
 import { motion } from 'framer-motion'
 import CyberSidebar from '../components/CyberSidebar'
 import { useTranslation } from 'react-i18next'
 import { useUser } from '../context/user/useUser'
 import {
-  getTiktokLiveQueue,
   startTiktokLiveParsing,
-  stopTiktokLiveParsing,
   getTiktokLiveStatus,
-  QueueItem,
+  getTiktokLiveData,
+  getTiktokLiveById,
+  TikTokLiveRecord,
 } from '../http/API'
 import { Canvas, useFrame } from '@react-three/fiber'
 import { OrbitControls, Environment, Stars } from '@react-three/drei'
 import * as THREE from 'three'
 
-// ---------- 3D фон (без изменений) ----------
+// ---------- 3D фон ----------
 const FloatingRings = ({ position, color, size, speed }: any) => {
   const meshRef = React.useRef<THREE.Mesh>(null)
   useFrame(({ clock }) => {
@@ -122,15 +124,13 @@ const RingSpaceBackground = () => {
 
 const TikTokLiveStats = () => {
   const { user } = useUser()
-  const { t, ready } = useTranslation()
+  const { t, i18n } = useTranslation()
   const [drawerOpen, setDrawerOpen] = useState(false)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [searchTerm, setSearchTerm] = useState('')
   const [page, setPage] = useState(0)
   const [rowsPerPage, setRowsPerPage] = useState(10)
-  const [queueItems, setQueueItems] = useState<QueueItem[]>([])
-  const [totalCount, setTotalCount] = useState(0)
   const [parsingActive, setParsingActive] = useState(false)
   const [actionLoading, setActionLoading] = useState(false)
 
@@ -150,13 +150,20 @@ const TikTokLiveStats = () => {
     }
   }
 
-  const fetchData = async () => {
+  const fetchLiveData = async () => {
     setLoading(true)
     setError(null)
+
     try {
-      const res = await getTiktokLiveQueue({ limit: 1000, offset: 0 })
-      setQueueItems(res.data)
-      setTotalCount(res.total)
+      const res = await getTiktokLiveData({
+        limit: rowsPerPage,
+        offset: page * rowsPerPage,
+        search: searchTerm || undefined,
+      })
+
+      setLiveRecords(res.data)
+      setTotalRecords(res.total)
+
       await fetchStatus()
     } catch (err: any) {
       console.error('Ошибка загрузки истории парсинга:', err)
@@ -167,14 +174,18 @@ const TikTokLiveStats = () => {
   }
 
   useEffect(() => {
-    if (user) fetchData()
-  }, [user])
+    if (user) {
+      fetchLiveData()
+    }
+  }, [user, page, rowsPerPage, searchTerm])
 
   const handleStartParsing = async () => {
     setActionLoading(true)
     try {
       await startTiktokLiveParsing()
-      await fetchData()
+      setTimeout(() => {
+        fetchLiveData()
+      }, 2000)
     } catch (err: any) {
       console.error('Ошибка запуска парсинга:', err)
       setError(t('ne-udalos--5'))
@@ -183,40 +194,27 @@ const TikTokLiveStats = () => {
     }
   }
 
-  const handleStopParsing = async () => {
-    setActionLoading(true)
-    try {
-      await stopTiktokLiveParsing()
-      await fetchData()
-    } catch (err: any) {
-      console.error('Ошибка остановки парсинга:', err)
-      setError(t('ne-udalos--6'))
-    } finally {
-      setActionLoading(false)
-    }
-  }
-
   const handleRefresh = async () => {
-    await fetchData()
+    await fetchLiveData()
   }
 
-  // Фильтрация и пагинация
-  const filteredAndPaginated = useMemo(() => {
-    let filtered = [...queueItems]
-    if (searchTerm) {
-      const term = searchTerm.toLowerCase()
-      filtered = filtered.filter(
-        (item) =>
-          item.url.toLowerCase().includes(term) ||
-          item.User?.first_name?.toLowerCase().includes(term) ||
-          item.User?.email?.toLowerCase().includes(term)
-      )
+  const handleRowClick = async (id: number) => {
+    setModalLoading(true)
+    try {
+      const res = await getTiktokLiveById(id)
+      setSelectedRecord(res.data)
+      setModalOpen(true)
+    } catch (err) {
+      console.error('Ошибка загрузки записи:', err)
+    } finally {
+      setModalLoading(false)
     }
-    setTotalCount(filtered.length)
-    const start = page * rowsPerPage
-    const end = start + rowsPerPage
-    return filtered.slice(start, end)
-  }, [queueItems, searchTerm, page, rowsPerPage])
+  }
+
+  const handleCloseModal = () => {
+    setModalOpen(false)
+    setSelectedRecord(null)
+  }
 
   const handleChangePage = (_: unknown, newPage: number) => setPage(newPage)
   const handleChangeRowsPerPage = (
@@ -226,9 +224,59 @@ const TikTokLiveStats = () => {
     setPage(0)
   }
 
-  const getChannel = (url: string) => {
-    const match = url.match(/https?:\/\/(?:www\.)?tiktok\.com\/@([^\/]+)\/live/)
-    return match ? `@${match[1]}` : url
+  // Получение текста в зависимости от языка
+  const getLocalizedText = (record: TikTokLiveRecord) => {
+    const lang = i18n.language
+    if (lang === 'ru' && record.reason_ru) return record.reason_ru
+    if (lang === 'kz' && record.reason_kz) return record.reason_kz
+    if (lang === 'en' && record.reason_en) return record.reason_en
+    return record.reason_ru || record.reason_en || record.reason_kz || ''
+  }
+
+  const getLocalizedVerdict = (record: TikTokLiveRecord) => {
+    const lang = i18n.language
+    if (lang === 'ru') return record.verdict_text
+    if (lang === 'kz') {
+      const map: Record<string, string> = {
+        'опасно': 'қауіпті',
+        'безопасно': 'қауіпсіз',
+        'неопределенно': 'белгісіз',
+      }
+      return map[record.verdict_text] || record.verdict_text
+    }
+    if (lang === 'en') {
+      const map: Record<string, string> = {
+        'опасно': 'dangerous',
+        'безопасно': 'safe',
+        'неопределенно': 'uncertain',
+      }
+      return map[record.verdict_text] || record.verdict_text
+    }
+    return record.verdict_text
+  }
+
+  // Получение цвета для вердикта
+  const getVerdictColor = (verdict: string, isDangerous: boolean) => {
+    if (isDangerous) return '#ff3366'
+    if (verdict === 'safe' || verdict === 'безопасно' || verdict === 'қауіпсіз') return '#44ff66'
+    if (verdict === 'uncertain' || verdict === 'неопределенно' || verdict === 'белгісіз') return '#ffaa44'
+    return '#888'
+  }
+
+  // Получение цвета для безопасности
+  const getSafetyColor = (percent: number) => {
+    if (percent > 70) return '#44ff66'
+    if (percent > 40) return '#ffaa44'
+    return '#ff3366'
+  }
+
+  // Формирование URL для видео
+  const getVideoUrl = (filename: string) => {
+    if (!filename) return ''
+    if (filename.startsWith('http://') || filename.startsWith('https://')) {
+      return filename
+    }
+    return `${import.meta.env.VITE_WS_URL}${filename.slice(1)}`
   }
 
   if (!ready) return null
@@ -293,19 +341,22 @@ const TikTokLiveStats = () => {
           >
             <Grid container spacing={2} alignItems="center">
               <Grid size={{ xs: 12, md: 6 }}>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, flexWrap: 'wrap' }}>
                   <Button
                     variant="contained"
-                    onClick={
-                      parsingActive ? handleStopParsing : handleStartParsing
-                    }
-                    disabled={actionLoading}
-                    startIcon={parsingActive ? <StopIcon /> : <PlayArrowIcon />}
+                    onClick={handleStartParsing}
+                    disabled={actionLoading || parsingActive}
+                    startIcon={<PlayArrowIcon />}
                     sx={{
-                      bgcolor: parsingActive ? '#ff3366' : '#33ffcc',
+                      bgcolor: parsingActive ? '#44ff66' : '#33ffcc',
                       color: '#000',
                       '&:hover': {
-                        bgcolor: parsingActive ? '#cc0044' : '#00e676',
+                        bgcolor: parsingActive ? '#44ff66' : '#00e676',
+                      },
+                      '&.Mui-disabled': {
+                        bgcolor: parsingActive ? '#44ff66' : '#33ffcc',
+                        color: '#000',
+                        opacity: 0.7,
                       },
                     }}
                   >
@@ -407,24 +458,24 @@ const TikTokLiveStats = () => {
               <TableBody>
                 {loading ? (
                   <TableRow>
-                    <TableCell colSpan={4} align="center" sx={{ py: 4 }}>
+                    <TableCell colSpan={6} align="center" sx={{ py: 4 }}>
                       <CircularProgress sx={{ color: '#ffaa44' }} />
                     </TableCell>
                   </TableRow>
                 ) : error ? (
                   <TableRow>
                     <TableCell
-                      colSpan={4}
+                      colSpan={6}
                       align="center"
                       sx={{ py: 4, color: '#ff3366' }}
                     >
                       {error}
                     </TableCell>
                   </TableRow>
-                ) : filteredAndPaginated.length === 0 ? (
+                ) : liveRecords.length === 0 ? (
                   <TableRow>
                     <TableCell
-                      colSpan={4}
+                      colSpan={6}
                       align="center"
                       sx={{ py: 4, color: '#aaa' }}
                     >
@@ -432,61 +483,77 @@ const TikTokLiveStats = () => {
                     </TableCell>
                   </TableRow>
                 ) : (
-                  filteredAndPaginated.map((item) => {
-                    const statusInfo = STATUS_MAP[item.status] || {
-                      label: item.status,
-                      color: '#aaa',
-                    }
-                    return (
-                      <TableRow
-                        key={item.id}
-                        sx={{ '&:hover': { bgcolor: 'rgba(255,170,68,0.05)' } }}
-                      >
-                        <TableCell sx={{ color: '#fff' }}>
-                          {getChannel(item.url)}
-                        </TableCell>
-                        <TableCell sx={{ color: '#88f' }}>
-                          <Link
-                            href={item.url}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            sx={{
-                              color: '#88f',
-                              textDecoration: 'none',
-                              '&:hover': { textDecoration: 'underline' },
-                            }}
-                          >
-                            {item.url.length > 50
-                              ? item.url.substring(0, 50) + '...'
-                              : item.url}
-                          </Link>
-                        </TableCell>
-                        <TableCell sx={{ color: '#aaa', fontSize: '0.85rem' }}>
-                          {new Date(item.createdAt).toLocaleString()}
-                        </TableCell>
-                        <TableCell>
-                          <Chip
-                            label={statusInfo.label}
-                            size="small"
-                            sx={{
-                              bgcolor: statusInfo.color,
-                              color: '#fff',
-                              fontWeight: 'bold',
-                            }}
-                          />
-                        </TableCell>
-                      </TableRow>
-                    )
-                  })
+                  liveRecords.map((record) => (
+                    <TableRow
+                      key={record.id}
+                      onClick={() => handleRowClick(record.id)}
+                      sx={{
+                        '&:hover': {
+                          bgcolor: 'rgba(255,170,68,0.1)',
+                          cursor: 'pointer',
+                        },
+                      }}
+                    >
+                      <TableCell sx={{ color: '#fff' }}>
+                        {record.authorName || 'Unknown'}
+                      </TableCell>
+                      <TableCell sx={{ color: '#88f' }}>
+                        <Link
+                          href={import.meta.env.VITE_API_URL + record.video_url.slice(1)}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          onClick={(e) => e.stopPropagation()}
+                          sx={{
+                            color: '#88f',
+                            textDecoration: 'none',
+                            '&:hover': { textDecoration: 'underline' },
+                          }}
+                        >
+                          Перейти к видео
+                        </Link>
+                      </TableCell>
+                      <TableCell sx={{ color: '#aaa', fontSize: '0.85rem' }}>
+                        {new Date(record.checked_at).toLocaleString()}
+                      </TableCell>
+                      <TableCell>
+                        <Chip
+                          label={getLocalizedVerdict(record)}
+                          size="small"
+                          sx={{
+                            bgcolor: getVerdictColor(
+                              record.verdict_text,
+                              record.is_dangerous
+                            ),
+                            color: '#fff',
+                            fontWeight: 'bold',
+                          }}
+                        />
+                      </TableCell>
+                      <TableCell>
+                        <Chip
+                          label={`${Math.round(record.safety_percent)}%`}
+                          size="small"
+                          sx={{
+                            bgcolor: getSafetyColor(record.safety_percent),
+                            color: '#fff',
+                            fontWeight: 'bold',
+                          }}
+                        />
+                      </TableCell>
+                      <TableCell sx={{ color: '#aaa', fontSize: '0.85rem' }}>
+                        {Math.round(record.duration_seconds)} сек
+                      </TableCell>
+                    </TableRow>
+                  ))
                 )}
               </TableBody>
             </Table>
           </TableContainer>
 
           <TablePagination
-            rowsPerPageOptions={[5, 10, 25]}
+            rowsPerPageOptions={[5, 10, 25, 50]}
             component="div"
-            count={totalCount}
+            count={totalRecords}
             rowsPerPage={rowsPerPage}
             page={page}
             onPageChange={handleChangePage}
@@ -494,10 +561,216 @@ const TikTokLiveStats = () => {
             sx={{
               color: '#fff',
               '& .MuiTablePagination-selectIcon': { color: '#fff' },
+              '& .MuiTablePagination-select': { color: '#fff' },
+              '& .MuiTablePagination-actions button': { color: '#fff' },
             }}
           />
         </Container>
       </Box>
+
+      {/* Модалка с видео */}
+      <Dialog
+        open={modalOpen}
+        onClose={handleCloseModal}
+        maxWidth="lg"
+        fullWidth
+        PaperProps={{
+          sx: {
+            bgcolor: 'rgba(10,10,30,0.95)',
+            backdropFilter: 'blur(12px)',
+            borderRadius: 3,
+            border: '1px solid rgba(255,170,68,0.3)',
+          },
+        }}
+      >
+        <DialogTitle
+          sx={{
+            color: '#ffaa44',
+            borderBottom: '1px solid rgba(255,170,68,0.2)',
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+          }}
+        >
+          Видео анализ
+          {selectedRecord && (
+            <Chip
+              label={getLocalizedVerdict(selectedRecord)}
+              size="small"
+              sx={{
+                bgcolor: getVerdictColor(
+                  selectedRecord.verdict_text,
+                  selectedRecord.is_dangerous
+                ),
+                color: '#fff',
+                fontWeight: 'bold',
+              }}
+            />
+          )}
+        </DialogTitle>
+        <DialogContent sx={{ mt: 2 }}>
+          {modalLoading ? (
+            <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
+              <CircularProgress sx={{ color: '#ffaa44' }} />
+            </Box>
+          ) : selectedRecord ? (
+            <Box>
+              {/* ВИДЕО ПЛЕЕР */}
+              <Box
+                sx={{
+                  position: 'relative',
+                  width: '100%',
+                  bgcolor: '#000',
+                  borderRadius: 2,
+                  overflow: 'hidden',
+                  mb: 3,
+                  aspectRatio: '16/9',
+                }}
+              >
+                {selectedRecord.authorName ? (
+                  <video
+                    controls
+                    autoPlay
+                    style={{
+                      width: '100%',
+                      height: '100%',
+                      display: 'block',
+                    }}
+                  >
+                    <source 
+                      src={getVideoUrl(selectedRecord.video_url)} 
+                      type="video/mp4" 
+                    />
+                    Ваш браузер не поддерживает видео
+                  </video>
+                ) : (
+                  <Box
+                    sx={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      height: '100%',
+                      color: '#666',
+                    }}
+                  >
+                    <Typography>Видео недоступно</Typography>
+                  </Box>
+                )}
+              </Box>
+
+              {/* Детали */}
+              <Grid container spacing={2}>
+                <Grid size={{ xs: 12, md: 6 }}>
+                  <Typography variant="caption" sx={{ color: '#888' }}>
+                    Автор
+                  </Typography>
+                  <Typography sx={{ color: '#fff' }}>
+                    {selectedRecord.authorName || 'Unknown'}
+                  </Typography>
+                </Grid>
+                <Grid size={{ xs: 12, md: 6 }}>
+                  <Typography variant="caption" sx={{ color: '#888' }}>
+                    Безопасность
+                  </Typography>
+                  <Typography
+                    sx={{
+                      color: getSafetyColor(selectedRecord.safety_percent),
+                      fontWeight: 'bold',
+                    }}
+                  >
+                    {Math.round(selectedRecord.safety_percent)}%
+                  </Typography>
+                </Grid>
+                <Grid size={{ xs: 12 }}>
+                  <Typography variant="caption" sx={{ color: '#888' }}>
+                    Ссылка
+                  </Typography>
+                  <Link
+                    href={selectedRecord.video_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    sx={{
+                      color: '#88f',
+                      display: 'block',
+                      wordBreak: 'break-all',
+                      textDecoration: 'none',
+                      '&:hover': { textDecoration: 'underline' },
+                    }}
+                  >
+                    {selectedRecord.video_url}
+                  </Link>
+                </Grid>
+                {selectedRecord.primary_risk && (
+                  <Grid size={{ xs: 12 }}>
+                    <Typography variant="caption" sx={{ color: '#888' }}>
+                      Основной риск
+                    </Typography>
+                    <Typography sx={{ color: '#ffaa44' }}>
+                      {selectedRecord.primary_risk}
+                    </Typography>
+                  </Grid>
+                )}
+                <Grid size={{ xs: 12 }}>
+                  <Typography variant="caption" sx={{ color: '#888' }}>
+                    Причина
+                  </Typography>
+                  <Typography
+                    sx={{
+                      color: '#ccc',
+                      bgcolor: 'rgba(255,255,255,0.05)',
+                      p: 1,
+                      borderRadius: 1,
+                      mt: 0.5,
+                    }}
+                  >
+                    {getLocalizedText(selectedRecord)}
+                  </Typography>
+                </Grid>
+                <Grid size={{ xs: 6 }}>
+                  <Typography variant="caption" sx={{ color: '#888' }}>
+                    Длительность
+                  </Typography>
+                  <Typography sx={{ color: '#fff' }}>
+                    {Math.round(selectedRecord.duration_seconds)} сек
+                  </Typography>
+                </Grid>
+                <Grid size={{ xs: 6 }}>
+                  <Typography variant="caption" sx={{ color: '#888' }}>
+                    ID записи
+                  </Typography>
+                  <Typography sx={{ color: '#aaa', fontSize: '0.85rem' }}>
+                    #{selectedRecord.id}
+                  </Typography>
+                </Grid>
+                <Grid size={{ xs: 12 }}>
+                  <Typography variant="caption" sx={{ color: '#888' }}>
+                    Дата проверки
+                  </Typography>
+                  <Typography sx={{ color: '#aaa' }}>
+                    {new Date(selectedRecord.checked_at).toLocaleString()}
+                  </Typography>
+                </Grid>
+              </Grid>
+            </Box>
+          ) : null}
+        </DialogContent>
+        <DialogActions
+          sx={{
+            borderTop: '1px solid rgba(255,170,68,0.2)',
+            p: 2,
+          }}
+        >
+          <Button
+            onClick={handleCloseModal}
+            sx={{
+              color: '#ffaa44',
+              '&:hover': { bgcolor: 'rgba(255,170,68,0.1)' },
+            }}
+          >
+            Закрыть
+          </Button>
+        </DialogActions>
+      </Dialog>
     </>
   )
 }
