@@ -279,7 +279,7 @@ const TikTokLiveStats = () => {
     if (filename.startsWith('http://') || filename.startsWith('https://')) {
       return filename
     }
-    return `${import.meta.env.VITE_WS_URL}${filename.slice(1)}`
+    return `${import.meta.env.VITE_API_URL}${filename.slice(1)}`
   }
 
   return (

@@ -1,31 +1,45 @@
 import { Router } from 'express'
 import {
-  startTiktokLiveProcess,
-  stopTiktokLiveProcess,
-  getTiktokLiveStatus,
-} from '../controllers/tiktokLiveController.js'
-import authMiddleware from '../middleware/authMiddleware.js'
-import { requireRole } from '../middleware/checkRoleMiddleware.js'
+  getSettings,
+  updateSettings,
+  toggleScraping,
+  triggerVideoScrape,
+  getScrapeStatus,
+  startScrapingProcess,
+  stopScrapingProcess,
+} from '../controllers/settingsController'
+import authMiddleware from '../middleware/authMiddleware'
+import { requireRole } from '../middleware/checkRoleMiddleware'
 
 const router = Router()
 
-router.get(
-  '/status',
+router.get('/', authMiddleware, getSettings)
+router.put('/', authMiddleware, requireRole(['ADMIN']), updateSettings)
+router.post(
+  '/toggle-scraping',
   authMiddleware,
   requireRole(['ADMIN']),
-  getTiktokLiveStatus
+  toggleScraping
 )
 router.post(
-  '/start',
+  '/scrape-video',
   authMiddleware,
   requireRole(['ADMIN']),
-  startTiktokLiveProcess
+  triggerVideoScrape
+)
+router.get('/status', authMiddleware, requireRole(['ADMIN']), getScrapeStatus)
+
+router.post(
+  '/scrape/start',
+  authMiddleware,
+  requireRole(['ADMIN']),
+  startScrapingProcess
 )
 router.post(
-  '/stop',
+  '/scrape/stop',
   authMiddleware,
   requireRole(['ADMIN']),
-  stopTiktokLiveProcess
+  stopScrapingProcess
 )
 
 export default router

@@ -13,7 +13,7 @@ import {
   getTiktokLiveStatus,
   getTiktokLiveData,
   getTiktokLiveById,
-} from '../controllers/tiktokLiveController.js'
+} from '../controllers/TikTokLiveController'
 import authMiddleware from '../middleware/authMiddleware.js'
 import { requireRole } from '../middleware/checkRoleMiddleware.js'
 import { TikTokLive } from '../db/db.js'

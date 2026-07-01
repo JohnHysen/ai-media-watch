@@ -214,10 +214,15 @@ export const deleteVideoAnalysis = async (id: number) => {
   }
 }
 
-export const createAnalysisJob = async (url: string) => {
+// ===== ИЗМЕНЕНО: передаём userId явно =====
+export const createAnalysisJob = async (
+  url: string,
+  userId?: number | null
+) => {
   try {
     const res = await $host.post('analysis-queue', {
       url,
+      userId,
     })
     return res.data
   } catch (e: any) {
@@ -325,6 +330,7 @@ export const getScrapeStatus = async (): Promise<ScrapeStatus> => {
     throw e
   }
 }
+
 export interface FraudResource {
   id: number
   platform: 'youtube' | 'tiktok' | 'instagram' | 'telegram' | 'unknown'
@@ -430,6 +436,7 @@ export const deleteFraudResource = async (id: number): Promise<void> => {
     throw e
   }
 }
+
 // ===== TikTok Live =====
 
 export interface QueueItem {
@@ -488,11 +495,7 @@ export const getTiktokLiveQueue = async (params?: {
 }
 
 // Запустить парсинг TikTok Live
-export const startTiktokLiveParsing = async (): Promise<{
-  success: boolean
-  message: string
-  pid?: number
-}> => {
+export const startTiktokLiveParsing = async () => {
   try {
     const res = await $host.get('/settings/tiktok-live/tiktoklive')
     toast.success(res.data.message)
@@ -557,7 +560,7 @@ export interface TikTokLiveResponse {
   offset: number
 }
 
-// ==================== TikTok Live ====================
+// ==================== TikTok Live (дублирующий интерфейс, но оставляем) ====================
 
 export interface TikTokLiveRecord {
   id: number

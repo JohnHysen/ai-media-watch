@@ -5,8 +5,9 @@ import { User } from '../db/models/user'
 
 export const createAnalysisJob = async (req: Request, res: Response) => {
   try {
-    const { url } = req.body
-    const userId = req.user?.id ?? null
+    // Получаем userId из тела запроса (с фронтенда) или из токена
+    const { url, userId } = req.body
+    const finalUserId = userId ?? req.user?.id ?? null
 
     if (!url) {
       return res.status(400).json({
@@ -40,7 +41,7 @@ export const createAnalysisJob = async (req: Request, res: Response) => {
 
     await AnalysisQueue.create({
       url,
-      userId,
+      userId: finalUserId,
       status: QueueStatus.PENDING,
       platform: 'unknown',
       priority: 1,
@@ -68,7 +69,7 @@ export const getQueue = async (req: Request, res: Response) => {
     const items = await AnalysisQueue.findAndCountAll({
       where,
       order: [
-        ['priority', 'ASC'], // 0 — сначала
+        ['priority', 'ASC'],
         ['createdAt', 'ASC'],
       ],
       limit: Number(limit),

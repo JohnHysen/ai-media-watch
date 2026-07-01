@@ -39,7 +39,9 @@ app.add_middleware(
 
 @app.get("/analyze")
 async def analyze(
-    url: str, userId: Optional[int] = None, background_tasks: BackgroundTasks = None
+    url: str,
+    userId: Optional[int] = None,
+    background_tasks: BackgroundTasks = None
 ):
     start_time = time.time()
     analyze_id = str(uuid.uuid4())

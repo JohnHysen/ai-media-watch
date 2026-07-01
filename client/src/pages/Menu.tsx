@@ -626,11 +626,10 @@ const CyberMediaWatchPro = () => {
     if (!videoUrl.trim()) return
     setIsChecking(true)
     try {
-      const response = await $host.post('/analysis-queue', {
-        url: videoUrl,
-      })
+      // Используем createAnalysisJob с передачей userId
+      const response = await createAnalysisJob(videoUrl, user?.user_id)
       setCheckResultMessage(
-        `[OK] ${response.data.message || 'Видео добавлено в очередь обработки'}`
+        `[OK] ${response?.message || 'Видео добавлено в очередь обработки'}`
       )
     } catch (error: any) {
       console.error('Ошибка при добавлении в очередь:', error)
